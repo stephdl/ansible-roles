@@ -1,0 +1,40 @@
+---
+
+- name: Download binary
+  get_url:
+    url: "{{ docker_local_persist_url }}"
+    dest: /usr/local/bin/docker-volume-local-persist
+    mode: 0755
+    checksum: sha1:{{ docker_local_persist_sha1 }}
+  tags: docker
+
+- name: Create needed dir
+  file: path={{ item.dir }} state=directory mode={{ item.mode }}
+  loop:
+    - dir: /opt/docker
+      mode: "755"
+    - dir: /opt/docker/plugin-data
+      mode: "700"
+    - dir: /var/lib/docker
+      mode: "755"
+  tags: docker
+
+- name: Link plugin-data
+  file: src=/opt/docker/plugin-data dest=/var/lib/docker/plugin-data state=link
+  tags: docker
+
+- name: Install systemd unit
+  template: src=docker-volume-local-persist.service.j2 dest=/etc/systemd/system/docker-volume-local-persist.service
+  register: docker_local_persist_unit
+  notify: restart docker-volume-local-persist
+  tags: docker
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: docker_local_persist_unit.changed
+  tags: docker
+
+- name: Start and enable the service
+  service: name=docker-volume-local-persist state=started enabled=True
+  register: docker_local_persist_started
+  tags: docker

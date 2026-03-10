@@ -1,0 +1,16 @@
+---
+
+- name: Check if qemu agent channel is available
+  stat: path=/dev/virtio-ports/org.qemu.guest_agent.0
+  register: qemu_ga_dev
+
+- include: guest_{{ ansible_os_family }}.yml
+  when:
+    - qemu_ga_dev.stat.exists
+    - ansible_virtualization_type == 'kvm'
+
+- name: Start and enable qemu guest agent
+  service: name=qemu-guest-agent state=started enabled=yes
+  when:
+    - qemu_ga_dev.stat.exists
+    - ansible_virtualization_type == 'kvm'

@@ -1,0 +1,14 @@
+---
+
+- name:  Handle gitea ports in the firewall
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ item.port }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  with_items:
+    - port: "{{ gitea_web_port }}"
+      name: gitea_web_port
+      src_ip: "{{ gitea_web_src_ip }}"
+  tags: firewall,gitea
+

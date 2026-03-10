@@ -1,0 +1,12 @@
+---
+
+- name: Create directories
+  file: path={{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - path: /opt/openproject/meta
+      mode: 700
+    - path: "{{ openproject_data_dir }}"
+      owner: openproject
+      group: openproject
+      mode: 700
+  tags: openproject

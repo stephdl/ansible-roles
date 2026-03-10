@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/profile.d/git.sh
+    - "{{ gitea_root_dir }}/db_dumps"
+  tags: gitea

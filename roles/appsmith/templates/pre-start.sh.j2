@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+# If the conf changed since the last client deployement, or if the client build is newer than the one deployed, then re-deploy
+if [ {{ appsmith_root_dir }}/etc/env -nt {{ appsmith_root_dir }}/client/ -o {{ appsmith_root_dir }}/src/app/client/build/ -nt {{ appsmith_root_dir }}/client/ ]; then
+  rsync -a --delete {{ appsmith_root_dir }}/src/app/client/build/ {{ appsmith_root_dir }}/client/
+  find {{ appsmith_root_dir }}/client/ -type f | xargs \
+    sed -i \
+{% for var in [
+  "APPSMITH_SENTRY_DSN","APPSMITH_SMART_LOOK_ID","APPSMITH_OAUTH2_GOOGLE_CLIENT_ID",
+  "APPSMITH_OAUTH2_GITHUB_CLIENT_ID","APPSMITH_MARKETPLACE_ENABLED",
+  "APPSMITH_SEGMENT_KEY","APPSMITH_OPTIMIZELY_KEY","APPSMITH_ALGOLIA_API_ID",
+  "APPSMITH_ALGOLIA_SEARCH_INDEX_NAME","APPSMITH_ALGOLIA_API_KEY","APPSMITH_CLIENT_LOG_LEVEL",
+  "APPSMITH_GOOGLE_MAPS_API_KEY","APPSMITH_TNC_PP","APPSMITH_VERSION_ID",
+  "APPSMITH_VERSION_RELEASE_DATE","APPSMITH_INTERCOM_APP_ID","APPSMITH_MAIL_ENABLED","APPSMITH_DISABLE_TELEMETRY"] %}
+      -e "s/__{{ var }}__/${{ '{' ~ var ~ '}' }}/g"{% if not loop.last %} \{% endif %}
+
+{% endfor %}
+
+fi

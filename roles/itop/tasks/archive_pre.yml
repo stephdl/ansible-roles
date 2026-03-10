@@ -1,0 +1,10 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ itop_root_dir }}"
+    - version: "{{ itop_current_version }}"
+    - db_name: "{{ itop_db_name }}"
+    - db_server: "{{ itop_db_server }}"
+  tags: itop
+

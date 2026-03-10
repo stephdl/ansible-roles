@@ -1,0 +1,11 @@
+#!/bin/bash
+
+{% if pbs_letsencrypt_cert is defined and pbs_letsencrypt_cert is string %}
+if [ $1 == "{{ pbs_letsencrypt_cert }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ pbs_letsencrypt_cert }}/privkey.pem > /etc/proxmox-backup/proxy.key
+  cat /var/lib/dehydrated/certificates/certs/{{ pbs_letsencrypt_cert }}/fullchain.pem > /etc/proxmox-backup/proxy.pem
+  chown root:backup /etc/proxmox-backup/proxy.{key,pem}
+  chmod 640 /etc/proxmox-backup/proxy.{key,pem}
+  /bin/systemctl reload proxmox-backup-proxy
+fi
+{% endif %}

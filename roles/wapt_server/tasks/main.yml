@@ -1,0 +1,218 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: wapt
+
+- name: Install packages
+  yum: name={{ wapt_packages }}
+  tags: wapt
+
+- name: Create directories
+  file: path={{ item.path }} state=directory mode={{ item.mode | default(omit) }} owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }}
+  loop:
+    - path: /opt/wapt/meta
+      mode: 700
+    - path: /opt/wapt/backup
+      mode: 700
+    - path: /var/www/html/ssl
+      mode: 750
+      owner: wapt
+      group: nginx
+  tags: wapt
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "/opt/wapt/meta/ansible_dbpass"
+  when: wapt_db_pass is not defined
+  tags: wapt
+- set_fact: wapt_db_pass={{ rand_pass }}
+  when: wapt_db_pass is not defined
+  tags: wapt
+
+- name: Create wapt DB user
+  postgresql_user:
+    db: postgres
+    name: "{{ wapt_db_user }}"
+    password: "{{ wapt_db_pass }}"
+    login_host: "{{ wapt_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: wapt
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: wapt
+    encoding: UTF-8
+    template: template0
+    owner: "{{ wapt_db_user }}"
+    login_host: "{{ wapt_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: wapt
+
+- name: Enable the hstore extension
+  postgresql_ext:
+    db: "{{ wapt_db_name }}"
+    login_host: "{{ wapt_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+    name: hstore
+  tags: wapt
+
+- name: Configure SELinux
+  seboolean: name={{ item }} state=True persistent=True
+  with_items:
+    - httpd_can_network_connect
+    - httpd_setrlimit
+  when: ansible_selinux.status == 'enabled'
+  tags: wapt
+
+- name: Set SELinux context on repo dir
+  sefcontext:
+    target: '/var/www/html/wapt(\-host)?(/.*)?'
+    setype: httpd_sys_content_t
+  when: ansible_selinux.status == 'enabled'
+  tags: wapt
+
+- name: Reset SELinux contexts
+  command: restorecon -Rv /var/www/html
+  changed_when: False
+  tags: wapt
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "/opt/wapt/meta/ansible_secret_key"
+  tags: wapt
+- set_fact: wapt_secret_key={{ rand_pass }}
+  tags: wapt
+
+- name: Configure WAPT server
+  ini_file: path=/opt/wapt/conf/waptserver.ini section=options option={{ item.option }} value={{ item.value }}
+  with_items:
+    - option: db_name
+      value: "{{ wapt_db_name }}"
+    - option: db_host
+      value: "{{ wapt_db_server }}"
+    - option: db_user
+      value: "{{ wapt_db_user }}"
+    - option: db_password
+      value: "{{ wapt_db_pass }}"
+    - option: waptwua_folder
+      value: /var/www/html/waptwua
+    - option: server_uuid
+      value: "{{ inventory_hostname | to_uuid }}"
+    - option: allow_unauthenticated_connect
+      value: 'False'
+    - option: allow_unauthenticated_registration
+      value: 'False'
+    - option: secret_key
+      value: "{{ wapt_secret_key }}"
+    - option: use_kerberos
+      value: 'False'
+  notify: restart wapt
+  tags: wapt
+
+- name: Create unit snippet dir
+  file: path=/etc/systemd/system/waptserver.service.d state=directory
+  tags: wapt
+
+- name: Tune wapt to restart indefinitely
+  copy:
+    content: |
+      [Service]
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=20
+    dest: /etc/systemd/system/waptserver.service.d/restart.conf
+  register: wapt_unit
+  tags: wapt
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: wapt_unit.changed
+  tags: wapt
+
+- name: Configure system proxy
+  ini_file: path=/opt/wapt/conf/waptserver.ini section=options option=http_proxy value={{ system_proxy }}
+  when: system_proxy is defined and system_proxy != ''
+  notify: restart wapt
+  tags: wapt
+
+- name: Check if admin password is set
+  command: grep -qP '^wapt_password' /opt/wapt/conf/waptserver.ini
+  ignore_errors: True
+  register: wapt_admin_pass_set
+  changed_when: False
+  tags: wapt
+
+- name: Hash the WAPT admin password
+  command: python -c 'from passlib.hash import pbkdf2_sha256; print pbkdf2_sha256.hash("admin".encode("utf8"))'
+  register: wapt_admin_pass_hash
+  environment:
+    - PYTHONPATH: /opt/wapt/lib/python2.7/site-packages/
+  when: wapt_admin_pass_set.rc != 0
+  changed_when: False
+  tags: wapt
+- set_fact: wapt_admin_pass_hash={{ wapt_admin_pass_hash.stdout }}
+  when: wapt_admin_pass_set.rc != 0
+  tags: wapt
+- name: Set default admin password
+  ini_file: path=/opt/wapt/conf/waptserver.ini section=options option=wapt_password value={{ wapt_admin_pass_hash }}
+  when: wapt_admin_pass_set.rc != 0
+  notify: restart wapt
+  tags: wapt
+
+- name: Set correct ownership for wapt configuration
+  file: path=/opt/wapt/conf/waptserver.ini owner=wapt mode=0600
+  tags: wapt
+
+- name: Deploy nginx config
+  template: src={{ item.src }}.j2 dest={{ item.dest }}
+  with_items:
+    - src: nginx.conf
+      dest: /etc/nginx/nginx.conf
+    - src: wapt.conf
+      dest: /etc/nginx/conf.d/wapt.conf
+  notify: restart nginx
+  tags: wapt
+
+- name: Start and enable nginx
+  service: name=nginx state=started enabled=True
+  tags: wapt
+
+- name: Start and enable WAPT services
+  service: name={{ item }} state=started enabled=True
+  with_items:
+    - waptserver
+      #- wapttasks
+  tags: wapt
+
+- name: Handle ports
+  iptables_raw:
+    name: wapt_ports
+    state: "{{ (wapt_src_ip is defined and wapt_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ wapt_ports | join(',') }} -s {{ wapt_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: wapt
+
+- name: Create DB dump directory
+  file: path=/opt/wapt/backup state=directory mode=0700
+  tags: wapt
+
+- name: Deploy pre and post backup scripts
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/wapt.sh mode=0755
+  with_items:
+    - pre
+    - post
+  tags: wapt
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /opt/wapt/db_dumps
+  tags: wapt

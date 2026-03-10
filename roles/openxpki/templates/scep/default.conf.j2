@@ -1,0 +1,10 @@
+[global]
+log_config = {{ pki_root_dir }}/etc/scep/log.conf
+log_facility = client.scep
+service=SCEP
+socket={{ pki_root_dir }}/run/openxpki.socket
+realm={{ item.name }}
+iprange={{ item.scep.iprange | default('0.0.0.0/0') }}
+servername=scep-server
+encryption_algorithm=3DES
+hash_algorithm=SHA256

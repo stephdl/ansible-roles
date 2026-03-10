@@ -1,0 +1,57 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - clamav
+      - clamav-data-empty
+      - clamav-server-systemd
+      - clamav-update
+
+- name: Create clamav user account
+  user:
+    name: clamav
+    system: True
+    shell: /sbin/nologin
+    comment: "ClamAV antivirus user account"
+
+- name: Set SELinux
+  seboolean: name={{ item }} state=True persistent=True
+  with_items:
+    - clamd_use_jit
+    - antivirus_can_scan_system
+  when: ansible_selinux.status == 'enabled'
+
+- name: Deploy freshclam configuration
+  template: src=freshclam.conf.j2 dest=/etc/freshclam.conf mode=644
+  notify: restart freshclam
+
+- name: Deploy clamd configuration
+  template: src=clamd.conf.j2 dest=/etc/clamd.conf
+  notify: restart clamd
+
+- name: Deploy systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  with_items:
+    - freshclam.service
+    - clamd.service
+  notify:
+    - restart freshclam
+    - restart clamd
+  register: clamav_units
+
+- name: Deploy tmpfiles.d fragment
+  copy:
+    content: 'd /run/clamav 755 {{ clam_user }} {{ clam_group }}'
+    dest: /etc/tmpfiles.d/clamav.conf
+  notify: systemd-tmpfiles
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: clamav_units.changed
+
+- name: Start and enable freshclam
+  service: name=freshclam state=started enabled=True
+
+- name: Handle clamd service
+  service: name=clamd state={{ clam_enable_clamd | ternary('started','stopped') }} enabled={{ clam_enable_clamd }}

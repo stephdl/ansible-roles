@@ -1,0 +1,47 @@
+[mysqld]
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+symbolic-links=0
+{% if not mysql_networking | default(False) %}
+skip-networking
+{% endif %}
+{% if mysql_innodb_file_per_table | default(True) %}
+innodb_file_per_table
+{% endif %}
+{% if mysql_innodb_buffer_pool_size is defined %}
+innodb_buffer_pool_size={{ mysql_innodb_buffer_pool_size }}
+{% endif %}
+{% if mysql_innodb_buffer_pool_instances is defined %}
+innodb_buffer_pool_instances={{ mysql_innodb_buffer_pool_instances }}
+{% endif %}
+{% if mysql_innodb_log_buffer_size is defined %}
+innodb_log_buffer_size={{ mysql_innodb_log_buffer_size }}
+{% endif %}
+{% if mysql_innodb_flush_log_at_trx_commit is defined %}
+innodb_flush_log_at_trx_commit={{ mysql_innodb_flush_log_at_trx_commit }}
+{% endif %}
+{% if mysql_innodb_flush_method is defined %}
+innodb_flush_method={{ mysql_innodb_flush_method }}
+{% endif %}
+{% if mysql_innodb_log_file_size is defined %}
+innodb_log_file_size={{ mysql_innodb_log_file_size }}
+{% endif %}
+
+{% if mysql_sql_mode | length > 0 %}
+sql_mode = {{ mysql_sql_mode | join(',') }}
+{% endif %}
+
+max_allowed_packet={{ mysql_max_allowed_packet | default('16M') }}
+open_files_limit={{ mysql_open_files_limit | default('8192') }}
+max_connections={{ mysql_max_connections | default('300') }}
+
+[mysqld_safe]
+{% if mysql_engine == 'mysql' %}
+log-error=/var/log/mysql/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+{% else %}
+log-error=/var/log/mariadb/mariadb.log
+pid-file=/var/run/mariadb/mariadb.pid
+{% endif %}
+
+!includedir /etc/my.cnf.d

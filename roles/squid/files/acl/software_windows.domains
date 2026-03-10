@@ -1,0 +1,47 @@
+# MS update &cie
+windowsupdate.microsoft.com
+.update.microsoft.com
+.download.windowsupdate.com
+redir.metaservices.microsoft.com
+images.metaservices.microsoft.com
+c.microsoft.com
+wustat.windows.com
+sls.microsoft.com
+productactivation.one.microsoft.com
+ntservicepack.microsoft.com
+next-services.apps.microsoft.com
+ctldl.windowsupdate.com
+download.microsoft.com
+www.msftncsi.com
+www.msftconnecttest.com
+ipv6.msftconnecttest.com
+settings-win.data.microsoft.com
+go.microsoft.com
+dl.delivery.mp.microsoft.com
+dmd.metaservices.microsoft.com
+activation-v2.sls.microsoft.com
+download.visualstudio.microsoft.com
+activation.sls.microsoft.com
+
+# comon CRL / OCSP
+crl.microsoft.com
+.digicert.com
+.spice-space.org
+ocsp.usertrust.com
+crl.usertrust.com
+ocsp.comodoca.com
+crl.comodoca.com
+.symcb.com
+isrg.trustid.ocsp.identrust.com
+crl.identrust.com
+status.rapidssl.com
+crl.certum.pl
+ocsp.thawte.com
+crl.thawte.com
+ts-ocsp.ws.symantec.com
+ts-crl.ws.symantec.com
+ocsp.sectigo.com
+
+# Common AV
+.avast.com
+.avcdn.net

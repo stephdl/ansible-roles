@@ -1,0 +1,16 @@
+systemLog:
+  destination: syslog
+processManagement:
+  fork: true
+  pidFilePath: /var/run/mongodb/mongod.pid
+net:
+  port: {{ mongo_port }}
+  bindIp: 0.0.0.0
+  bindIpAll: true
+  unixDomainSocket:
+    pathPrefix: /var/run/mongodb
+security:
+  authorization: {{ mongo_auth | ternary('enabled','disabled') }}
+storage:
+  dbPath: {{ mongo_db_path }}
+  

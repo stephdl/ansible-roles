@@ -1,0 +1,12 @@
+---
+
+  # On EL8 and newer, rabbitmq config uses the new format
+- set_fact: rabbitmq_conf={{ ansible_distribution_major_version is version('8','>=') | ternary('rabbitmq.conf','rabbitmq.config') }}
+  tags: rabbitmq
+
+- when: rabbitmq_letsencrypt_cert is defined or rabbitmq_ssl_cert_path is not defined or rabbitmq_ssl_key_path is not defined
+  block:
+    - set_fact: rabbitmq_ssl_cacert_path='/etc/rabbitmq/ssl/chain.pem'
+    - set_fact: rabbitmq_ssl_cert_path='/etc/rabbitmq/ssl/cert.pem'
+    - set_fact: rabbitmq_ssl_key_path='/etc/rabbitmq/ssl/key.pem'
+  tags: rabbitmq

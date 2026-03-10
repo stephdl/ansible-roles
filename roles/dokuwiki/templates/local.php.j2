@@ -1,0 +1,14 @@
+<?php
+$conf['lang'] = 'fr';
+$conf['license'] = '';
+$conf['superuser'] = '@admins,admin';
+$conf['showuseras'] = 'username';
+$conf['passcrypt'] = 'sha512';
+$conf['disableactions'] = 'register';
+$conf['subscribers'] = 1;
+$conf['userewrite'] = '1';
+$conf['useslash'] = 1;
+{% if 'bootstrap3' in dokuwiki_tpl_to_install %}
+$conf['template'] = 'bootstrap3';
+{% endif %}
+?>

@@ -1,0 +1,4 @@
+---
+dependencies:
+  - { role: repo_nux_dextop }
+  - { role: repo_google_chrome }

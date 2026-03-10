@@ -1,0 +1,60 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item.src }} dest={{ item.dest }}
+  loop:
+    - src: xorg-video-dummy.conf.j2
+      dest: /etc/X11/xorg.conf.d/jibri.conf
+    - src: jibri.conf.j2
+      dest: "{{ jitsi_root_dir }}/etc/jibri/jibri.conf"
+  notify: restart jitsi-jibri
+  tags: jitsi
+
+- name: Configure pam
+  copy:
+    content: |
+      #%PAM-1.0
+      auth    required pam_permit.so
+      account required pam_permit.so
+    dest: /etc/pam.d/xserver
+  tags: jitsi
+
+- name: Allow any user to run Xorg
+  copy:
+    content: allowed_users = anybody
+    dest: /etc/X11/Xwrapper.config
+  tags: jitsi
+
+- name: Create Chrome policy dir
+  file: path=/etc/opt/chrome/policies/managed/ state=directory
+  tags: jitsi
+
+- name: Configure Chrome policy
+  copy:
+    content: |
+      { "CommandLineFlagSecurityWarningsEnabled": false }
+    dest: /etc/opt/chrome/policies/managed/managed_policies.json
+  tags: jitsi
+
+- name: Ensure snd-aloop is loaded
+  modprobe: name=snd-aloop state=present
+  tags: jitsi
+
+- name: Configure snd-aloop to be loaded on boot
+  copy:
+    content: snd-aloop
+    dest: /etc/modules-load.d/jibri.conf
+  tags: jitsi
+
+- name: Configure asound
+  template: src=asound.conf.j2 dest={{ jitsi_root_dir }}/jibri/.asoundrc owner={{ jitsi_jibri_user }}
+  tags: jitsi
+
+- name: Configure nginx to serve recordings
+  template: src=nginx.conf.j2 dest=/etc/nginx/ansible_location.d/10-jitsi-jibri.conf
+  notify: reload nginx
+  tags: jitsi
+
+- name: Configure the finalize script
+  template: src=finalize.yml.j2 dest={{ jitsi_root_dir }}/etc/jibri/finalize.yml
+  tags: jitsi

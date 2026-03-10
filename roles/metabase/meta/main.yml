@@ -1,0 +1,7 @@
+---
+
+dependencies:
+  - role: mysql_server
+    when: metabase_db_server in ['localhost','127.0.0.1'] and metabase_db_engine == 'mysql'
+  - role: postgresql_server
+    when: metabase_db_server in ['localhost','127.0.0.1'] and metabase_db_engine == 'postgres'

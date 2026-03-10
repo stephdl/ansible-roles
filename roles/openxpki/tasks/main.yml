@@ -1,0 +1,23 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: pki_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+- include: pki.yml
+- include: service.yml
+- include: write_version.yml
+- include: archive_post.yml
+  when: pki_install_mode == 'upgrade'
+- include: cleanup.yml
+
+#### TODO #####
+# * Cron to renew at least issuing CA (and maybe Root CA later)
+# * Add/Modify workflow to allow passwordless certs to be stored
+# * Profile for OCSP signing
+# * OCSP responder

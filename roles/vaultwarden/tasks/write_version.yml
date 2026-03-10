@@ -1,0 +1,10 @@
+---
+
+- name: Write versions
+  copy: content={{ item.version }} dest={{ vaultwarden_root_dir }}/meta/{{ item.file }}
+  loop:
+    - version: "{{ vaultwarden_version }}"
+      file: ansible_version
+    - version: "{{ vaultwarden_web_version }}"
+      file: ansible_web_version
+  tags: vaultwarden

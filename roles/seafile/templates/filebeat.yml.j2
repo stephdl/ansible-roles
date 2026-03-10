@@ -1,0 +1,8 @@
+- type: log
+  enabled: True
+  paths:
+    - {{ seafile_root_dir }}/logs/*.log
+    - {{ seafile_root_dir }}/logs/slow_logs/*.log
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

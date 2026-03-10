@@ -1,0 +1,81 @@
+<VirtualHost *:80>
+  ServerName {{ funkwhale_public_url | urlsplit('hostname') }}
+  ProxyVia On
+  ProxyPreserveHost On
+  <IfModule mod_remoteip.c>
+    RemoteIPHeader X-Forwarded-For
+  </IfModule>
+  <Proxy *>
+    AddDefaultCharset off
+    Order Allow,Deny
+    Allow from all
+  </Proxy>
+
+  <Location "/">
+    LimitRequestBody 104857600
+    ProxyPass http://127.0.0.1:{{ funkwhale_api_port }}/
+    ProxyPassReverse http://127.0.0.1:{{ funkwhale_api_port }}/
+  </Location>
+  <Location "/federation">
+    ProxyPass http://127.0.0.1:{{ funkwhale_api_port }}/federation
+    ProxyPassReverse http://127.0.0.1:{{ funkwhale_api_port }}/federation
+  </Location>
+
+  <Location "/rest">
+    ProxyPass http://127.0.0.1:{{ funkwhale_api_port }}/api/subsonic/rest
+    ProxyPassReverse http://127.0.0.1:{{ funkwhale_api_port }}/api/subsonic/rest
+  </Location>
+
+  <Location "/.well-known/">
+    ProxyPass http://127.0.0.1:{{ funkwhale_api_port }}/.well-known/
+    ProxyPassReverse http://127.0.0.1:{{ funkwhale_api_port }}/.well-known/
+  </Location>
+
+  <Location "/front">
+    ProxyPass  "!"
+  </Location>
+
+  Alias /front {{ funkwhale_root_dir }}/front/dist/
+
+  <Location "/media">
+    ProxyPass  "!"
+  </Location>
+  Alias /media {{ funkwhale_root_dir }}/data/media/
+
+  <Location "/staticfiles">
+    ProxyPass  "!"
+  </Location>
+  Alias /staticfiles {{ funkwhale_root_dir }}/data/static
+
+  <Location "/api/v1/activity">
+    ProxyPass ws://127.0.0.1:{{ funkwhale_api_port }}/api/v1/activity
+  </Location>
+
+  <Directory "{{ funkwhale_root_dir }}/data/static">
+    Options FollowSymLinks
+    AllowOverride None
+    Require all granted
+  </Directory>
+
+  <Directory "{{ funkwhale_root_dir }}/front/dist">
+    Options FollowSymLinks
+    AllowOverride None
+    Require all granted
+  </Directory>
+
+  <Directory "{{ funkwhale_root_dir }}/data/media">
+    Options FollowSymLinks
+    AllowOverride None
+    Require all granted
+  </Directory>
+
+{% if funkwhale_xsendfile.stat.exists %}
+  LoadModule xsendfile_module modules/mod_xsendfile.so
+{% endif %}
+  <IfModule mod_xsendfile.c>
+    XSendFile On
+    XSendFilePath {{ funkwhale_root_dir }}/data/media
+    XSendFilePath {{ funkwhale_root_dir }}/data/music
+    SetEnv MOD_X_SENDFILE_ENABLED 1
+  </IfModule>
+</VirtualHost>

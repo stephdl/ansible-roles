@@ -1,0 +1,6 @@
+---
+
+# If you need newer MariaDB version, define the branch here
+# It'll use the yum repo from mariadb.org
+mysql_mariadb_version: default
+# mysql_mariadb_version: 10.3

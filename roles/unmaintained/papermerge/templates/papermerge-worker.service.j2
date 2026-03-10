@@ -1,0 +1,24 @@
+[Unit]
+Description=Papermerge Worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ papermerge_root_dir }}/app
+Environment=DJANGO_SETTINGS_MODULE=config.settings.production
+Environment=OMP_THREAD_LIMIT={{ ansible_processor_vcpus }}
+ExecStart={{ papermerge_root_dir }}/venv/bin/python manage.py worker
+User={{ papermerge_user }}
+Group={{ papermerge_user }}
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

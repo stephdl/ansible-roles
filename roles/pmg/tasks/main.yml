@@ -1,0 +1,283 @@
+---
+
+- set_fact: pmg_smtpd_milters_int={{ [] }}
+  tags: pmg
+
+- name: Enable dkim signing for outgoing messages
+  set_fact: pmg_smtpd_milters_int={{ pmg_smtpd_milters_int + ['unix:/var/run/opendkim/signer.sock'] }}
+  when: pmg_dkim_sign | length > 0
+  tags: pmg
+
+- name: Add PMG repository APT key
+  apt_key:
+    url: http://download.proxmox.com/debian/proxmox-ve-release-6.x.gpg
+    state: present
+  environment:
+    - http_proxy: "{{ system_proxy | default('') }}"
+  tags: pmg
+
+- name: Remove the paid repository
+  apt_repository:
+    repo: deb https://enterprise.proxmox.com/debian/pmg stretch pmg-enterprise
+    state: absent
+    filename: pmg-enterprise
+  tags: pmg
+
+- name: Configure the no-subscription PMG repository
+  apt_repository:
+    repo: deb http://download.proxmox.com/debian/pmg {{ ansible_distribution_release }} pmg-no-subscription
+    state: present
+    filename: pmg-enterprise
+  tags: pmg
+
+- name: Install PMG
+  apt:
+    name:
+      - proxmox-mailgateway
+      - opendkim
+      - opendkim-tools
+      - patch                   # Needed to remove the subscription nag screen
+      - libmail-imapclient-perl # For the sa-learn script
+    update_cache: True
+  tags: pmg
+
+- name: Remove registration nag
+  patch: src=remove_nag.patch dest=/usr/share/perl5/PMG/API2/Subscription.pm
+  notify: restart pmgproxy
+  tags: pmg
+
+  # The tracking center uses mails.{info,err,log}
+- name: Ensure syslog daemon is enabled and running
+  service: name=rsyslog state=started enabled=True
+  tags: pmg
+
+- name: Add postfix to the opendkim group
+  user:
+    name: postfix
+    groups: opendkim
+    append: True
+  notify: restart postfix
+  tags: pmg
+
+- name: Create custom templates directory
+  file: path=/etc/pmg/templates state=directory
+  tags: pmg
+
+- name: Copy custom templates
+  template: src={{ item }}.j2 dest=/etc/pmg/templates/{{ item }}
+  with_items:
+    - master.cf.in
+  notify: pmgconfig sync
+  tags: pmg
+
+- name: Check if pmg backup dir exists
+  stat: path=/var/lib/pmg/backup
+  register: pmg_backup
+  tags: pmg
+
+- name: Move backup dir
+  command: mv /var/lib/pmg/backup /home/lbkp/pmg
+  when: pmg_backup.stat.isdir is defined and pmg_backup.stat.isdir
+  tags: pmg
+
+- name: Link backup dir
+  file: src=/home/lbkp/pmg dest=/var/lib/pmg/backup state=link
+  tags: pmg
+
+- name: Deploy pre/post backup scripts
+  template: src=pmg_{{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/pmg.sh mode=755
+  with_items:
+    - pre
+    - post
+  tags: pmg
+
+- name: Deploy dehydrated hook
+  template: src=dehydrated_deploy_hook.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/pmg mode=755
+  tags: pmg
+
+- name: Create directories for opendkim
+  file: path={{ item.dir }} owner={{ item.owner | default(omit) }} mode={{ item.mode | default(omit) }} state=directory
+  with_items:
+    - dir: /etc/opendkim
+    - dir: /etc/opendkim/keys
+      owner: opendkim
+      mode: 700
+  tags: pmg
+
+- name: Deploy opendkim signing
+  template: src={{ item }}.j2 dest=/etc/opendkim/{{ item }}
+  with_items:
+    - keytable
+    - signingtable
+  notify: restart opendkim-signer
+  tags: pmg
+
+- name: Deploy opendkim daemon config
+  template: src=opendkim.conf.j2 dest=/etc/opendkim/{{ item }}.conf
+  with_items:
+    - signer
+  notify:
+    - restart opendkim-signer
+  tags: pmg
+
+- name: Create DKIM dir
+  file: path=/etc/opendkim/keys/{{ (item.domain == '*') | ternary('default',item.domain) }} state=directory owner=opendkim group=opendkim mode=700
+  with_items: "{{ pmg_dkim_sign }}"
+  tags: pmg
+
+- name: Create DKIM keys
+  command: opendkim-genkey -D /etc/opendkim/keys/{{ (item.domain == '*') | ternary('default',item.domain) }}/ -s {{ item.selector | default('default') }}
+  args:
+    creates: /etc/opendkim/keys/{{ (item.domain == '*') | ternary('default',item.domain) }}/{{ item.selector | default('default') }}.private
+  become_user: opendkim
+  with_items: "{{ pmg_dkim_sign }}"
+  tags: pmg
+
+- name: Deploy opendkim service unit
+  template: src=opendkim.service.j2 dest=/etc/systemd/system/opendkim-{{ item }}.service
+  with_items:
+    - signer
+  register: pmg_opendkim_unit
+  tags: pmg
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pmg_opendkim_unit.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: pmg
+
+- name: Check if /etc/pmg/mynetworks exists
+  stat: path=/etc/pmg/mynetworks
+  register: pmg_mynetworks
+  tags: pmg
+
+- name: Handle opendkim services
+  service: name={{ item.service }} state={{ item.enabled | ternary('started','stopped') }} enabled={{ item.enabled }}
+  with_items:
+    - service: opendkim
+      enabled: False
+    - service: opendkim-signer
+      enabled: "{{ pmg_dkim_sign | length > 0 }}"
+  tags: pmg
+
+- name: Install imap-sa-learn script
+  copy: src=imap-sa-learn dest=/usr/local/bin/imap-sa-learn mode=755
+  tags: pmg
+
+- name: Deploy imap-sa-learn config
+  template: src=imap-sa-learn.j2 dest=/etc/default/imap-sa-learn mode=600
+  tags: pmg
+
+- name: Deploy imap-sa-learn systemd units
+  template: src=imap-sa-learn.{{ item }}.j2 dest=/etc/systemd/system/imap-sa-learn.{{ item }}
+  loop:
+    - service
+    - timer
+  register: pmg_imap_sa_learn_unit
+  tags: pmg
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pmg_imap_sa_learn_unit.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: pmg
+
+- name: Handle imap-sa-learn timer
+  systemd:
+    name: imap-sa-learn.timer
+    state: "{{ (pmg_bayes_imap_server is defined and pmg_bayes_imap_user is defined and pmg_bayes_imap_pass is defined) | ternary('started','stopped') }}"
+    enabled: "{{ (pmg_bayes_imap_server is defined and pmg_bayes_imap_user is defined and pmg_bayes_imap_pass is defined) | ternary(True,False) }}"
+  tags: pmg
+
+- name: Remove imap-sa-learn wrapper
+  file: path={{ item }} state=absent
+  loop:
+    - /usr/local/bin/imap-sa-learn.sh
+    - /etc/cron.d/imap_sa_learn
+  tags: pmg
+
+- name: Configure log retention
+  template: src=logrotate.d/{{ item }}.j2 dest=/etc/logrotate.d/{{ item }}
+  with_items:
+    - rsyslog
+  tags: pmg
+
+- name: Configure additional spamassassin plugins
+  template: src=spamassassin/{{ item }}.j2 dest=/etc/mail/spamassassin/{{ item }}
+  with_items:
+    - hashbl.pre
+    - hashbl.cf
+    - fromnamespoof.pre
+    - fromnamespoof.cf
+    - phishing.pre
+    - phishing.cf
+    - bayes_auto_learn.cf
+  notify: reload pmg-smtp-filter
+  tags: pmg
+
+- name: Create spamassassin data dir
+  file: path=/var/lib/spamassassin state=directory
+  tags: pmg
+
+- name: Download fishtank feed
+  get_url:
+    url: https://data.phishtank.com/data/online-valid.csv
+    dest: /var/lib/spamassassin/phishtank.txt
+  notify: reload pmg-smtp-filter
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  tags: pmg
+
+- name: Download openphish feed
+  get_url:
+    url: https://openphish.com/feed.txt
+    dest: /var/lib/spamassassin/openphish.txt
+  notify: reload pmg-smtp-filter
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  when: pmg_use_openphish
+  tags: pmg
+
+- name: Deploy a script to update phishing feeds
+  template: src=update-phishing-feeds.j2 dest=/usr/local/bin/update-phishing-feeds mode=755
+  tags: pmg
+
+- name: Add a cron job to update phishing feeds
+  cron:
+    name: phishing_feeds
+    cron_file: phishing_feeds
+    user: root
+    job: systemd-cat /usr/local/bin/update-phishing-feeds
+    minute: 1
+    hour: '*/3'
+    state: present
+  tags: pmg
+
+- name: Handle ports in the firewall
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src | length > 0) | ternary('present','absent') }}"
+    rules: "{% if 'tcp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'tcp' %}-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT\n{% endif %}
+            {% if 'udp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'udp' %}-A INPUT -m state --state NEW -p udp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT{% endif %}"
+  when: iptables_manage | default(True)
+  with_items:
+    - ports: "{{ pmg_api_ports }}"
+      name: pmg_api_ports
+      src: "{{ pmg_api_src_ip }}"
+    - ports: "{{ pmg_smtp_ext_ports }}"
+      name: pmg_smtp_ext_ports
+      src: "{{ pmg_smtp_ext_src_ip }}"
+    - ports: "{{ pmg_smtp_int_ports }}"
+      name: pmg_smtp_int_ports
+      src: "{{ pmg_smtp_int_src_ip }}"
+  tags: pmg,firewall
+
+- name: Remove obsolete firewall rules
+  iptables_raw:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - pmg_imap_ports
+    - pmg_pop_ports
+  tags: pmg,firewall
+
+- include: filebeat.yml
+- include: cleanup.yml

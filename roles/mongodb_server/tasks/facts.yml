@@ -1,0 +1,19 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: mongo
+
+# Create a random encryption password
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "/root/.mongo.pw"
+    - set_fact: mongo_admin_pass={{ rand_pass }}
+  when: mongo_admin_pass is not defined
+  tags: mongo
+

@@ -1,0 +1,158 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - git
+  tags: zcs
+
+- name: Configure MySQL bind IP
+  ini_file:
+    section: mysqld
+    option: bind-address
+    value: 0.0.0.0
+    path: /opt/zimbra/conf/my.cnf
+    mode: 0640
+    owner: zimbra
+    group: zimbra
+  notify: restart zimbra
+  tags: zcs
+
+- name: Get MySQL root password
+  shell: /opt/zimbra/bin/zmlocalconfig -s mysql_root_password | awk '{ print $3 }'
+  become_user: zimbra
+  register: zcs_mysql_root_password
+  changed_when: False
+  tags: zcs
+
+- name: Create sqladmin user account
+  mysql_user:
+    name: sqladmin
+    password: '{{ mysql_admin_pass }}'
+    host: '%'
+    priv: '*.*:ALL,GRANT'
+    state: present
+    login_user: root
+    login_password: "{{ zcs_mysql_root_password.stdout }}"
+    login_unix_socket: /opt/zimbra/data/tmp/mysql/mysql.sock
+  when: mysql_admin_pass is defined
+  tags: zcs
+
+- name: Handle Zimbra store ports
+  iptables_raw:
+    name: zcs_store_ports
+    state: "{{ (zcs_cluster_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports 143,993,7143,7993 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports 110,995,7110,7995 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports 8080,8443,7071,7072,7073 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports 7025,7026 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports 8735,8736 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs
+
+- name: Handle Zimbra MySQL ports
+  iptables_raw:
+    name: zcs_mysql_ports
+    state: "{{ (zcs_mysql_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport 7306 -s {{ zcs_mysql_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs
+
+  #- name: Create ShareToolki cache dir
+  #  file: path=/opt/zimbra/addon_cache/sharetoolkit state=directory
+  #  tags: zcs
+  #
+  #- name: Clone ShareToolkit repo
+  #  git:
+  #    repo: https://github.com/Zimbra-Community/shared-mailbox-toolkit.git
+  #    dest: /opt/zimbra/addon_cache/sharetoolkit
+  #    force: True
+  #  register: zcs_sharetoolkit_repo
+  #  notify: restart zmmailboxd
+  #  tags: zcs
+  #
+  #- name: Remove previous ShareToolkit client zimlet
+  #  file: path=/opt/zimbra/zimlets-deployed/_dev/tk_barrydegraaff_sharetoolkit_client state=absent
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Create ShareToolkit client Zimlet directory
+  #  file: path=/opt/zimbra/zimlets-deployed/_dev/ state=directory
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Deploy ShareToolkit client zimlet
+  #  copy: src=/opt/zimbra/addon_cache/sharetoolkit/tk_barrydegraaff_sharetoolkit_client dest=/opt/zimbra/zimlets-deployed/_dev/ remote_src=True
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Undeploy previous ShareToolkit Zimlet
+  #  command: /opt/zimbra/bin/zmzimletctl undeploy tk_barrydegraaff_sharetoolkit_admin
+  #  become_user: zimbra
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Create a ZIP archive for ShareToolkit admin zimlet
+  #  archive:
+  #    path: /opt/zimbra/addon_cache/sharetoolkit/tk_barrydegraaff_sharetoolkit_admin/*
+  #    dest: /tmp/tk_barrydegraaff_sharetoolkit_admin.zip
+  #    format: zip
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Deploy new ShareToolkit admin zimlet
+  #  command: /opt/zimbra/bin/zmzimletctl deploy /tmp/tk_barrydegraaff_sharetoolkit_admin.zip
+  #  become_user: zimbra
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Remove previous Java server extension
+  #  file: path=/opt/zimbra/lib/ext/ShareToolkit state=absent
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Create ShareToolkit Java server extension dir
+  #  file: path=/opt/zimbra/lib/ext/ShareToolkit state=directory
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Deploy new Java server extension
+  #  copy: src=/opt/zimbra/addon_cache/sharetoolkit/extension/ShareToolkit/out/artifacts/ShareToolkit/ShareToolkit.jar dest=/opt/zimbra/lib/ext/ShareToolkit/ remote_src=True
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Enable the X-Authenticated-User header
+  #  command: /opt/zimbra/bin/zmprov modifyConfig {{ inner_item.attr }} {{ inner_item.value }}
+  #  become_user: zimbra
+  #  loop:
+  #    - attr: zimbraSmtpSendAddAuthenticatedUser
+  #      value: 'TRUE'
+  #    - attr: zimbraMtaSmtpdSaslAuthenticatedHeader
+  #      value: 'yes'
+  #  loop_control:
+  #    loop_var: inner_item
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Deploy ShareToolkit CLI tools
+  #  synchronize:
+  #    src: /opt/zimbra/addon_cache/sharetoolkit/bin/
+  #    dest: /usr/local/sbin/
+  #    rsync_opts:
+  #      - "--chmod=F755"
+  #  delegate_to: "{{ inventory_hostname }}"
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+  #
+  #- name: Flush Zimbra cache
+  #  command: /opt/zimbra/bin/zmprov flushCache all
+  #  become_user: zimbra
+  #  when: zcs_sharetoolkit_repo.changed
+  #  tags: zcs
+
+- name: Remove ADPassword listener (not working with JDK 13)
+  file: path=/opt/zimbra/lib/ext/adpassword state=absent
+  tags: zcs
+
+- include_tasks: cas.yml
+  tags: zcs

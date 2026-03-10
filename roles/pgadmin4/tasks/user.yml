@@ -1,0 +1,10 @@
+---
+- name: Create a useraccount
+  user:
+    name: pgadmin4_{{ pga_id }}
+    comment: "PgAdmin4 User Account"
+    system: True
+    shell: /sbin/nologin
+    home: "{{ pga_root_dir }}"
+  tags: pgadmin4
+

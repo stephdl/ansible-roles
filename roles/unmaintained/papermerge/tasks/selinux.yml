@@ -1,0 +1,5 @@
+---
+
+- name: Allow nginx to bind on papermerge port
+  seport: ports={{ papermerge_port }} proto=tcp setype=http_port_t state=present
+  tags: ged

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if itop_db_server not in ['127.0.0.1','localhost'] %}
+    --user={{ itop_db_user }} \
+    --password={{ itop_db_pass | quote }} \
+    --host={{ itop_db_server }} \
+{% if itop_db_port is defined %}
+    --port={{ itop_db_port }} \
+{% endif %}
+{% endif %}
+    --quick --single-transaction \
+    --add-drop-table {{ itop_db_name }} | zstd -c > {{ itop_root_dir }}/backup/{{ itop_db_name }}.sql.zst

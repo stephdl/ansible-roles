@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+restorecon -R {{ wp_root_dir }}
+chown -R {{ wp_php_user }}:{{ wp_php_user }} {{ wp_root_dir }}/{web,sessions,tmp}

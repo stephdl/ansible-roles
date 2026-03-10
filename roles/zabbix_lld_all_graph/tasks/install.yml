@@ -1,0 +1,26 @@
+---
+
+- name: Install packages
+  package:
+    name:
+      - curl
+      - perl-Getopt-Long
+      - perl-Time-HiRes
+  tags: zabbix
+
+- name: Install zabbix_lld_all_graph script
+  copy: src=zabbix_lld_all_graph dest=/usr/local/bin/zabbix_lld_all_graph mode=755
+  tags: zabbix
+
+- name: Install lld_all_graph systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - zabbix-lld-all-graph.service
+    - zabbix-lld-all-graph.timer
+  register: zabbix_lld_all_graph_units
+  tags: zabbix
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zabbix_lld_all_graph_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: zabbix

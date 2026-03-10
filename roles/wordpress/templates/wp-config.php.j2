@@ -1,0 +1,37 @@
+<?php
+
+// {{ ansible_managed }}
+
+define('DB_NAME', '{{ wp_db_name }}');
+define('DB_USER', '{{ wp_db_user }}');
+define('DB_PASSWORD', '{{ wp_db_pass }}');
+define('DB_HOST', '{{ wp_db_server }}');
+define('DB_PORT', '{{ wp_db_port }}');
+define('DB_CHARSET', 'utf8mb4');
+
+{% for secret in wp_secrets.results %}
+define('{{ secret.item.item }}', '{{ wp_secrets.results | selectattr('item','equalto',secret.item) | map(attribute='stdout') | first | string }}');
+{% endfor %}
+
+$table_prefix = '{{ wp_table_prefix }}';
+
+if ( ! defined( 'ABSPATH' ) ) {
+  define( 'ABSPATH', dirname( __FILE__ ) . '/' );
+}
+
+define('WP_TEMP_DIR','{{ wp_root_dir }}/tmp');
+
+define('DISALLOW_FILE_EDIT',true);
+if ( (!empty( $_SERVER['HTTP_X_FORWARDED_HOST'])) ||
+     (!empty( $_SERVER['HTTP_X_FORWARDED_FOR'])) ) {
+  // http://wordpress.org/support/topic/wordpress-behind-reverse-proxy-1
+  $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];
+}
+// When running behind a reverse proxy doing the SSL endpoint
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https'){
+  $_SERVER['HTTPS'] = 'on';
+}
+define('FS_METHOD','direct');
+
+require_once ABSPATH . 'wp-settings.php';
+

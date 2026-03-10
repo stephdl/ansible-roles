@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ etherpad_root_dir }}"
+    - version: "{{ etherpad_version }}"
+  tags: etherpad
+

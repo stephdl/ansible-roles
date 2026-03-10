@@ -1,0 +1,51 @@
+server:
+  verbosity: 1
+  statistics-interval: 0
+  num-threads: 4
+  chroot: ""
+  interface: 0.0.0.0
+  interface-automatic: yes
+  access-control: 0.0.0.0/0 allow
+  port: 53
+  do-ip6: no
+  so-reuseport: yes
+  username: "unbound"
+  directory: "/etc/unbound"
+  logfile: ""
+  log-time-ascii: no
+  pidfile: "/var/run/unbound/unbound.pid"
+  root-hints: "/etc/unbound/root.hints"
+  hide-identity: yes
+  hide-version: yes
+  unwanted-reply-threshold: 10000000
+  prefetch: yes
+  prefetch-key: yes
+  auto-trust-anchor-file: "/var/lib/unbound/root.key"
+  val-log-level: 2
+  module-config: "validator iterator"
+  private-address: 10.0.0.0/8
+  private-address: 172.16.0.0/12
+  private-address: 192.168.0.0/16
+{% for zone in unbound_forward_zones %}
+  private-domain: "{{ zone.name }}"
+  domain-insecure: "{{ zone.name }}"
+{% endfor %}
+{% for zone in unbound_local_zones %}
+  local-zone: "{{ zone.name }}{% if not zone.name is search('\.$') %}.{% endif %}" static
+{% for entry in zone.entries | default([]) %}
+  local-data: "{{ entry.name }}.{{ zone.name }}{% if not zone.name is search('\.$') %}.{% endif %} IN {{ entry.type }} {{ entry.value }}"
+{% endfor %}
+{% endfor %}
+
+remote-control:
+  control-enable: no
+
+{% for zone in unbound_forward_zones %}
+forward-zone:
+  name: "{{ zone.name }}"
+{% for forwarder in zone.forwarders %}
+  forward-addr: {{ forwarder }}
+{% endfor %}
+
+{% endfor %}
+

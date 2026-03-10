@@ -1,0 +1,8 @@
+---
+
+memcached_port: 11211
+memcached_user: memcached
+memcached_max_conn: 1024
+memcached_cache_size: 64
+memcached_options: ''
+memcached_src_ip: []

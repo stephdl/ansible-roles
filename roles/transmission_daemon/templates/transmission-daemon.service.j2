@@ -1,0 +1,20 @@
+[Unit]
+Description = Transmission BitTorrent Daemon
+After = network.target
+
+[Service]
+Type=notify
+EnvironmentFile = /etc/sysconfig/transmission
+ExecStart = /bin/transmission-daemon $TRANSMISSION_OPTS
+ExecReload = /bin/kill -s HUP $MAINPID
+User = {{ transmission_user }}
+Group = {{ transmission_user }}
+Restart = on-failure
+IOSchedulingClass = best-effort
+IOSchedulingPriority = 7
+Nice = 10
+CPUSchedulingPolicy = idle
+
+[Install]
+WantedBy = multi-user.target
+

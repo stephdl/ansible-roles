@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: mkdir
+  - role: repo_zabbix
+  - role: httpd_php
+  - role: snmp_mibs

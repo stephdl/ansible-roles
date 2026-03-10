@@ -1,0 +1,7 @@
+---
+
+- name: Cleanup temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ rust_root_dir }}/tmp/rustup-init"
+  tags: rust

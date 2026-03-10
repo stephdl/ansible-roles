@@ -1,0 +1,19 @@
+--- /usr/share/php/openmediavault/session.inc.orig	2018-10-02 18:57:00.324000000 +0200
++++ /usr/share/php/openmediavault/session.inc	2018-10-02 18:58:04.188000000 +0200
+@@ -91,8 +91,14 @@
+ 	 * @return Returns TRUE if the session is authenticated, otherwise FALSE.
+ 	 */
+ 	public function isAuthenticated() {
+-		if (!isset($_SESSION['authenticated']) || !$_SESSION['authenticated'])
+-			return FALSE;
++		if (!isset($_SESSION['authenticated']) || !$_SESSION['authenticated']){
++			if (isset($_SERVER['HTTP_AUTH_USER'])){
++				$role = (isset($_SERVER['HTTP_OMV_ROLE']) && $_SERVER['HTTP_OMV_ROLE'] === 'admin') ? OMV_ROLE_ADMINISTRATOR : OMV_ROLE_USER;
++				$this->initialize($_SERVER['HTTP_AUTH_USER'], $role);
++			} else {
++				return FALSE;
++		}
++		}
+ 	 	return TRUE;
+ 	}
+ 

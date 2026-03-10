@@ -1,0 +1,18 @@
+geo $limit {
+  default 1;
+  127.0.0.1 0;
+{% for ip in trusted_ip | default([]) %}
+  {{ ip }} 0;
+{% endfor %}
+{% for ip in nginx_dos_whitelisted_ip | default([])%}
+  {{ ip }} 0;
+{% endfor %}
+}
+ 
+map $limit $limit_key {
+  0 "";
+  1 $binary_remote_addr;
+}
+
+limit_req_zone $limit_key zone=limit_req_std:3m rate={{ nginx_req_per_sec }}r/s;
+limit_conn_zone $limit_key zone=limit_conn_std:3m;

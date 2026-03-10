@@ -1,0 +1,7 @@
+---
+
+- include: facts.yml
+- include: directories.yml
+- include: install.yml
+- include: conf.yml
+- include: service.yml

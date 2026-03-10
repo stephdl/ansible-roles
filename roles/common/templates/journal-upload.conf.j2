@@ -1,0 +1,7 @@
+[Upload]
+{% if system_journal_remote_uri is defined and system_journal_remote_uri | regex_search('^https?://') %}
+URL={{ system_journal_remote_uri }}
+{% if ansible_os_family == 'RedHat' %}
+TrustedCertificateFile=/etc/pki/tls/cert.pem
+{% endif %}
+{% endif %}

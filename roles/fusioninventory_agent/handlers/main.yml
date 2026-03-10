@@ -1,0 +1,3 @@
+---
+- name: restart fusioninventory-agent
+  service: name=fusioninventory-agent state=restarted enabled=yes

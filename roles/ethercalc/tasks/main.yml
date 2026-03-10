@@ -1,0 +1,69 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - nodejs
+      - npm
+      - git
+      - gcc-c++
+      - make
+  tags: ethercalc
+
+- name: Create user account
+  user: name={{ ethercalc_user }} home={{ ethercalc_root_dir }} shell=/bin/bash state=present
+  tags: ethercalc
+
+- name: Clone / Update Ethercalc repository
+  git:
+    repo: "{{ ethercalc_git_uri }}"
+    dest: "{{ ethercalc_root_dir }}/app"
+    version: "{{ ethercalc_version}}"
+  become_user: "{{ ethercalc_user }}"
+  register: ethercalc_git
+  notify: restart ethercalc
+  become: "{{ ethercalc_user }}"
+  tags: ethercalc
+
+- name: Install Ethercalc
+  command: npm i
+  args:
+    chdir: "{{ ethercalc_root_dir }}/app"
+  when: ethercalc_git.changed
+  tags: ethercalc
+
+- name: Install systemd unit
+  template: src=ethercalc.service.j2 dest=/etc/systemd/system/ethercalc_{{ ethercalc_id }}.service
+  notify: restart ethercalc
+  register: ethercalc_unit
+  tags: ethercalc
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: ethercalc_unit.changed
+  tags: ethercalc
+
+- name: Handle Ethercalc port
+  iptables_raw:
+    name: ethercalc_{{ ethercalc_id }}_port
+    state: "{{ (ethercalc_src_ip is defined and ethercalc_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ ethercalc_port }} -s {{ ethercalc_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: ethercalc,firewall
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ ethercalc_root_dir }}/key.txt"
+  tags: ethercalc
+- set_fact: ethercalc_key={{ rand_pass }}
+  tags: ethercalc
+
+- name: Create the env file for systemd
+  template: src=env.j2 dest={{ ethercalc_root_dir }}/env owner={{ ethercalc_user }} mode=640
+  tags: ethercalc
+
+- name: Start and enable the service
+  service: name=ethercalc_{{ ethercalc_id }} state=started enabled=True
+  tags: ethercalc
+
+...

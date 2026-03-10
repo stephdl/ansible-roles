@@ -1,0 +1,49 @@
+[General]
+USER_NAME = {{ seafile_user }}
+ID = {{ seafile_ccnet_id }}
+NAME = seafile
+{% if seafile_version is version('9.0.0', '<') %}
+SERVICE_URL = {{ seafile_public_url }}
+{% endif %}
+
+[Database]
+ENGINE = mysql
+HOST = {{ seafile_db_server }}
+PORT = {{ seafile_db_port }}
+USER = {{ seafile_db_user }}
+PASSWD = {{ seafile_db_pass }}
+DB = {{ seafile_db_ccnet }}
+CONNECTION_CHARSET = utf8
+
+{% if seafile_ldap_auth is defined and seafile_ldap_auth %}
+[LDAP]
+HOST = {{ seafile_ldap_uri }}
+BASE = {{ seafile_ldap_base }}
+{% if seafile_ldap_bind_dn is defined and seafile_ldap_bind_pass is defined %}
+USER_DN = {{ seafile_ldap_bind_dn }}
+PASSWORD = {{ seafile_ldap_bind_pass }}
+{% endif %}
+LOGIN_ATTR = {{ seafile_ldap_login_attr }}
+FILTER = {{ seafile_ldap_filter }}
+
+{% if seafile_license is defined %}
+[LDAP_SYNC]
+ENABLE_USER_SYNC = true
+ENABLE_GROUP_SYNC = true
+{% if seafile_ldap_group_filter is defined %}
+GROUP_FILTER = {{ seafile_ldap_group_filter }}
+{% endif %}
+DEACTIVE_USER_IF_NOTFOUND = true
+SYNC_INTERVAL = 60
+USER_OBJECT_CLASS = person
+ENABLE_EXTRA_USER_INFO_SYNC = true
+FIRST_NAME_ATTR = givenName
+LAST_NAME_ATTR = sn
+DEPT_ATTR = department
+UID_ATTR = sAMAccountName
+CONTACT_EMAIL_ATTR = mail
+ACTIVATE_USER_WHEN_IMPORT = false
+ACTIVATE_AFTER_FIRST_LOGIN = True
+{% endif %}
+
+{% endif %}

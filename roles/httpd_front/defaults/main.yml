@@ -1,0 +1,39 @@
+---
+httpd_ssl_ports: ['443']
+httpd_ssl_src_ip:
+  - 0.0.0.0/0
+httpd_front_modules:
+  - ssl
+  - socache_shmcb
+  - cache
+  - cache_disk
+  - security2
+  - unique_id
+httpd_cert_path: /etc/pki/tls/certs/localhost.crt
+httpd_key_path: /etc/pki/tls/private/localhost.key
+# httpd_chain_path: /etc/pki/tls/certs/chain.crt
+
+# httpd_ssl_cipher_suite: 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA'
+
+# httpd_dos_page_count: 8
+# httpd_dos_site_count: 150
+# httpd_dos_page_interval: 1
+# httpd_dos_site_interval: 5
+# httpd_dos_block_time: 30
+# httpd_dos_whitelisted_ip:
+#  - 12.13.14.15
+#  - 41.42.43.44
+
+# httpd_cache_max_file_size: 1000000
+# httpd_cache_default_expire: 3600
+# httpd_cache_max_expire: 86400
+# httpd_cache_limit: 200M
+
+# httpd_mod_security: True | audit
+# httpd_mod_security_request_body_limit: 13107200
+# httpd_mod_security_body_no_files_limit: 131072
+# httpd_mod_security_in_memory_limit: 131072
+# httpd_mod_sec_disabled_rules:
+#   - 960015
+#   - 981203
+...

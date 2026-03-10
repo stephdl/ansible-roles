@@ -1,0 +1,35 @@
+[wp_{{ wp_id }}]
+
+listen.owner = root
+listen.group = apache
+listen.mode = 0660
+listen = /run/php-fpm/wp_{{ wp_id }}.sock
+user = {{ wp_php_user }}
+group = {{ wp_php_user }}
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 5m
+
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = 256M
+php_admin_value[session.save_path] = {{ wp_root_dir }}/sessions
+php_admin_value[upload_tmp_dir] = {{ wp_root_dir }}/tmp
+php_admin_value[sys_temp_dir] = {{ wp_root_dir }}/tmp
+php_admin_value[post_max_size] = {{ wp_upload_max_filesize }}
+php_admin_value[upload_max_filesize] = {{ wp_upload_max_filesize }}
+php_admin_value[disable_functions] = system, show_source, symlink, exec, dl, shell_exec, passthru, phpinfo, escapeshellarg, escapeshellcmd
+php_admin_value[open_basedir] = {{ wp_root_dir }}:/usr/share/pear/:/usr/share/php/
+php_admin_value[max_execution_time] = 120
+php_admin_value[max_input_time] = 60
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = off
+php_admin_flag[file_uploads] = on
+php_admin_flag[session.cookie_httponly] = on

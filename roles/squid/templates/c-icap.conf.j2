@@ -1,0 +1,12 @@
+ServerAdmin {{ squid_admin_email | default(system_admin_email) | default('admin@' + ansible_domain) }}
+ServerName {{ inventory_hostname }}
+TmpDir /tmp
+MaxMemObject 1048576
+Module logger sys_logger.so
+Logger sys_logger
+DebugLevel 0
+Port 127.0.0.1:1344
+TemplateDir /usr/share/c_icap/templates/
+{% if squid_scan_av %}
+Service squidclamav squidclamav.so
+{% endif %}

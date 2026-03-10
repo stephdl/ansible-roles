@@ -1,0 +1,5 @@
+#!/bin/sh
+
+chown -R root:root {{ synadm_root_dir }}
+find {{ synadm_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ synadm_root_dir }}/web -type d -exec chmod 755 "{}" \;

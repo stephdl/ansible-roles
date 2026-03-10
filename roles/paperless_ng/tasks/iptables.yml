@@ -1,0 +1,14 @@
+---
+
+- name:  Handle paperless port in the firewall
+  iptables_raw:
+    name: paperless_{{ paperless_id }}_port
+    state: "{{ (paperless_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ paperless_port }} -s {{ paperless_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,ged
+
+- name: Remove old (single instance) paperless rule
+  iptables_raw:
+    name: paperless_port
+    state: absent
+  tags: firewall,ged

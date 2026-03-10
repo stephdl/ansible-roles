@@ -1,0 +1,19 @@
+{% if dolibarr_alias is defined %}
+Alias /{{ dolibarr_alias }} {{ dolibarr_root_dir }}/web/htdocs
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+RewriteEngine On
+<Directory {{ dolibarr_root_dir }}/web/htdocs>
+  AllowOverride All
+  Options FollowSymLinks
+{% if dolibarr_src_ip is defined %}
+  Require ip {{ dolibarr_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ dolibarr_php_fpm_pool  | default('dolibarr_' + dolibarr_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+</Directory>

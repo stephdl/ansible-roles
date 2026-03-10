@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ sftpgo_version }} dest={{ sftpgo_root_dir }}/meta/ansible_version
+  tags: sftpgo

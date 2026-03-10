@@ -1,0 +1,15 @@
+[Unit]
+Description=ClamAV antivirus daemon for squid
+After=syslog.target network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/clamd -c /etc/clamd.d/squid.conf
+User=clamav
+Group=clamav
+Restart=on-failure
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

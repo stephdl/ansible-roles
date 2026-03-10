@@ -1,0 +1,5 @@
+---
+
+- name: Create jitsi user account
+  user: name={{ jitsi_user }} home={{ jitsi_root_dir }} system=True
+  tags: jitsi

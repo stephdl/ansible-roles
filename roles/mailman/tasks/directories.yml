@@ -1,0 +1,48 @@
+---
+
+- name: Create directories
+  file:
+    path: "{{ mailman_root_dir }}/{{ item.dir }}"
+    state: directory
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop:
+    - dir: venv
+    - dir: archives
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: etc
+      group: "{{ mailman_user }}"
+      mode: 770
+    - dir: data
+      owner: "{{ mailman_user }}"
+      group: "{{ mailman_user }}"
+      mode: 700
+    - dir: data/fulltext_index
+      owner: "{{ mailman_user }}"
+      group: "{{ mailman_user }}"
+      mode: 700
+    - dir: tmp
+      owner: "{{ mailman_user }}"
+      group: "{{ mailman_user }}"
+      mode: 700
+    - dir: log
+      owner: "{{ mailman_user }}"
+      group: "{{ mailman_user }}"
+      mode: 700
+    - dir: web/static
+      group: "{{ mailman_user }}"
+      mode: 775
+    - dir: backup
+      mode: 700
+  tags: mailman
+
+# mailman-web pretend to support specifying the conf dir
+# with the MAILMAN_WEB_CONFIG env var, but it's not, the script
+# exits with status code 1 if /etc/mailman3/settings.py doesn't exist
+- name: Link config dir
+  file: src={{ mailman_root_dir }}/etc dest=/etc/mailman3 state=link
+  tags: mailman
+

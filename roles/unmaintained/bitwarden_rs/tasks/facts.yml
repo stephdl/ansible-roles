@@ -1,0 +1,67 @@
+---
+
+- name: Set initial install modes
+  block:
+    - set_fact: bitwarden_install_mode='none'
+    - set_fact: bitwarden_current_version=''
+    - set_fact: bitwarden_web_install_mode='none'
+    - set_fact: bitwarden_web_current_version=''
+  tags: bitwarden
+
+- name: Check if server is installed
+  stat: path={{ bitwarden_root_dir }}/meta/ansible_version
+  register: bitwarden_version_file
+  tags: bitwarden
+
+- when: bitwarden_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ bitwarden_root_dir }}/meta/ansible_version
+      register: bitwarden_current_version
+    - set_fact: bitwarden_current_version={{ bitwarden_current_version.content | b64decode | trim }}
+    - set_fact: bitwarden_install_mode='upgrade'
+      when: bitwarden_current_version != bitwarden_version
+  tags: bitwarden
+
+- when: not bitwarden_version_file.stat.exists
+  block:
+    - set_fact: bitwarden_install_mode='install'
+  tags: bitwarden
+
+- name: Check if web vault is installed
+  stat: path={{ bitwarden_root_dir }}/meta/ansible_web_version
+  register: bitwarden_web_version_file
+  tags: bitwarden
+
+- when: bitwarden_web_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ bitwarden_root_dir }}/meta/ansible_web_version
+      register: bitwarden_web_current_version
+    - set_fact: bitwarden_web_current_version={{ bitwarden_web_current_version.content | b64decode | trim }}
+    - set_fact: bitwarden_web_install_mode='upgrade'
+      when: bitwarden_web_current_version != bitwarden_web_version
+  tags: bitwarden
+
+- when: not bitwarden_web_version_file.stat.exists
+  block:
+    - set_fact: bitwarden_web_install_mode='install'
+  tags: bitwarden
+
+- when: bitwarden_admin_token is not defined
+  name: Generate a random admin token
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ bitwarden_root_dir }}/meta/ansible_admin_token"
+    - set_fact: bitwarden_admin_token={{ rand_pass }}
+  tags: bitwarden
+
+- when: bitwarden_db_pass is not defined
+  tags: bitwarden
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ bitwarden_root_dir }}/meta/ansible_dbpass"
+    - set_fact: bitwarden_db_pass={{ rand_pass }}
+

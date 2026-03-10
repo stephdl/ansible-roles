@@ -1,0 +1,27 @@
+---
+
+- name: Create archive dir
+  file: path={{ graylog_root_dir }}/archives/{{ graylog_current_version }}/mongo state=directory
+  tags: graylog
+
+- name: Archive current version
+  synchronize:
+    src: "{{ graylog_root_dir }}/app"
+    dest: "{{ graylog_root_dir }}/archives/{{ graylog_current_version }}/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  tags: graylog
+
+- name: Archive mongo database
+  shell: |
+    mongodump --quiet \
+      --out {{ graylog_root_dir }}/archives/{{ graylog_current_version }}/mongo \
+      --uri \
+      {% if  graylog_mongo_pass is defined and graylog_mongo_pass != False and graylog_mongo_url | length == 1 %}
+      {% set url = graylog_mongo_url[0] %}
+      {{ url | urlsplit('scheme') }}://{{ graylog_mongo_user }}:{{ graylog_mongo_pass | urlencode | regex_replace('/','%2F') }}@{{ url | urlsplit('hostname') }}{% if url | urlsplit('port') %}:{{ url | urlsplit('port') }}{% endif %}{{ url | urlsplit('path') }}?{{ url | urlsplit('query') }}
+      {% else %}
+      {{ graylog_mongo_url[0] }}
+      {% endif %}
+  tags: graylog

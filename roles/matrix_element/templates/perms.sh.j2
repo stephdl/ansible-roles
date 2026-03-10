@@ -1,0 +1,5 @@
+#!/bin/sh
+
+chown -R root:root {{ element_root_dir }}
+find {{ element_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ element_root_dir }}/web -type d -exec chmod 755 "{}" \;

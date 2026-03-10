@@ -1,0 +1,5 @@
+---
+
+- name: Write current version
+  copy: content={{ mayan_version }} dest={{ mayan_root_dir }}/meta/ansible_version
+  tags: mayan

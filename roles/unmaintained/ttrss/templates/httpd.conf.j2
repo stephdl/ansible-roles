@@ -1,0 +1,45 @@
+{% if ttrss_alias is defined %}
+Alias /{{ ttrss_alias }}/feed-icons {{ ttrss_root_dir }}/data/icons
+Alias /{{ ttrss_alias }} {{ ttrss_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ ttrss_root_dir }}/web>
+  AllowOverride All
+  Options FollowSymLinks
+{% if ttrss_src_ip is defined %}
+  Require ip {{ ttrss_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ ttrss_php_fpm_pool | default('ttrss_' + ttrss_id) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+{% if httpd_src_ip is defined and httpd_src_ip | length > 0 and '0.0.0.0/0' not in httpd_src_ip %}
+  RewriteEngine On
+  RewriteCond %{HTTP:Auth-User} ^(\w+)$
+  RewriteRule .* - [E=REMOTE_USER:%1]
+{% endif %}
+
+  <FilesMatch "(\.ansible_version|\.git.*|config\.php)">
+    Require all denied
+  </FilesMatch>
+</Directory>
+<Directory {{ ttrss_root_dir }}/data/icons>
+  AllowOverride None
+  Options None
+  Require all granted
+</Directory>
+
+<Directory {{ ttrss_root_dir }}/web/.git>
+    Require all denied
+</Directory>
+<Directory {{ ttrss_root_dir }}/web/schema>
+    Require all denied
+</Directory>
+<Directory {{ ttrss_root_dir }}/web/cache>
+    Require all denied
+</Directory>
+

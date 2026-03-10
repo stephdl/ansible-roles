@@ -1,0 +1,14 @@
+---
+
+- name: Detect installed version
+  shell: rpm -q --qf "%{version}-%{release}" onlyoffice-documentserver || echo 0
+  args:
+    warn: False
+  register: oo_current_version
+  changed_when: False
+  #when: oo_current_version | string == '0' # Only detect again on first install
+  tags: oo
+
+- name: Write current version
+  copy: content={{ oo_current_version.stdout }} dest=/etc/onlyoffice/meta/ansible_version
+  tags: oo

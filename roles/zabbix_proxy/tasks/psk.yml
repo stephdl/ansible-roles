@@ -1,0 +1,19 @@
+---
+- name: Check if a TLS PSK key exists
+  stat: path=/etc/zabbix/zabbix_proxy.psk
+  register: zbx_proxy_psk
+  tags: zabbix
+
+- name: Generate random PSK key for TLS encryption
+  shell: "openssl rand -hex 32 > /etc/zabbix/zabbix_proxy.psk"
+  when:
+    - not zbx_proxy_psk.stat.exists
+    - zabbix_proxy_encryption | default('none') == "psk"
+  tags: zabbix
+
+- name: Restrict permission on PSK file
+  file: path=/etc/zabbix/zabbix_proxy.psk owner=root group=zabbix mode=0640
+  when:
+    - not zbx_proxy_psk.stat.exists
+    - zabbix_proxy_encryption | default('none') == "psk"
+  tags: zabbix

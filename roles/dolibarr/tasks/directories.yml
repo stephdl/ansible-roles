@@ -1,0 +1,13 @@
+---
+
+- name: Create directory structure
+  file: path={{ item.dir }} state=directory mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ dolibarr_root_dir }}"
+    - dir: "{{ dolibarr_root_dir }}/archives"
+    - dir: "{{ dolibarr_root_dir }}/tmp"
+    - dir: "{{ dolibarr_root_dir }}/sessions"
+    - dir: "{{ dolibarr_root_dir }}/meta"
+    - dir: "{{ dolibarr_root_dir }}/db_dumps"
+    - dir: "{{ dolibarr_root_dir }}/data"
+  tags: dolibarr

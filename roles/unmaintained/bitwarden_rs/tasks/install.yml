@@ -1,0 +1,109 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - openssl-devel
+      - gcc
+      - sqlite
+  tags: bitwarden
+
+- name: Check if MariaDB version is set
+  fail: msg="Need to define mysql_mariadb_version"
+  when:
+    - bitwarden_db_engine == 'mysql'
+    - mysql_mariadb_version is not defined or mysql_mariadb_version == 'default'
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version is version('8','<')
+  tags: bitwarden
+
+- name: Install MariaDB devel package
+  yum:
+    name:
+      - mariadb-devel
+  when: bitwarden_db_engine == 'mysql'
+  tags: bitwarden
+
+  # With upstream MariaDB repo, /usr/lib64/libmariadb.so is in MariaDB-shared not in MariaDB-devel
+- name: Install MariaDB shared libs
+  yum:
+    name:
+      - MariaDB-shared
+  when:
+    - bitwarden_db_engine == 'mysql'
+    - mysql_mariadb_version is defined
+    - mysql_mariadb_version != 'default'
+  tags: bitwarden
+
+- when: bitwarden_install_mode != 'none'
+  tags: bitwarden
+  block:
+    - name: Download bitwarden
+      get_url:
+        url: "{{ bitwarden_archive_url }}"
+        dest: "{{ bitwarden_root_dir }}/tmp"
+        checksum: sha1:{{ bitwarden_archive_sha1 }}
+
+    - name: Extract bitwarden archive
+      unarchive:
+        src: "{{ bitwarden_root_dir }}/tmp/bitwarden_rs-{{ bitwarden_version }}.tar.gz"
+        dest: "{{ bitwarden_root_dir }}/tmp"
+        remote_src: True
+  
+    - name: Build bitwarden
+      command: bash -lc 'cargo build --features={{ (bitwarden_db_engine == "mysql") | ternary("mysql","sqlite") }} --release'
+      args:
+        chdir: "{{ bitwarden_root_dir }}/tmp/bitwarden_rs-{{ bitwarden_version }}"
+
+    - name: Install binary
+      copy: src={{ bitwarden_root_dir }}/tmp/bitwarden_rs-{{ bitwarden_version }}/target/release/bitwarden_rs dest="{{ bitwarden_root_dir }}/" mode=755 remote_src=True
+      notify: restart bitwarden_rs
+
+- when: bitwarden_web_install_mode != 'none'
+  tags: bitwarden
+  block:
+    - name: Download bitwarden web vault
+      get_url:
+       url: "{{ bitwarden_web_archive_url }}"
+       dest: "{{ bitwarden_root_dir }}/tmp"
+       checksum: sha1:{{ bitwarden_web_archive_sha1 }}
+
+    - name: Extract the archive
+      unarchive:
+        src: "{{ bitwarden_root_dir }}/tmp/bw_web_v{{ bitwarden_web_version }}.tar.gz"
+        dest: "{{ bitwarden_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move files to their final location
+      synchronize:
+        src: "{{ bitwarden_root_dir }}/tmp/web-vault/"
+        dest: "{{ bitwarden_root_dir }}/web-vault/"
+        recursive: True
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+
+- name: Install systemd unit
+  template: src=bitwarden_rs.service.j2 dest=/etc/systemd/system/bitwarden_rs.service
+  register: bitwarden_unit
+  tags: bitwarden
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: bitwarden_unit.changed
+  tags: bitwarden
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/bitwarden_rs.sh mode=755
+  loop:
+    - pre
+    - post
+  tags: bitwarden
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ bitwarden_db_name }}"
+    - db_user: "{{ bitwarden_db_user }}"
+    - db_server: "{{ bitwarden_db_server }}"
+    - db_pass: "{{ bitwarden_db_pass }}"
+  when: bitwarden_db_engine == 'mysql'
+  tags: bitwarden

@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: repo_wapt
+  - role: postgresql_server
+    when: wapt_db_server in ['localhost','127.0.0.1']

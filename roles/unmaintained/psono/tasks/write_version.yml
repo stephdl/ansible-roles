@@ -1,0 +1,12 @@
+---
+
+- name: Write version
+  copy: content={{ item.version }} dest={{ psono_root_dir }}/meta/{{ item.file }}
+  loop:
+    - version: "{{ psono_server_version }}"
+      file: ansible_server_version
+    - version: "{{ psono_client_version }}"
+      file: ansible_client_version
+    - version: "{{ psono_admin_version }}"
+      file: ansible_admin_version
+  tags: psono

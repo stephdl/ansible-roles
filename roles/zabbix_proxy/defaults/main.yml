@@ -1,0 +1,26 @@
+---
+# zabbix_proxy_encryption: none
+# zabbix_proxy_port: 10051
+zabbix_proxy_src_ip:
+  - 0.0.0.0/0
+zabbix_proxy_server: zabbix.firewall-services.com
+# zabbix_proxy_pollers: 5
+# zabbix_proxy_ipmi_pollers: 1
+# zabbix_proxy_unreachable_pollers: 2
+# zabbix_proxy_trappers: 5
+# zabbix_proxy_pingers: 4
+# zabbix_proxy_discoverers: 1
+# zabbix_proxy_http_pollers: 1
+# zabbix_proxy_timeout: 15
+zabbix_proxy_cache_size: 32M
+
+# If update is set to False, the role will only ensure packages are installed
+# If set to True, it will update components to their latest version
+zabbix_proxy_update: False
+
+# You might want to ignore system proxy for Zabbix proxy itself,
+# so its web monitoring can be direct
+# This will only have an effect if system_proxy is defined
+zabbix_proxy_uses_system_proxy: True
+
+...

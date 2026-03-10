@@ -1,0 +1,6 @@
+{% for module in httpd_modules %}
+LoadModule {{ module }}_module modules/mod_{{ module }}.so
+{% endfor %}
+{% for module in httpd_modules_extras | default([]) %}
+LoadModule {{ module }}_module modules/mod_{{ module }}.so
+{% endfor %}

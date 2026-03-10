@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+# {{ ansible_managed }}
+
+export LS_OPTIONS='--color=auto'
+eval "`dircolors`"
+
+{% for alias in system_bash_aliases.keys() | list %}
+alias {{ alias }}='{{ system_bash_aliases[alias] }}'
+{% endfor %}
+{% if not system_tailf.stat.exists %}
+alias tailf='tail -f'
+{% endif %}

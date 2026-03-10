@@ -1,0 +1,22 @@
+[Unit]
+Description=Funkwhale celery worker
+After=redis.service postgresql.service
+
+[Service]
+User={{ funkwhale_user }}
+WorkingDirectory={{ funkwhale_root_dir }}/api
+EnvironmentFile={{ funkwhale_root_dir }}/config/.env
+ExecStart={{ funkwhale_root_dir }}/venv/bin/celery -A funkwhale_api.taskapp worker -l INFO --pool=solo --concurrency=1
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+SyslogIdentifier=funkwhale_{{ funkwhale_id }}-worker
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

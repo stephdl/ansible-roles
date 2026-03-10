@@ -1,0 +1,15 @@
+---
+
+- name: Set correct SELinux context
+  sefcontext:
+    target: "{{ sftpgo_root_dir }}/app/sftpgo"
+    setype: bin_t
+    state: present
+  register: sftpgo_selinux_context
+  tags: sftpgo
+
+- name: Restore correct SELinux context
+  command: restorecon {{ sftpgo_root_dir }}/app/sftpgo
+  when: sftpgo_selinux_context.changed
+  tags: sftpgo
+

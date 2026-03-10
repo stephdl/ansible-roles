@@ -1,0 +1,7 @@
+---
+
+- include: ../httpd_common/handlers/main.yml
+- include: ../nginx/handlers/main.yml
+
+- name: restart llng-fastcgi-server
+  service: name=llng-fastcgi-server state=restarted

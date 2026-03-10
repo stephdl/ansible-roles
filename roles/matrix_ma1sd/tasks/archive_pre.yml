@@ -1,0 +1,22 @@
+---
+
+- name: Stop the service
+  service: name=matrix-ma1sd state=stopped
+  tags: matrix
+
+- name: Create archive dir
+  file: path={{ ma1sd_root_dir }}/archives/{{ ma1sd_current_version }} state=directory
+  tags: matrix
+
+- name: Archive current version
+  synchronize:
+    src: "{{ ma1sd_root_dir }}/{{ item }}"
+    dest: "{{ ma1sd_root_dir }}/archives/{{ ma1sd_current_version }}/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  loop:
+    - app
+    - db
+    - etc
+  tags: matrix

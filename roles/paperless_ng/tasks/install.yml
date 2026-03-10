@@ -1,0 +1,97 @@
+---
+
+- name: Install packages
+  package: name={{ paperless_packages }}
+  tags: ged
+
+- when: paperless_install_mode != 'none'
+  block:
+    - name: Download paperless
+      get_url:
+        url: "{{ paperless_archive_url }}"
+        dest: "{{ paperless_root_dir }}/tmp"
+        checksum: sha1:{{ paperless_archive_sha1 }}
+
+    - name: Extract archive
+      unarchive:
+        src: "{{ paperless_root_dir }}/tmp/paperless-ng-{{ paperless_version }}.tar.xz"
+        dest: "{{ paperless_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move paperless app
+      synchronize:
+        src: "{{ paperless_root_dir }}/tmp/paperless-ng/"
+        dest: "{{ paperless_root_dir }}/app/"
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Fix permissions
+      file: path={{ paperless_root_dir }}/app/ owner=root group=root recurse=True
+
+    - name: Add exec perm on manage.py
+      file: path={{ paperless_root_dir }}/app/src/manage.py mode=755
+
+  tags: ged
+
+- name: Create the virtualenv
+  pip:
+    requirements: "{{ paperless_root_dir }}/app/requirements.txt"
+    state: "{{ (paperless_install_mode == 'upgrade') | ternary('latest', 'present') }}"
+    virtualenv: "{{ paperless_root_dir }}/venv"
+    virtualenv_command: /bin/python3.9 -m venv
+  tags: ged
+
+- block:
+    - name: Create the PostgreSQL role
+      postgresql_user:
+        db: postgres
+        name: "{{ paperless_db_user }}"
+        password: "{{ paperless_db_pass }}"
+        login_host: "{{ paperless_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+    
+    - name: Create the PostgreSQL database
+      postgresql_db:
+        name: "{{ paperless_db_name }}"
+        encoding: UTF-8
+        template: template0
+        owner: "{{ paperless_db_user }}"
+        login_host: "{{ paperless_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+  tags: ged
+
+- name: Install a wrapper for manage.py
+  copy:
+    content: |
+      #!/bin/bash
+      cd {{ paperless_root_dir }}/app/src
+      {{ paperless_root_dir }}/venv/bin/python ./manage.py $@
+    dest: /usr/local/bin/paperless_{{ paperless_id }}
+    mode: 0755
+  tags: ged
+
+- name: Install systemd units
+  template: src={{ item }}.service.j2 dest=/etc/systemd/system/{{ item | regex_replace('^paperless','paperless_' ~ paperless_id) }}.service
+  loop:
+    - paperless-webserver
+    - paperless-scheduler
+    - paperless-consumer
+  notify: restart paperless
+  register: paperless_units
+  tags: ged
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: paperless_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: ged
+
+- name: Install backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/paperless_{{ paperless_id }} mode=700
+  loop:
+    - pre
+    - post
+  tags: ged
+

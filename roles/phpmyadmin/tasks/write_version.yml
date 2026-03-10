@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ pma_root_dir }}"
+    - version: "{{ pma_version }}"
+  tags: pma

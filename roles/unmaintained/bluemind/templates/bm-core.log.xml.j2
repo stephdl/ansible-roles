@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="CORE" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-core - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="org.apache.directory.shared" level="ERROR" />
+  <root level="INFO">
+    <appender-ref ref="CORE" />
+  </root>
+
+  <appender name="XMPP" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-xmpp - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.xmpp" level="INFO" additivity="false" />
+    <appender-ref ref="XMPP" />
+  </logger>
+
+  <appender name="MAILINDEX" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-mailindex - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.index.mail" level="INFO" additivity="false" />
+    <appender-ref ref="MAILINDEX" />
+  </logger>
+
+  <appender name="SLOWRESTCALL" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-slowrestcall - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.core.rest.log.CallLogger" level="WARN" additivity="false" />
+    <appender-ref ref="SLOWRESTCALL" />
+  </logger>
+
+  <appender name="RESTSOCKJSPROXYHANDLER" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-js - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.core.rest.sockjs.vertx.RestSockJsProxyHandler" level="INFO" additivity="false" />
+    <appender-ref ref="RESTSOCKJSPROXYHANDLER" />
+  </logger>
+</configuration>

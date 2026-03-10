@@ -1,0 +1,37 @@
+---
+
+- name: Set correct SELinux labels
+  sefcontext:
+    target: "{{ pki_root_dir }}/{{ item.path }}(/.*)?"
+    setype: "{{ item.type }}"
+    state: present
+  loop:
+    - path: run
+      type: httpd_var_run_t
+    - path: web/cgi-bin
+      type: httpd_sys_script_exec_t
+    - path: web/htdocs
+      type: httpd_sys_content_t
+    - path: data
+      type: httpd_sys_content_t
+  tags: pki
+
+- name: Restore SElinux contexts
+  command: restorecon -R {{ pki_root_dir }}
+  changed_when: False
+  tags: pki
+
+- name: Copy SElinux policy file
+  copy: src=openxpki.te dest=/etc/selinux/targeted/local/
+  register: pki_selinux_policy
+  tags: pki
+
+- name: Add local policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o openxpki.mod openxpki.te
+    semodule_package -o openxpki.pp -m openxpki.mod
+    semodule -i /etc/selinux/targeted/local/openxpki.pp
+  when: pki_selinux_policy.changed
+  tags: pki
+

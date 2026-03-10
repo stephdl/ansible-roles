@@ -1,0 +1,19 @@
+org.jitsi.impl.neomedia.transform.srtp.SRTPCryptoContext.checkReplay=false
+org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT={{ jitsi_videobridge_rtp_port }}
+org.ice4j.ipv6.DISABLED=true
+{% if jitsi_external_ip is defined %}
+org.ice4j.ice.harvest.NAT_HARVESTER_LOCAL_ADDRESS={{ ansible_default_ipv4.address }}
+org.ice4j.ice.harvest.NAT_HARVESTER_PUBLIC_ADDRESS={{ jitsi_external_ip }}
+{% endif %}
+
+org.jitsi.videobridge.ENABLE_STATISTICS=true
+org.jitsi.videobridge.STATISTICS_TRANSPORT=muc
+org.jitsi.videobridge.STATISTICS_INTERVAL=5000
+
+org.jitsi.videobridge.xmpp.user.acc1.HOSTNAME={{ jitsi_xmpp_server }}
+org.jitsi.videobridge.xmpp.user.acc1.DOMAIN={{ jitsi_videobridge_xmpp_domain }}
+org.jitsi.videobridge.xmpp.user.acc1.USERNAME={{ jitsi_videobridge_xmpp_user }}
+org.jitsi.videobridge.xmpp.user.acc1.PASSWORD={{ jitsi_videobridge_xmpp_pass }}
+org.jitsi.videobridge.xmpp.user.acc1.MUC_JIDS=JvbBrewery@internal.{{ jitsi_auth_domain }}
+org.jitsi.videobridge.xmpp.user.acc1.MUC_NICKNAME={{ inventory_hostname }}
+

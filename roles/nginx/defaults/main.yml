@@ -1,0 +1,116 @@
+---
+
+nginx_ports:
+  - 80
+nginx_ssl_ports:
+  - 443
+nginx_src_ip:
+ - 0.0.0.0/0
+
+# If true, will install openresty as an nginx replacement
+nginx_openresty: False
+
+nginx_modules:
+  - stream
+  - http_image_filter
+  - http_perl
+
+nginx_log_format: combined_virtual
+
+# The root domaine.
+# Some special vhost names can be derived from it. Eg downtime.{{ nginx_primary_domain }}
+nginx_primary_domain: "{{ ansible_domain }}"
+
+nginx_cert_path: /etc/nginx/ssl/cert.pem
+nginx_key_path: /etc/nginx/ssl/key.pem
+# OR
+#
+# nginx_letsencrypt_cert:
+
+nginx_vhosts: []
+nginx_default_vhost_base:
+  aliases: []
+  port: 80 # can also be a list of ports
+  ssl:
+    enabled: True
+    forced: True
+    compat: False
+    port: 443 # can also be a list of ports
+  auth: none
+  # htpasswd_file: 
+  maintenance: False
+  acme_http: False
+  redirect_aliases: True
+  document_root: /var/www/html
+  csp: "default-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  perf: True
+  limits: True
+  max_body_size: 10m
+  location: /
+  proxy:
+    backend: False
+    websocket: True
+    cache: False
+    timeout: 60s
+    headers:
+      X-Forwarded-For: '$proxy_add_x_forwarded_for'
+      X-Real-IP: '$remote_addr'
+      X-Forwarded-Proto: '$scheme'
+      X-Scheme: '$scheme'
+      X-Forwarded-Host: '$host'
+      X-Forwarded-Port: '$server_port'
+      Host: '$host'
+  allowed_methods:
+    - GET
+    - HEAD
+    - POST
+  headers:
+    X-Frame-Options: SAMEORIGIN
+    X-Content-Type-Options: nosniff
+    X-XSS-Protection: 1; mode=block
+    Strict-Transport-Security: $hsts_header
+  logs:
+    gelf: True
+  src_ip: []
+  deny_ip: []
+  custom_pre: '# No custom configuration defined'
+  custom_begin: '# No custom configuration defined'
+  custom_end: '# No custom configuration defined'
+  custom_location_begin: '# No custom configuration defined'
+  custom_location_end: '# No custom configuration defined'
+
+nginx_default_vhost_extra: {}
+nginx_default_vhost: "{{ nginx_default_vhost_base | combine(nginx_default_vhost_extra,recursive=True) }}"
+
+# List of IP addresses which won't be affected by maintenance redirections
+nginx_maintenance_ip: []
+
+nginx_ssl_ciphers_modern: 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
+nginx_ssl_ciphers_compat: 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA'
+nginx_ssl_protocols:
+  - TLSv1.2
+  - TLSv1.3
+
+# List of ip/cidr which won't have any DOS limit
+nginx_dos_whitelisted_ip: []
+
+# Max number of request per second, per IP address for non whitelisted IP
+nginx_req_per_sec: 30
+
+# Max size of the cache on disk
+nginx_cache_size: 2g
+
+# If true, a letsencrypt cert will be created for every vhost, automatically
+nginx_auto_letsencrypt_cert: False
+
+# Can be used to deploy htpasswd files
+nginx_htpasswd: []
+# nginx_htpasswd:
+#   - path: /etc/nginx/customers.htpasswd
+#     users:
+#       - login: client1
+#         password: s3crEt.
+#         state: present
+#       - login: client2
+#         state: absent
+

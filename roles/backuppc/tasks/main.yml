@@ -1,0 +1,53 @@
+---
+
+- name: Install BackupPC 4
+  yum:
+    name:
+      - BackupPC4
+      - fuse-backuppcfs4
+  when: bpc_major_version == 4
+  tags: bpc
+
+- name: Install BackupPC 3
+  yum:
+    name:
+      - BackupPC
+      - fuse-backuppcfs
+  when: bpc_major_version != 4
+  tags: bpc
+
+- name: Install tools
+  yum:
+    name:
+      - rsync
+      - tar
+      - samba-client
+      - openssh-clients
+      - BackupPC-server-scripts
+      - fuse-chunkfs
+  tags: bpc
+
+- name: Deploy httpd conf
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/40-BackupPC.conf
+  notify: reload httpd
+  tags: bpc
+
+- name: Deploy sudo config
+  template: src=sudoers.j2 dest=/etc/sudoers.d/backuppc mode=0400
+  tags: bpc
+
+- name: Create SSH Key
+  user:
+    name: backuppc
+    generate_ssh_key: yes
+    ssh_key_bits: 4096
+  tags: bpc
+
+- name: Start the service
+  service: name=backuppc state=started
+  when: bpc_enabled
+  tags: bpc
+
+- name: Handle backuppc service status
+  service: name=backuppc enabled={{ bpc_enabled }}
+  tags: bpc

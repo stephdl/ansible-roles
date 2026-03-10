@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+{% if bm_letsencrypt_cert is defined %}
+if [ $1 == "{{ bm_letsencrypt_cert }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ bm_letsencrypt_cert }}/privkey.pem >  /etc/ssl/certs/bm_cert.pem
+  cat /var/lib/dehydrated/certificates/certs/{{ bm_letsencrypt_cert }}/fullchain.pem >> /etc/ssl/certs/bm_cert.pem
+  chown root:root /etc/ssl/certs/bm_cert.pem
+  chmod 644 /etc/ssl/certs/bm_cert.pem
+  /bin/systemctl reload postfix
+  /bin/systemctl reload bm-nginx
+fi
+{% endif %}

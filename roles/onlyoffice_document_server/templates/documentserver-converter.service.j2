@@ -1,0 +1,25 @@
+[Unit]
+Description=Only Office converter
+Requires=rabbitmq-server.service
+
+[Service]
+Type=simple
+ExecStart=/var/www/onlyoffice/documentserver/server/FileConverter/converter
+WorkingDirectory=/var/www/onlyoffice/documentserver/server/FileConverter/
+User=ds
+Group=ds
+Environment=NODE_ENV=oods
+Environment=NODE_CONFIG_DIR=/etc/onlyoffice/documentserver
+Environment=NODE_DISABLE_COLORS=1
+Environment=APPLICATION_NAME=ONLYOFFICE
+Restart=always
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=oods-converter
+MemoryLimit=1024M
+
+[Install]
+WantedBy=multi-user.target

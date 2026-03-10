@@ -1,0 +1,42 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - elasticsearch-oss
+      - java-1.8.0-openjdk-headless
+  tags: es
+
+- name: Deploy pre and post backup script
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/es mode=750
+  loop:
+    - pre
+    - post
+  tags: es
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/elasticsearch.service.d state=directory
+  tags: es
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Service]
+      ProtectSystem=full
+      PrivateDevices=yes
+      ProtectHome=yes
+      NoNewPrivileges=yes
+      SyslogIdentifier=elasticsearch
+      Restart=on-failure
+      ExecStart=
+      ExecStart=/usr/share/elasticsearch/bin/elasticsearch -p ${PID_DIR}/elasticsearch.pid
+    dest: /etc/systemd/system/elasticsearch.service.d/ansible.conf
+  register: es_unit
+  notify: restart elasticsearch
+  tags: es
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: es_unit.changed
+  tags: es
+

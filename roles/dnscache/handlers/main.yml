@@ -1,0 +1,4 @@
+---
+- name: restart dnscache
+  service: name=dnscache state=restarted enabled=yes
+...

@@ -1,0 +1,72 @@
+---
+
+- name: Deploy prosody configuration
+  template: src=prosody.cfg.lua.j2 dest=/etc/prosody/ansible_conf.d/jitsi.cfg.lua group=prosody mode=640
+  register: jitsi_prosody_conf
+  when: jitsi_xmpp_server in ['localhost', '127.0.0.1', inventory_hostname]
+  tags: jitsi
+
+- name: Register XMPP accounts
+  block:
+    - name: Reload prosody
+      service: name=prosody state=restarted
+
+    - name: register XMPP users
+      command: prosodyctl register {{ item.user }} {{ jitsi_auth_domain }} '{{ item.pass }}'
+      loop:
+        - user: "{{ jitsi_jvb_xmpp_user }}"
+          pass: "{{ jitsi_jvb_xmpp_pass }}"
+        - user: "{{ jitsi_jicofo_xmpp_user }}"
+          pass: "{{ jitsi_jicofo_xmpp_pass }}"
+        - user: "{{ jitsi_jigasi_xmpp_user }}"
+          pass: "{{ jitsi_jigasi_xmpp_pass }}"
+        - user: "{{ jitsi_jibri_xmpp_user }}"
+          pass: "{{ jitsi_jibri_xmpp_pass }}"
+
+    - name: Register recorder XMPP account
+      command: prosodyctl register {{ jitsi_jibri_recorder_xmpp_user }} recorder.{{ jitsi_domain }} '{{ jitsi_jibri_recorder_xmpp_pass }}'
+
+    - name: add focus component in focus user roster
+      command: prosodyctl mod_roster_command subscribe focus.{{ jitsi_domain }} {{ jitsi_jicofo_xmpp_user }}@{{ jitsi_auth_domain }}
+
+  when: jitsi_prosody_conf is defined and jitsi_prosody_conf.changed
+  tags: jitsi
+
+- name: Deploy jicofo configuration
+  template: src=jicofo/{{ item }}.j2 dest={{ jitsi_root_dir }}/etc/jicofo/{{ item }} group={{ jitsi_user }} mode=640
+  loop:
+    - jicofo.conf
+    - sip-communicator.properties
+  notify: restart jitsi-jicofo
+  tags: jitsi
+
+- name: Deploy jigasi configuration
+  template: src=jigasi/{{ item }}.j2 dest={{ jitsi_root_dir }}/etc/jigasi/{{ item }} group={{ jitsi_user }} mode=640
+  loop:
+    - jigasi.conf
+    - sip-communicator.properties
+  notify: restart jitsi-jigasi
+  tags: jitsi
+
+- name: Deploy meet configuration
+  template: src={{ item.src }}.j2 dest={{jitsi_root_dir }}/meet/{{ item.dest }}
+  loop:
+    - src: meet.js
+      dest: config.js
+    - src: meet_interface.js
+      dest: interface_config.js
+  tags: jitsi
+
+- name: Deploy nginx configuration
+  template: src=nginx.conf.j2 dest=/etc/nginx/ansible_conf.d/10-jitsi.conf
+  notify: reload nginx
+  tags: jitsi
+
+- name: Deploy conference mapper configuration
+  template: src=confmapper.json.j2 dest={{ jitsi_root_dir }}/etc/confmapper/config.json
+  notify: restart jitsi-confmapper
+  tags: jitsi
+
+- name: Link conference mapper configuration
+  file: path={{ jitsi_root_dir }}/confmapper/config.json src={{ jitsi_root_dir }}/etc/confmapper/config.json state=link
+  tags: jitsi

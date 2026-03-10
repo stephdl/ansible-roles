@@ -1,0 +1,5 @@
+[WEBDAV]
+enabled = {{ seafile_webdav | ternary('true','false') }}
+port = {{ seafile_webdav_port }}
+fastcgi = false
+share_name = {{ (seafile_public_url == 'http://' + inventory_hostname + ':' + seafile_seahub_port | string) | ternary('/','/seafdav') }}

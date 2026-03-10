@@ -1,0 +1,8 @@
+---
+
+- name: Handle ma1sd port
+  iptables_raw:
+    name: ma1sd_port
+    state: "{{ (ma1sd_src_ip is defined and ma1sd_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ ma1sd_port }} -s {{ ma1sd_src_ip | join(',') }} -j ACCEPT"
+  tags: matrix

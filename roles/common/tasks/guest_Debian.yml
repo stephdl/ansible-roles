@@ -1,0 +1,4 @@
+---
+
+- name: Install qemu guest agent
+  apt: name=qemu-guest-agent state=present

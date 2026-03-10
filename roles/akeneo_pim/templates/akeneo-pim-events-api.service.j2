@@ -1,0 +1,22 @@
+[Unit]
+Description=Akeneo Events API worker for PIM {{ pim_id }}
+
+[Service]
+User={{ pim_user }}
+Group={{ pim_user }}
+WorkingDirectory={{ pim_root_dir }}/app
+ExecStart=/bin/php{{ pim_php_version }} bin/console messenger:consume webhook --env=prod
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+SyslogIdentifier=akeneo-pim_{{ pim_id }}-events-api
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+

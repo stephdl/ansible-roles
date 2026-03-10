@@ -1,0 +1,48 @@
+---
+
+rad_clients: []
+# rad_clients:
+#   - name: ap-wifi
+#     ip: 192.168.7.0/24
+#     secret: p@ssw0rd
+#     nas_type: other
+
+rad_auth_port: 1812
+rad_acc_port: 1813
+rad_ports: [ "{{ rad_auth_port }}", "{{ rad_acc_port }}" ]
+rad_src_ip: []
+
+# An optional password if the private key is protected
+# rad_tls_key_pass: 
+
+# The CA (full chain) to verify client's certificates
+# rad_tls_ca: |
+#   ---- BEGIN CERTIFICATE ----
+#   ---- END CERTIFICATE ----
+
+# The certificate of the radius server
+# rad_tls_cert: |
+#   ---- BEGIN CERTIFICATE ----
+#   ---- END CERTIFICATE ----
+
+# The private key of the radius server
+# rad_tls_key: |
+#   -----BEGIN RSA PRIVATE KEY-----
+#   -----END RSA PRIVATE KEY-----
+
+# An optional CRL to check client's certificate against
+# Can either be a raw CRL in PEM format, or an http or https URL
+# where to fetch it
+# If undefined, no check will be performed, and revoked certificates will be accepted
+# rad_tls_crl:
+
+# An email address to notify in case of CRL issue.
+# In case the CRL couldn't be fetched or is outdated, and rad_notify_crl is defined
+# the validation script will allow the authentication and notify the adress instead of failing
+# rad_notify_crl: admin@example.org
+
+# The issuer of the clients certificate
+# This can be usefull if you have several intermediate CA
+# all signed by the same root CA, but only want to trust clients from
+# one of them
+# rad_tls_issuer: /C=FR/ST=Aquitaine/L=Bordeaux/O=Firewall Services/OU=Security/CN=wifi

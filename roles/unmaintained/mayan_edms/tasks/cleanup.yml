@@ -1,0 +1,7 @@
+---
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ mayan_root_dir }}/archive"
+  tags: mayan

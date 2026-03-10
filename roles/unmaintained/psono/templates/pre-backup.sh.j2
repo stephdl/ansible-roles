@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD='{{ psono_db_pass }}' /usr/pgsql-11/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ psono_db_user }} \
+  --host={{ psono_db_server }} \
+  {{ psono_db_name }} | \
+  zstd -T0 -c > {{ psono_root_dir }}/backup/{{ psono_db_name }}.sql.zst

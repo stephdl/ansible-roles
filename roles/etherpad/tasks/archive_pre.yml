@@ -1,0 +1,28 @@
+---
+
+- name: Create archive dir
+  file: path={{ etherpad_root_dir }}/archives/{{ etherpad_current_version }} state=directory mode=700
+  tags: etherpad
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ etherpad_root_dir }}/{{ etherpad_web_dir.stat.exists | ternary('web','app') }}" # previous versions were installed in the web subdir, now in app)
+    dest: "{{ etherpad_root_dir }}/archives/{{ etherpad_current_version }}/"
+    compress: False
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  tags: etherpad
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ etherpad_db_name }}"
+    target: "{{ etherpad_root_dir }}/archives/{{ etherpad_current_version }}/{{ etherpad_db_name }}.sql.xz"
+    login_host: "{{ etherpad_db_server | default(mysql_server) }}"
+    login_user: "{{ etherpad_db_user }}"
+    login_password: "{{ etherpad_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: etherpad

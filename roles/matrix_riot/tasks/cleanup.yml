@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp files
+  file: path={{ riot_root_dir }}/tmp/{{ item }} state=absent
+  with_items:
+    - riot-v{{ riot_version }}.tar.gz
+    - riot-v{{ riot_version }}
+  tags: matrix

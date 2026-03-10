@@ -1,0 +1,14 @@
+---
+
+- name: Ensure the data dir exists
+  file: path={{ es_data_dir }} state=directory
+  tags: es
+
+  # We do it in two steps, so that parent dirs aren't created with restrictive permissions
+- name: Restrict permissions on data dir
+  file: path={{ es_data_dir }} state=directory owner=elasticsearch group=elasticsearch mode=750
+  tags: es
+
+- name: Create backup dir
+  file: path={{ es_backup_dir }} state=directory owner=elasticsearch group=elasticsearch mode=700
+  tags: es

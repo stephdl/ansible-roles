@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ synapse_root_dir }}/archives/{{ synapse_current_version }}.tar.zst --use-compress-program=zstd ./
+  args:
+    chdir: "{{ synapse_root_dir }}/archives/{{ synapse_current_version }}"
+    warn: False
+  environment:
+    ZSTD_CLEVEL: 10
+  tags: matrix

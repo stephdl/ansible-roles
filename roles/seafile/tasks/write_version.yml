@@ -1,0 +1,6 @@
+---
+
+- name: Write version
+  copy: content={{ seafile_version }} dest={{ seafile_root_dir }}/meta/ansible_version
+  when: seafile_install_mode != 'none'
+  tags: seafile

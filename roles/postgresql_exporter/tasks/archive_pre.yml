@@ -1,0 +1,11 @@
+---
+
+- name: Create archive dir
+  file: path={{ pg_exporter_root_dir }}/archives/{{ pg_exporter_current_version }} state=directory
+  tags: pg
+
+- name: Archive previous version
+  archive:
+    path: "{{ pg_exporter_root_dir }}/app"
+    dest: "{{ pg_exporter_root_dir }}/archives/{{ pg_exporter_current_version }}.tgz"
+  tags: pg

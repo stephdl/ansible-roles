@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+{% if rabbitmq_letsencrypt_cert is defined %}
+
+{% if rabbitmq_letsencrypt_cert == True %}
+{% set cert = inventory_hostname %}
+{% elif rabbitmq_letsencrypt_cert is string %}
+{% set cert = rabbitmq_letsencrypt_cert %}
+{% endif %}
+
+if [ $1 == "{{ cert }}" ]; then
+  cp /var/lib/dehydrated/certificates/certs/{{ cert }}/chain.pem /etc/rabbitmq/ssl/chain.pem
+  cp /var/lib/dehydrated/certificates/certs/{{ cert }}/cert.pem /etc/rabbitmq/ssl/cert.pem
+  cp /var/lib/dehydrated/certificates/certs/{{ cert }}/privkey.pem /etc/rabbitmq/ssl/key.pem
+  chown :rabbitmq /etc/rabbitmq/ssl/key.pem
+  chmod 644 /etc/rabbitmq/ssl/{cert,chain}.pem
+  chmod 640 /etc/rabbitmq/ssl/key.pem
+  systemctl restart rabbitmq-server
+fi
+{% endif %}
+

@@ -1,0 +1,101 @@
+# Mailman Web configuration file.
+
+from mailman_web.settings.base import *
+from mailman_web.settings.mailman import *
+
+#: Default list of admins who receive the emails from error logging.
+ADMINS = (
+    ('Mailman Suite Admin', '{{ mailman_site_owner }}'),
+)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.{{ (mailman_db_engine == 'postgres') | ternary('postgresql_psycopg2','mysql') }}',
+        'NAME': '{{ mailman_db_name.web }}',
+        'USER': '{{ mailman_db_user }}',
+        'PASSWORD': '{{ mailman_db_pass }}',
+        'HOST': '{{ mailman_db_server }}',
+        'PORT': '{{ mailman_db_port }}',
+{% if mailman_db_engine != 'postgres' %}
+        'OPTIONS': {'charset': 'utf8mb4'}
+{% endif %}
+    }
+}
+
+# 'collectstatic' command will copy all the static files here.
+# Alias this location from your webserver to `/static`
+STATIC_ROOT = '{{ mailman_root_dir }}/web/static'
+
+LOGGING = {
+  'version': 1,
+  'disable_existing_loggers': False,
+  'handlers': {
+    'console': {
+      'class': 'logging.StreamHandler',
+    },
+  },
+  'root': {
+    'handlers': ['console'],
+    'level': 'WARNING',
+  }
+}
+
+#: See https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
+ALLOWED_HOSTS = [
+    'localhost',  # Archiving API from Mailman
+    '{{ mailman_public_url | urlsplit("hostname") }}'
+]
+
+# Set this to a new secret value.
+SECRET_KEY = '{{ mailman_secret_key }}'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = '{{ mailman_smtp_server }}'
+EMAIL_PORT = {{ mailman_smtp_port }}
+{% if mailman_smtp_user is defined and mailman_smtp_pass is defined %}
+EMAIL_HOST_USER='{{ mailman_smtp_user }}'
+EMAIL_HOST_PASS='{{ mailman_smtp_pass }}'
+{% endif %}
+{% if mailman_smtp_tls %}
+EMAIL_USE_TLS=True
+{% endif %}
+DEFAULT_FROM_EMAIL = '{{ mailman_email_from }}'
+
+HAYSTACK_CONNECTIONS = {
+  'default': {
+    'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',
+    'PATH': '{{ mailman_root_dir }}/data/fulltext_index',
+  },
+}
+
+MAILMAN_REST_API_URL = 'http://localhost:{{ mailman_rest_port }}'
+MAILMAN_REST_API_USER = 'mailmanapi'
+MAILMAN_REST_API_PASS = '{{ mailman_rest_pass }}'
+MAILMAN_ARCHIVER_KEY = '{{ mailman_hyperkitty_api_key }}'
+MAILMAN_ARCHIVER_FROM = ('127.0.0.1')
+
+ROOT_URLCONF = 'urls'
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+X_FRAME_OPTIONS = 'DENY'
+
+TIME_ZONE = '{{ (system_tz is defined) | ternary(system_tz, 'UTC') }}'
+
+ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_UNIQUE_EMAIL  = True
+
+Q_CLUSTER = {
+    'timeout': 300,
+    'save_limit': 100,
+    'orm': 'default',
+    'retry': 360,
+}
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+chown -R {{ pki_user }}:{{ pki_user }} {{ pki_root_dir }}/etc/ssl
+chmod 700 {{ pki_root_dir }}/etc/ssl
+# The root key is not used by OpenXPKI itself, protect it
+chown root:root {{ pki_root_dir }}/etc/ssl/root/signer-key-1.pem
+# Restrict access to the different keys
+chmod 600 {{ pki_root_dir }}/etc/ssl/*/*key*.pem

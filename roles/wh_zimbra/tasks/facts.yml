@@ -1,0 +1,5 @@
+---
+
+- name: Build a list of Zimbra domains
+  set_fact: wh_mail_domains={{ wh_clients | selectattr('mail', 'defined') | selectattr('mail.enabled', 'equalto', True) | selectattr('mail.domain', 'defined') | map(attribute='mail.domain') | list }}
+  tags: mail

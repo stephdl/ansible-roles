@@ -1,0 +1,19 @@
+---
+
+docker_data_dir: /opt/docker
+docker_log_driver: journald
+
+docker_base_conf:
+  data-root: /opt/docker
+  log-driver: journald
+  storage-driver: overlay2
+  storage-opts:
+    - 'overlay2.override_kernel_check=true'
+docker_extra_conf: {}
+# docker_extra_conf:
+#   log-opts:
+#     max-size: 100m
+#     max-file: 5
+
+docker_conf: "{{ docker_base_conf | combine(docker_extra_conf, recursive=True) }}"
+

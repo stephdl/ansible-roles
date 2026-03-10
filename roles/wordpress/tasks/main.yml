@@ -1,0 +1,11 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: wp_install_mode == 'upgrade'
+- include: conf.yml
+- include: install.yml
+- include: archive_post.yml
+  when: wp_install_mode == 'upgrade'

@@ -1,0 +1,6 @@
+---
+
+- name: Create synapse user account
+  user: name={{ synapse_user }} home={{ synapse_root_dir }} shell=/bin/bash state=present
+  tags: matrix
+

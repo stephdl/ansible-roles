@@ -1,0 +1,16 @@
+---
+
+seadrive_daemons: []
+# seadrive_daemons:
+#   - id: media                                # An name for this instance of seadrive
+#     user: htpc                               # Unix account under which the daemon will run
+#     server: https://seafile.example.com/     # URL of the server
+#     login: htpc@example.com                  # Login on the server
+#     pass: S3cret                             # Password. Can be omitted if token is given
+#     token: xxxxxxxxxxxxxxx                   # Token. Will be asked automatically if password is given
+#     cache_size: 2                            # Size of the cache, in GB
+#     data_dir: /var/cache/seadrive            # The dir where cache data is kept
+#     drive_dir: /home/htpc/SeaDrive           # The dir where data will be accessible
+#     cleanup_interval: 10                     # Interval between cache cleanups, in minutes
+#     fuse_opts:                               # A list of fuse options
+#       - allow_other

@@ -1,0 +1,13 @@
+---
+- name: Add Zabbix repo key
+  apt_key:
+    url: https://repo.zabbix.com/zabbix-official-repo.key
+  environment:
+    https_proxy: "{{ system_proxy | default('') }}"
+  tags: repo
+
+- name: Add Zabbix repo
+  apt_repository:
+    repo: deb http://repo.zabbix.com/zabbix/{{ zabbix_major_version }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} main
+    filename: zabbix
+  tags: repo

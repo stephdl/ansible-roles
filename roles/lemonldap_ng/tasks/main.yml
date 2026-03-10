@@ -1,0 +1,163 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: web
+
+- name: Install common packages
+  yum: name={{ llng_common_packages }}
+  tags: web
+
+- name: Install Lemonldap::NG handler
+  yum: name=lemonldap-ng-handler
+  when: llng_handler == True
+  tags: web
+
+- name: Install Lemonldap::NG portal
+  yum: name={{ llng_portal_packages }}
+  when: llng_portal == True
+  tags: web
+
+- name: Install Lemonldap::NG manager
+  yum: name={{ llng_manager_packages }}
+  when: llng_manager == True
+  tags: web
+
+- name: Create directories
+  file: name={{ item }} state=directory group=apache mode=770
+  with_items:
+    - /var/cache/lemonldap-ng
+  tags: web
+
+- include: "{{ llng_server }}.yml"
+
+- name: Deploy manager's nginx configuration
+  template: src=nginx_manager.conf.j2 dest=/etc/nginx/ansible_conf.d/23-llng_manager.conf
+  when: llng_manager == True and llng_server == 'nginx'
+  notify: reload nginx
+
+- include: mysql.yml
+  when: llng_conf_backend == 'mysql'
+
+- name: Deploy Lemonldap::NG main configuration
+  template: src=lemonldap-ng.ini.j2 dest=/etc/lemonldap-ng/lemonldap-ng.ini group=apache mode=640
+  notify: restart {{ (llng_server == 'nginx') | ternary('llng-fastcgi-server','httpd') }}
+  tags: web
+
+- name: Deploy Lemonldap::NG migration configuration
+  template: src=lemonldap-ng-file.ini.j2 dest=/etc/lemonldap-ng/lemonldap-ng-file.ini group=apache mode=640
+  tags: web
+
+- name: Copy applications logo
+  copy: src=logos/ dest=/usr/share/lemonldap-ng/portal/htdocs/static/common/apps/
+  when: llng_portal == True
+  tags: web
+
+- name: Remove old custom logo dir
+  file: path=/usr/share/lemonldap-ng/portal-skins/ state=absent
+  tags: web
+
+- name: Check if there are custom app logo
+  local_action: stat path=config/{{ inventory_hostname }}/lemonldap_ng/logos
+  register: llng_custom_logo
+  vars:
+    ansible_become: False
+  tags: web
+
+- name: Copy custom logos
+  copy: src=config/{{ inventory_hostname }}/lemonldap_ng/logos/ dest=/usr/share/lemonldap-ng/portal/htdocs/static/common/apps/
+  when: llng_custom_logo.stat.exists and llng_custom_logo.stat.exists.isdir
+  tags: web
+
+- name: Check if there're a custom backgrounds
+  local_action: stat path=config/{{ inventory_hostname }}/lemonldap_ng/backgrounds
+  register: llng_custom_background
+  vars:
+    ansible_become: False
+  tags: web
+
+- name: Copy custom backgrounds
+  copy: src=config/{{ inventory_hostname }}/lemonldap_ng/backgrounds/ dest=/usr/share/lemonldap-ng/portal/htdocs/static/common/backgrounds/
+  when: llng_custom_background.stat.exists and llng_custom_background.stat.isdir
+  tags: web
+
+- name: Create htpasswd file for API endpoints
+  htpasswd:
+    path: /etc/lemonldap-ng/api.htpasswd
+    name: "{{ llng_api_user }}"
+    password: "{{ llng_api_pass }}"
+    owner: root
+    group: "{{ (llng_server == 'nginx') | ternary('nginx','apache') }}"
+    mode: 0640
+  when:
+    - llng_api_pass is defined
+    - llng_portal == True
+  tags: web
+
+- name: Add a cron task to renew OIDC keys
+  cron:
+    name: lemonldap_rotate_oidc
+    special_time: weekly
+    user: apache
+    job: '/usr/share/lemonldap-ng/bin/rotateOidcKeys'
+    cron_file: lemonldap_rotate_oidc
+    state: "{{ (llng_portal and llng_server != 'nginx') | ternary('present','absent') }}"
+  tags: web
+
+  # provided cron job has a syntaxe error
+- name: Override purgeCentralCache cron job
+  copy:
+    content: |
+      #
+      # Regular cron jobs for LemonLDAP::NG
+      #
+      10 * * * * apache [ -x /usr/libexec/lemonldap-ng/bin/purgeCentralCache ] && /usr/libexec/lemonldap-ng/bin/purgeCentralCache
+    dest: /etc/cron.d/lemonldap-ng-portal
+  when: llng_portal == True
+  tags: web
+
+- when: llng_server == 'nginx'
+  block:
+    - name: Deploy custom llng-fastcgi-server unit
+      template: src=llng-fastcgi-server.service.j2 dest=/etc/systemd/system/llng-fastcgi-server.service
+      notify: restart llng-fastcgi-server
+      register: llng_fastcgi_unit
+
+    - name: Reload systemd
+      systemd: daemon_reload=True
+
+    - name: Deploy llng-fastcgi-server config
+      template: src=llng-fastcgi-server.j2 dest=/etc/default/llng-fastcgi-server
+      notify: restart llng-fastcgi-server
+  tags: web
+
+- name: Handle Fast CGI server
+  service:
+    name: llng-fastcgi-server
+    state: "{{ (llng_server == 'nginx') | ternary('started','stopped') }}"
+    enabled: "{{ (llng_server == 'nginx') | ternary(True,False) }}"
+  tags: web
+
+- name: Set correct SELinux context for Lemonldap::NG files
+  sefcontext:
+    target: "{{ item.target }}"
+    setype: "{{ item.type }}"
+    state: present
+  loop:
+    - target: "/var/lib/lemonldap-ng(/.*)?"
+      type: httpd_var_lib_t
+    - target: "/var/cache/lemonldap-ng(/.*)?"
+      type: httpd_cache_t
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+
+- name: Restore SELinux context
+  command: restorecon -R /var/lib/lemonldap-ng /var/cache/lemonldap-ng
+  changed_when: False
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+

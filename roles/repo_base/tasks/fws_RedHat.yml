@@ -1,0 +1,22 @@
+---
+
+- name: Configure FWS repository
+  yum_repository:
+    name: fws
+    description: "Firewall Services"
+    baseurl: http://repo.firewall-services.com/centos/$releasever/
+    gpgcheck: True
+    gpgkey: http://repo.firewall-services.com/RPM-GPG-KEY
+  tags: repo
+
+- name: Configure FWS Testing repository
+  yum_repository:
+    name: fws-testing
+    description: "Firewall Services Testing"
+    file: fws
+    baseurl: http://repo.firewall-services.com/centos-testing/$releasever/
+    gpgcheck: True
+    gpgkey: http://repo.firewall-services.com/RPM-GPG-KEY
+    enabled: False
+  tags: repo
+

@@ -1,0 +1,5 @@
+[Unit]
+After=local-fs.target
+{% if docker_sssd.stat.exists %}
+After=sssd.service
+{% endif %}

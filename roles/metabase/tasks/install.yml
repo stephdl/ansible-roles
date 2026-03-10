@@ -1,0 +1,79 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - java-11-openjdk
+  tags: metabase
+
+- name: Stop the service during upgrades
+  service: name=metabase state=stopped
+  when: metabase_install_mode == 'upgrade'
+  tags: metabase
+
+- when: metabase_install_mode != 'none'
+  block:
+    - name: Download metabase JAR file
+      get_url:
+        url: "{{ metabase_jar_url }}"
+        dest: "{{ metabase_root_dir }}/tmp/"
+        checksum: sha256:{{ metabase_jar_sha256 }}
+
+    - name: Move the JAR to the app dir
+      copy: src={{ metabase_root_dir }}/tmp/metabase.jar dest={{ metabase_root_dir }}/app/ mode=644 remote_src=True
+      notify: restart metabase
+      
+  tags: metabase
+
+- name: Deploy systemd unit
+  template: src=metabase.service.j2 dest=/etc/systemd/system/metabase.service
+  register: metabase_unit
+  notify: restart metabase
+  tags: metabase
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: metabase_unit.changed
+  tags: metabase
+
+# Create the database
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ metabase_db_name }}"
+    - db_user: "{{ metabase_db_user }}"
+    - db_server: "{{ metabase_db_server }}"
+    - db_pass: "{{ metabase_db_pass }}"
+  when: metabase_db_engine == 'mysql'
+  tags: metabase
+
+- when: metabase_db_engine == 'postgres'
+  block:
+    - name: Create postgres user
+      postgresql_user:
+        db: postgres
+        name: "{{ metabase_db_user }}"
+        password: "{{ metabase_db_pass }}"
+        login_host: "{{ metabase_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+
+    - name: Create the PostgreSQL database
+      postgresql_db:
+        name: "{{ metabase_db_name }}"
+        encoding: UTF-8
+        lc_collate: C
+        lc_ctype: C
+        template: template0
+        owner: "{{ metabase_db_user }}"
+        login_host: "{{ metabase_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+
+  tags: metabase
+
+- name: Install pre and post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/metabase mode=700
+  loop:
+    - pre
+    - post
+  tags: metabase

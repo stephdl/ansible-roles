@@ -1,0 +1,7 @@
+base   authhttpldap
+author Daniel Berteaud
+email  daniel@firewall-services.com
+date   2014-05-06
+name   HTTP+LDAP auth plugin
+desc   This plugin uses a basic HTTP authentication, but LDAP to get info and authorization
+url    https://www.firewall-services.com

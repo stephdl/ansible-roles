@@ -1,0 +1,7 @@
+---
+
+- include: ../common/handlers/main.yml
+- include: ../httpd_common/handlers/main.yml
+- include: ../httpd_php/handlers/main.yml
+- name: restart ttrss-updater
+  service: name=ttrss-updater_{{ ttrss_id }} state=restarted

@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ dolibarr_root_dir }}"
+    - version: "{{ dolibarr_version }}"
+  tags: dolibarr

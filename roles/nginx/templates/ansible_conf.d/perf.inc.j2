@@ -1,0 +1,18 @@
+gzip on;
+gzip_types
+  text/plain
+  text/css
+  text/xml
+  text/json
+  image/svg+xml
+  application/xml
+  application/json
+  application/xhtml+xml
+  application/rss+xml
+  application/atom_xml
+  application/x-javascript
+  application/javascript;
+gzip_vary on;
+gzip_disable "msie6";
+expires $custom_expires;
+add_header Cache-Control $custom_cache_control;

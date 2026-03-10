@@ -1,0 +1,12 @@
+---
+
+pgadmin4_packages:
+  - gcc
+  - postgresql
+  - postgresql-devel
+  - postgresql14
+  - python3-virtualenv
+  - python3-pip
+  - python3-setuptools # Needed for pip install expect
+  - krb5-devel
+  - sqlite

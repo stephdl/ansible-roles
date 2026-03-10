@@ -1,0 +1,13 @@
+---
+
+- name: Check if authconfig needs to update pam config
+  command: "grep -P '^auth\\s+sufficient\\s+pam_sss.so' /etc/pam.d/system-auth"
+  register: auth_sss_done
+  changed_when: False
+  failed_when: False
+  tags: auth
+
+- name: Configure authentication with authconfig
+  command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+  when: auth_sss_done.rc != 0
+  tags: auth

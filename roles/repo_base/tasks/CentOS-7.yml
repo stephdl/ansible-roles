@@ -1,0 +1,51 @@
+---
+
+- name: Configure base repositories
+  yum_repository:
+    file: CentOS-Base
+    description: "Centos - {{ item.repo }}"
+    name: "{{ item.repo }}"
+    baseurl: http://mirror.centos.org/centos/$releasever/{{ item.dir }}/$basearch/
+    gpgcheck: True
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+    exclude: 'lasso*'
+  loop:
+    - repo: base
+      dir: os
+    - repo: updates
+      dir: updates
+    - repo: extras
+      dir: extras
+  tags: repo
+
+- name: Configure centosplus
+  yum_repository:
+    file: CentOS-Base
+    description: "Centos - centosplus"
+    name: centosplus
+    baseurl: http://mirror.centos.org/centos/$releasever/centosplus/$basearch/
+    gpgcheck: True
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+    enabled: False
+  tags: repo
+
+- name: Install yum priorities plugin
+  yum:
+    name:
+      - yum-plugin-priorities
+  tags: repo
+
+- name: Remove obsolete repo
+  file: path=/etc/yum.repos.d/{{ item }}.repo state=absent
+  loop:
+    - nux-dextop
+    - seadrive
+    - remi-safe
+    - redis
+    - fws-extra-nginx
+    - CentOS-Linux-BaseOS
+  tags: repo
+
+- include: epel_{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+- include: fws_{{ ansible_os_family }}.yml
+- include: postgres_client_{{ ansible_os_family }}.yml

@@ -1,0 +1,6 @@
+---
+
+- name: restart etherpad
+  service: name=etherpad_{{ etherpad_id }} state=restarted
+  when: not etherpad_started.changed
+

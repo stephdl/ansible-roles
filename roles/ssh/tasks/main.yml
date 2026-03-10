@@ -1,0 +1,139 @@
+---
+
+- name: Install ssh components
+  yum:
+    name:
+      - openssh-server
+      - openssh-clients
+  when: ansible_os_family == 'RedHat'
+  tags: ssh
+
+- name: Install ssh components
+  apt:
+    name:
+      - openssh-server
+      - openssh-client
+  when: ansible_os_family == 'Debian'
+  tags: ssh
+
+- name: Allow ssh port in SELinux
+  seport: ports={{ sshd_ports|join(',') }} proto=tcp setype=ssh_port_t state=present
+  when: ansible_selinux.status == 'enabled'
+  tags: ssh
+
+- name: Combine SSH users
+  set_fact:
+    ssh_users: "{{ ssh_users + ssh_extra_users | default([]) }}"
+  tags: ssh
+
+- name: Deploy sshd configuration
+  template: src=sshd_config.j2 dest=/etc/ssh/sshd_config backup=yes
+  notify: restart sshd
+  tags: ssh
+
+- name: Set SSH rate limit
+  iptables_raw:
+    name: sshd_limit
+    rules: |
+      -A INPUT -p tcp -m state --state NEW -m multiport --dports {{ sshd_ports | join(',') }} -m recent --name ssh_limit --set
+      -A INPUT -p tcp -m state --state NEW -m multiport --dports {{ sshd_ports | join(',') }} -m recent --name ssh_limit --rcheck --seconds 60 --hitcount {{ sshd_max_conn_per_minute }} -j LOG --log-prefix "Firewall (ssh limit): "
+      -A INPUT -p tcp -m state --state NEW -m multiport --dports {{ sshd_ports | join(',') }} -m recent --name ssh_limit --rcheck --seconds 60 --hitcount {{ sshd_max_conn_per_minute }} -j REJECT
+    state: "{{ (sshd_max_conn_per_minute > 0) | ternary('present','absent') }}"
+    weight: 10
+  when: iptables_manage | default(True)
+  tags: ssh,firewall
+
+- name: Handle ssh ports
+  iptables_raw:
+    name: sshd_ports
+    state: "{{ (sshd_src_ip is defined and sshd_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p tcp -m multiport --dports {{ sshd_ports | join(',') }} -s {{ sshd_src_ip | flatten | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: ssh,firewall
+
+- name: Create top level authorized keys directory
+  file: path=/etc/ssh/authorized_keys/ state=directory mode=755 owner=root group=root
+  tags: ssh
+
+- name: Create an SSH key pair for root
+  user:
+    name: root
+    generate_ssh_key: yes
+    ssh_key_file: .ssh/id_rsa
+  tags: ssh
+
+  # Do this in two times, to prevent hitting a bug in ansible
+  # where usermod could be called before useradd
+  # See https://github.com/ansible/ansible/issues/22576
+- name: Create ssh users
+  user:
+    name: "{{ item.name }}"
+  with_items: "{{ ssh_users }}"
+  register: ssh_create_user
+  when: item.create_user | default(False)
+  tags: ssh
+
+- name: Check if sssd is installed
+  stat: path=/usr/sbin/sss_cache
+  register: ssh_sss_cache
+  tags: ssh
+
+  # Flush sss cache so we can modify freshly created users
+- name: Reset sss cache
+  command: sss_cache -E
+  when: ssh_sss_cache.stat.exists and ssh_create_user.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: ssh
+
+- name: Set ssh user attributes
+  user:
+    name: "{{ item.name }}"
+    comment: "{{ item.full_name | default(omit) }}"
+    shell: "{{ item.shell | default(omit) }}"
+  with_items: "{{ ssh_users }}"
+  when: item.create_user | default(False)
+  tags: ssh
+
+- name: Create private dir for Authorized keys
+  file: path=/etc/ssh/authorized_keys/{{ item.name }} state=directory mode=700 owner={{ item.name }}
+  ignore_errors: True # Needed eg, if LDAP isn't available on first run
+  with_items: "{{ ssh_users }}"
+  tags: ssh
+
+- name: Deploy ssh user keys
+  authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.ssh_keys| default([]) | join(\"\n\") }}"
+    key_options: "{{ item.key_options | default([]) | join(',') }}"
+    path: "/etc/ssh/authorized_keys/{{ item.name }}/authorized_keys"
+    manage_dir: False
+    exclusive: True
+  ignore_errors: True # Needed eg, if LDAP isn't available on first run
+  #when: item.ssh_keys is defined
+  with_items: "{{ ssh_users }}"
+  tags: ssh
+
+- name: Ensure permissions and ownership on authorized_keys files
+  file:
+    path: /etc/ssh/authorized_keys/{{ item.name }}/authorized_keys
+    mode: 0600
+    owner: "{{ item.name }}"
+  when: item.ssh_keys is defined
+  ignore_errors: True
+  with_items: "{{ ssh_users }}"
+  tags: ssh
+
+- name: List all authorized keys directories
+  shell: ls -1 /etc/ssh/authorized_keys | xargs -n1 basename
+  register: existing_ssh_keys
+  changed_when: False
+  tags: ssh
+
+- name: Remove unmanaged ssh keys
+  file: path=/etc/ssh/authorized_keys/{{ item }} state=absent
+  with_items: "{{ existing_ssh_keys.stdout_lines | default([]) }}"
+  when: item not in ssh_users | map(attribute='name')
+  tags: ssh
+
+- name: Deploy sudo fragment
+  template: src=sudo.j2 dest=/etc/sudoers.d/ssh_users mode=600
+  tags: ssh

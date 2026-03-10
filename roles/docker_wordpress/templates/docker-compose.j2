@@ -1,0 +1,28 @@
+version: '3.1'
+services:
+  wordpress-fpm:
+    image: "{{ item.wh_docker_wp_image }}"
+    restart: unless-stopped
+    container_name: "wp_{{ item.wh_docker_name }}"
+    ports:
+      - {{ item.wh_docker_wp_port}}:80
+    environment:
+      WORDPRESS_DB_HOST: "{{ item.wh_docker_db_host }}"
+      WORDPRESS_DB_USER: "{{ item.wh_docker_db_user }}"
+      WORDPRESS_DB_PASSWORD: "{{ item.wh_docker_db_pass }}"
+      WORDPRESS_DB_NAME: "{{ item.wh_docker_db_name }}"
+    volumes:
+      - {{ wh_docker_root_dir }}/wordpress/{{ item.wh_docker_name }}/html:/var/www/html # Wordpress files
+      - {{ wh_docker_root_dir }}/wordpress/{{ item.wh_docker_name }}/backups:/var/www/backups # Backups folder
+      - {{ wh_docker_root_dir }}/wordpress/{{ item.wh_docker_name }}/custom.ini:/usr/local/etc/php/conf.d/custom.ini # Custom PHP configuration
+
+  phpmyadmin:
+    image: "{{ item.wh_docker_pma_image }}"
+    restart: unless-stopped
+    container_name: "pma_{{ item.wh_docker_name }}"
+    ports:
+      - {{ item.wh_docker_pma_port}}:80
+    environment:
+      PMA_ARBITRARY: 0
+      PMA_HOST: "{{ item.wh_docker_db_host }}"
+      PMA_ABSOLUTE_URI: "https://db.{{ item.wh_docker_url }}/"

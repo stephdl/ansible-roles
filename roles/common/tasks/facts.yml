@@ -1,0 +1,5 @@
+---
+
+- name: Check if tailf command exists
+  stat: path=/bin/tailf
+  register: system_tailf

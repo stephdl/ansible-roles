@@ -1,0 +1,8 @@
+---
+
+- name: Install Zabbix Agent and additional scripts
+  yum:
+    name: "{{ zabbix_agent_packages }}"
+    state: "{{ zabbix_agent_update | ternary('latest','present') }}"
+  notify: restart zabbix-agent
+  tags: zabbix

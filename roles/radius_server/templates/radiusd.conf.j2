@@ -1,0 +1,46 @@
+prefix = /usr
+localstatedir = /var/lib/radiusd
+logdir = /var/log/radius
+run_dir = /run/radiusd
+correct_escapes = true
+max_request_time = 30
+cleanup_delay = 5
+max_requests = 16384
+hostname_lookups = no
+log {
+  destination = syslog
+  syslog_facility = daemon
+  colourise = yes
+  stripped_names = no
+  auth = yes
+  auth_badpass = no
+  auth_goodpass = no
+}
+security {
+  user = radiusd
+  group = radiusd
+  allow_core_dumps = no
+  max_attributes = 200
+  reject_delay = 1
+  status_server = yes
+}
+proxy_requests  = no
+
+$INCLUDE clients.conf
+
+thread pool {
+  start_servers = 5
+  max_servers = 32
+  min_spare_servers = 3
+  max_spare_servers = 10
+  max_requests_per_server = 0
+  auto_limit_acct = no
+}
+modules {
+  $INCLUDE modules/eap.conf
+}
+instantiate {
+}
+policy {
+}
+$INCLUDE sites.conf

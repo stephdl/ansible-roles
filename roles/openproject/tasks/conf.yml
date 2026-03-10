@@ -1,0 +1,22 @@
+---
+
+- name: List conf fragment
+  shell: find /etc/openproject/conf.d -maxdepth 1 -mindepth 1 -type f -exec basename "{}" \;
+  register: openproject_conf_fragments
+  changed_when: False
+  tags: openproject
+
+- name: Remove unmanaged conf fragments
+  file: path=/etc/openproject/conf.d/{{ item }} state=absent
+  loop: "{{ openproject_conf_fragments.stdout_lines }}"
+  when: item != 'ansible'
+  tags: openproject
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/openproject/{{ item }} owner=openproject group=openproject mode=640
+  loop:
+    - installer.dat
+    - conf.d/ansible
+  notify:
+    - restart openproject
+  tags: openproject

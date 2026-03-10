@@ -1,0 +1,29 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if mayan_db_engine == 'mysql' %}
+/usr/bin/mysqldump --user={{ mayan_db_user | quote }} \
+                   --password={{ mayan_db_pass | quote }} \
+                   --host={{ mayan_db_server | quote }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ mayan_db_name | quote }} | zstd -c > {{ mayan_root_dir }}/backup/{{ mayan_db_name }}.sql.zst
+{% else %}
+PGPASSWORD={{ mayan_db_pass | quote }} /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ mayan_db_user | quote }} \
+  --host={{ mayan_db_server | quote }} \
+  {{ mayan_db_name | quote }} | \
+  zstd -c > "{{ mayan_root_dir }}/backup/{{ mayan_db_name }}.sql.zst"
+{% endif %}
+
+# Use FUSE to export indexes as a file tree
+set -o allexport
+. /opt/mayan-edms/config/.env
+set +o allexport
+{% for index in mayan_index_as_fuse %}
+mkdir -p {{ mayan_root_dir }}/fuse/{{ index }}
+{{ mayan_root_dir }}/venv/bin/python {{ mayan_root_dir }}/venv/bin/mayan-edms.py mountindex --background {{ index }} {{ mayan_root_dir }}/fuse/{{ index }}
+{% endfor %}
+

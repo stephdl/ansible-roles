@@ -1,0 +1,4 @@
+---
+
+- name: restart cs-firewall-bouncer
+  service: name=cs-firewall-bouncer state=restarted

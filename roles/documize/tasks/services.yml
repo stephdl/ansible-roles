@@ -1,0 +1,7 @@
+---
+
+- name: Start and enable the service
+  service: name=documize state=started enabled=True
+  register: documize_started
+  tags: documize
+

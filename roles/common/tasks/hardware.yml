@@ -1,0 +1,18 @@
+---
+
+- set_fact:
+    controllers: "{{ controllers | default([]) + [ ansible_devices[item].host ] }}"
+  with_items: "{{ ansible_devices.keys() | list }}"
+
+- set_fact:
+    lsi_controllers: "{{ controllers | select('match', '(?i).*(lsi|megaraid).*') | list | unique }}"
+
+- include_tasks: hardware_{{ ansible_os_family }}.yml
+
+- name: Remove MegaCli package
+  file: path=/tmp/{{ megacli }} state=absent
+  when:
+    - lsi_controllers | length > 0
+    - megacli_installed_version.stdout != megacli_version
+
+...

@@ -1,0 +1,75 @@
+---
+
+- name: Install filebeatbeat
+  package:
+    name:
+      - filebeat
+  tags: logs
+
+- name: Install journalbeat
+  package:
+    name:
+      - journalbeat
+  when: ansible_service_mgr == 'systemd'
+  tags: logs
+
+# Not useful, and prevent fast completion for journalctl
+- name: Remove journalbeat shortcut
+  file: path={{ item }} state=absent
+  loop:
+    - /bin/journalbeat
+    - /usr/bin/journalbeat
+  when: ansible_service_mgr == 'systemd'
+  tags: logs
+
+- name: Create ansible module directories
+  file: path=/etc/filebeat/ansible_{{ item }}.d state=directory
+  loop:
+    - modules
+    - inputs
+  tags: logs
+
+- name: Deploy filebeat configuration
+  template: src={{ item }}.j2 dest=/etc/filebeat/{{ item }}
+  loop:
+    - filebeat.yml
+    - ansible_modules.d/system.yml
+    - ansible_modules.d/auditd.yml
+    - ansible_inputs.d/system_specific.yml
+  notify: restart filebeat
+  tags: logs
+
+- name: Deploy journalbeat configuration
+  template: src=journalbeat.yml.j2 dest=/etc/journalbeat/journalbeat.yml
+  notify: restart journalbeat
+  tags: logs
+
+- name: Override filebeat unit
+  template: src=filebeat.service.j2 dest=/etc/systemd/system/filebeat.service
+  register: filebeat_unit
+  tags: logs
+
+- name: Override journalbeat unit
+  template: src=journalbeat.service.j2 dest=/etc/systemd/system/journalbeat.service
+  register: filebeat_journalbeat_unit
+  when: ansible_service_mgr == 'systemd'
+  tags: logs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: filebeat_unit.changed or (filebeat_journalbeat_unit is defined and filebeat_journalbeat_unit.changed)
+  tags: logs
+
+- name: Handle filebeat service
+  service:
+    name: filebeat
+    state: "{{ (filebeat_output_hosts | length > 0) | ternary('started','stopped') }}"
+    enabled: "{{ (filebeat_output_hosts | length > 0) | ternary(True,False) }}"
+  tags: logs
+
+- name: Handle journalbeat service
+  service:
+    name: journalbeat
+    state: "{{ (ansible_service_mgr == 'systemd' and filebeat_output_hosts | length > 0) | ternary('started','stopped') }}"
+    enabled: "{{ (ansible_service_mgr == 'systemd' and filebeat_output_hosts | length > 0) | ternary(True,False) }} "
+  tags: logs

@@ -1,0 +1,27 @@
+[Unit]
+Description=Bitwarden Server (Rust Edition)
+Documentation=https://github.com/dani-garcia/bitwarden_rs
+After=network.target
+{% if bitwarden_db_engine == 'mysql' and (bitwarden_db_server == 'localhost' or bitwarden_db_server == '127.0.0.1') %}
+After=mariadb.service
+Requires=mariadb.service
+{% endif %}
+
+[Service]
+User={{ bitwarden_user }}
+Group={{ bitwarden_user }}
+EnvironmentFile={{ bitwarden_root_dir }}/etc/bitwarden_rs.conf
+ExecStart={{ bitwarden_root_dir }}/bitwarden_rs
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=full
+WorkingDirectory={{ bitwarden_root_dir }}
+ReadWriteDirectories={{ bitwarden_root_dir }}/data
+ReadOnlyDirectories={{ bitwarden_root_dir }}/etc {{ bitwarden_root_dir }}/web-vault
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

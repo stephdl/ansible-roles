@@ -1,0 +1,18 @@
+---
+
+- name: Handle RabbitMQ Server port in the firewall
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ item.port }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  loop:
+    - name: rabbitmq_port
+      port: "{{ rabbitmq_port }}"
+      src_ip: "{{ rabbitmq_src_ip }}"
+    - name: rabbitmq_ssl_port
+      port: "{{ rabbitmq_ssl_port }}"
+      src_ip: "{{ rabbitmq_ssl_src_ip }}"
+    - name: rabbitmq_web_port
+      port: "{{ rabbitmq_web_port }}"
+      src_ip: "{{ rabbitmq_web_src_ip }}"
+  tags: firewall,rabbitmq

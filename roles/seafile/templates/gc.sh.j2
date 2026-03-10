@@ -1,0 +1,9 @@
+#!/bin/sh
+
+{% if seafile_license is not defined %}
+/usr/bin/systemctl stop seafile seahub
+{% endif %}
+/usr/bin/systemd-cat /usr/bin/sudo -u {{ seafile_user }} {{ seafile_root_dir }}/seafile-server/seaf-gc.sh
+{% if seafile_license is not defined %}
+/usr/bin/systemctl start seafile seahub
+{% endif %}

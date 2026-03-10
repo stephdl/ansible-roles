@@ -1,0 +1,93 @@
+---
+
+- block:
+    - set_fact: wp_install_mode='none'
+    - set_fact: wp_installed=False
+    - set_fact: wp_current_version=''
+    - set_fact: wp_version=''
+  tags: wp
+
+- name: Install wp-cli
+  yum:
+    name:
+      - wp-cli
+  tags: wp
+
+- name: Check if wordpress is installed
+  command: php{{ wp_php_version }} /usr/bin/wp core is-installed
+  args:
+    chdir: "{{ wp_root_dir }}/web"
+  become_user: "{{ wp_php_user }}"
+  failed_when: False
+  changed_when: False
+  register: wp_installed
+  tags: wp
+
+- name: Set install mode
+  set_fact: wp_install_mode='install'
+  when: wp_installed.rc != 0
+  tags: wp
+
+- when: wp_manage_upgrade == True and wp_installed.rc == 0
+  tags: wp
+  block:
+    - name: Check if an update is available
+      shell: "php{{ wp_php_version }} /usr/bin/wp core check-update | grep -q 'Success: WordPress is at the latest version'"
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+      become_user: "{{ wp_php_user }}"
+      changed_when: False
+      failed_when: False
+      register: wp_check_new_version
+
+    - name: Set upgrade mode
+      set_fact: wp_install_mode='upgrade'
+      when: wp_check_new_version.rc != 0
+
+    - name: Register current version
+      command: php{{ wp_php_version }} /usr/bin/wp core version
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+      become_user: "{{ wp_php_user }}"
+      changed_when: False
+      register: wp_current_version
+    - set_fact: wp_current_version={{ wp_current_version.stdout }}
+
+- when: wp_db_pass is not defined
+  tags: wp
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ wp_root_dir }}/meta/ansible_dbpass"
+    - set_fact: wp_db_pass={{ rand_pass }}
+
+- name: Check is secrets have been created
+  stat: path={{ wp_root_dir }}/meta/ansible_{{ item }}
+  register: wp_secrets_files
+  loop:
+    - AUTH_KEY
+    - SECURE_AUTH_KEY
+    - LOGGED_IN_KEY
+    - NONCE_KEY
+    - AUTH_SALT
+    - SECURE_AUTH_SALT
+    - LOGGED_IN_SALT
+    - NONCE_SALT
+    - WP_CACHE_KEY_SALT
+  tags: wp
+
+- name: Create missing secrets
+  shell: curl https://api.wordpress.org/secret-key/1.1/salt | perl -ne '/^define\(.{{ item.item }}.\s*,\s*.(.*).\s*\);/ && print "$1"' > {{ wp_root_dir }}/meta/ansible_{{ item.item }}
+  args:
+    creates: " {{ wp_root_dir }}/meta/ansible_{{ item.item }}"
+    warn: False
+  loop: "{{ wp_secrets_files.results }}"
+  when: not item.stat.exists
+  tags: wp
+
+- name: Read secrets
+  command: cat {{ wp_root_dir }}/meta/ansible_{{ item.item }}
+  register: wp_secrets
+  changed_when: False
+  loop: "{{ wp_secrets_files.results }}"
+  tags: wp

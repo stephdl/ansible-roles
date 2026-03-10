@@ -1,0 +1,37 @@
+name: main
+log4perl: {{ pki_root_dir }}/etc/log.conf
+user: {{ pki_user }}
+group: apache
+socket_file: {{ pki_root_dir }}/run/openxpki.socket
+pid_file: {{ pki_root_dir }}/run/openxpkid.pid
+stderr: /dev/stdout
+tmpdir: {{ pki_root_dir }}/tmp
+environment:
+  PERL5LIB: {{ pki_root_dir }}/lib/perl5
+  OPENXPKI_CONF_PATH: {{ pki_root_dir }}/etc/config.d
+
+session:
+  type: Database
+  table: frontend_session
+
+transport:
+  Simple: 1
+
+service:
+  Default:
+    enabled: 1
+    idle_timeout: 120
+
+  LibSCEP:
+    enabled: 1
+
+# settings for i18n
+i18n:
+  locale_directory: {{ pki_root_dir }}/locale
+  default_language: C
+
+prefork:
+  min_servers: 5
+  min_spare_servers: 5
+  max_servers: 25
+  max_spare_servers: 10

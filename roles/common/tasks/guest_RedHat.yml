@@ -1,0 +1,5 @@
+---
+
+- name: Install qemu guest agent
+  yum: name=qemu-guest-agent state=present
+

@@ -1,0 +1,7 @@
+[Unit]
+Description=Update MaxMind GeoIP databases
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/geoipupdate
+TimeoutSec=600

@@ -1,0 +1,27 @@
+eap {
+  default_eap_type = tls
+  tls-config tls-common {
+{% if rad_tls_key_pass is defined %}
+    private_key_password = {{ rad_tls_key_pass }}
+{% endif %}
+    private_key_file = /etc/radius/certs/key.pem
+    certificate_file = /etc/radius/certs/cert.pem
+{% if rad_tls_ca is defined %}
+    ca_file = /etc/radius/certs/ca.pem
+{% endif %}
+    dh_file = /etc/radius/certs/dh.pem
+    ca_path = /etc/radius/certs/
+    ecdh_curve = "prime256v1"
+{% if rad_tls_issuert is defined %}
+    check_cert_issuer = "{{ rad_tls_issuer }}"
+{% endif %}
+    verify {
+      tmpdir = /run/radiusd/tls
+      client = "/usr/local/bin/rad_check_client_cert --cert %{TLS-Client-Cert-Filename}{% if rad_tls_crl is defined %} --crl {{ (rad_tls_crl is search ('https?://')) | ternary(rad_tls_crl,'/etc/radius/certs/crl.pem') }}{% endif %}{% if rad_tls_issuer is defined %} --issuer '{{ rad_tls_issuer }}'{% endif %}{% if rad_crl_notify is defined %} --notify-crl='{{ rad_crl_notify }}'{% endif %}"
+    }
+  }
+
+  tls {
+    tls = tls-common
+  }
+}

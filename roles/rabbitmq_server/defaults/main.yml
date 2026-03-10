@@ -1,0 +1,34 @@
+---
+
+# Plain TCP port
+rabbitmq_port: 5672
+rabbitmq_ssl_port: 5671
+
+# Access to the plain port
+rabbitmq_src_ip: []
+# Access to the ssl port
+rabbitmq_ssl_src_ip: []
+
+# Can be either true, in which case a cert will be automatically obtained using letsencrypt
+# or can be a name, in which case you have to configure letsencrypt to obtain the cert yourself
+# rabbitmq_letsencrypt_cert: True
+# or
+# rabbitmq_letsencrypt_cert: rabbit.example.org
+# You have to deploy the letsencrypt role on the host for this to work
+
+# Or you can specify cert and key path. They must be readable by rabbitmq
+# Note that intermediate should be provided in the cacert file !
+# rabbitmq_ssl_cacert_path: /etc/rabbitmq/ssl/chain.pem
+# rabbitmq_ssl_cert_path: /etc/rabbitmq/ssl/cert.pem
+# rabbitmq_ssl_key_path: /etc/rabbitmq/ssl/key.pem
+
+# HTTP API / Web management interface
+rabbitmq_web_port: 15672
+rabbitmq_web_src_ip: []
+
+# Should the guest user available from anywhere ? If False, it'll only be accepted from loopback
+rabbitmq_guest_from_anywhere: False
+
+# List of plugins to enable
+rabbitmq_plugins:
+  - rabbitmq_management

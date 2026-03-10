@@ -1,0 +1,20 @@
+#!/bin/sh
+
+{% if squid_ufdb_update_from_univ %}
+/usr/bin/rsync -rzPq ftp.univ-tlse1.fr::blacklist/dest/ /var/ufdbguard/blacklists/
+{% endif %}
+
+find /var/ufdbguard/blacklists/ -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \;| while read CATEGORY; do
+  if [ -e /var/ufdbguard/blacklists/$CATEGORY/domains -o -e /var/ufdbguard/blacklists/$CATEGORY/urls ]; then
+    CMD="ufdbGenTable -W -n -t $CATEGORY"
+    if [ -e /var/ufdbguard/blacklists/$CATEGORY/domains ]; then
+      CMD=$CMD" -d /var/ufdbguard/blacklists/$CATEGORY/domains"
+    fi
+    if [ -e /var/ufdbguard/blacklists/$CATEGORY/urls ]; then
+      CMD=$CMD" -u /var/ufdbguard/blacklists/$CATEGORY/urls"
+    fi
+    eval $CMD 2>/dev/null
+  fi
+done
+systemctl restart ufdb
+exit 0

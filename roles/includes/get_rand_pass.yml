@@ -1,0 +1,24 @@
+---
+
+  # Check if a password has already been created
+- name: Check if password exists
+  stat: path={{ pass_file }}
+  register: current_pass
+
+  # When no pass exist, create a new one
+- name: Install pwgen
+  package: name=pwgen
+
+- when: not current_pass.stat.exists
+  block:
+    - shell: pwgen {% if complex | default(True) %}-y -r \`\'\"\\\|\^\# {% endif %}-s {{ pass_size | default(50) }} 1
+      register: rand_pass
+      # Now write this new pass
+    - copy: content={{ rand_pass.stdout | trim }} dest={{ pass_file }} mode=600
+
+  # When pass already exists, just read it
+- name: Read the password
+  slurp: src={{ pass_file }}
+  register: rand_pass
+- set_fact: rand_pass={{ rand_pass.content | b64decode | trim }}
+

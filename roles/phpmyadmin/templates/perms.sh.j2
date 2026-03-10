@@ -1,0 +1,16 @@
+#!/bin/sh
+
+restorecon -R {{ pma_root_dir }}
+chown root:root {{ pma_root_dir }}
+chmod 700 {{ pma_root_dir }}
+chown -R root:root {{ pma_root_dir }}/meta
+chmod 700 {{ pma_root_dir }}/meta
+setfacl -R -k -b {{ pma_root_dir }}
+setfacl -m u:{{ pma_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ pma_root_dir }}
+chown -R root:root {{ pma_root_dir }}/web
+chown -R {{ pma_php_user }} {{ pma_root_dir }}/{tmp,sessions,cache}
+chmod 700 {{ pma_root_dir }}/{tmp,sessions,cache}
+find {{ pma_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ pma_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown root:{{ pma_php_user }} {{ pma_root_dir }}/web/{sso.php,config.inc.php}
+chmod 640 {{ pma_root_dir }}/web/{sso.php,config.inc.php}

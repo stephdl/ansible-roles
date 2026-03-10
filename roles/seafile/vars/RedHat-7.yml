@@ -1,0 +1,41 @@
+---
+
+seafile_packages:
+  - python3
+  - python3-setuptools
+  - python3-pip
+  - python3-virtualenv
+  - python3-devel
+  - gcc
+  - gcc-c++
+  - MySQL-python
+  - ffmpeg
+  - ffmpeg-devel
+  - libmemcached-devel
+  - mysql-devel
+  - zlib-devel
+  - gcc
+  - tar
+  - mariadb
+  - fuse
+  - java-1.8.0-openjdk  # For seafile-pro
+  - poppler-utils       # For seafile-pro
+  - unoconv             # For seafile-pro
+  - python-setuptools   # needed for ansible to create the venv
+
+seafile_python_libs:
+  - Pillow
+  - pylibmc
+  - captcha
+  - jinja2
+  - sqlalchemy
+  - psd-tools
+  - django-pylibmc
+  - django-simple-captcha
+  - python3-ldap
+  - requests_oauthlib
+  - future
+  - mysqlclient==2.0.1
+
+seafile_rm_libs:
+  - libnssutil3.so

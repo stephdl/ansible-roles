@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD={{ wapt_db_pass | quote }} /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ wapt_db_user | quote }} \
+  --host={{ wapt_db_server | quote }} \
+  {{ wapt_db_name | quote }} | zstd -c > /opt/wapt/backup/{{ wapt_db_name }}.sql.zst

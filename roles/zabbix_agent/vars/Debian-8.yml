@@ -1,0 +1,13 @@
+---
+
+zabbix_agent_packages:
+  - zabbix-agent
+  - openssl
+  - git
+  - libconfig-simple-perl
+  - libjson-perl
+  - libfile-which-perl
+  - smartmontools
+  - lm-sensors
+  - patch
+  - fping

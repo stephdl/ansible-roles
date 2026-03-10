@@ -1,0 +1,27 @@
+---
+
+- name: Create archive dir
+  file: path={{ root_dir }}/archives/{{ version }} state=directory mode=700
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ root_dir }}/web"
+    dest: "{{ root_dir }}/archives/{{ version }}/"
+    compress: False
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ db_name }}"
+    target: "{{ root_dir }}/archives/{{ version }}/{{ db_name }}.sql.xz"
+    login_host: "{{ db_server | default(mysql_server) }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  when: db_name is defined
+

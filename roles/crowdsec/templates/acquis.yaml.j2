@@ -1,0 +1,6 @@
+{% if cs_acquis is defined and cs_acquis | length > 0%}
+{% for acquis in cs_acquis %}
+---
+{{ acquis | to_nice_yaml }}
+{% endfor %}
+{% endif %}

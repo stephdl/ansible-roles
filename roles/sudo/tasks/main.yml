@@ -1,0 +1,9 @@
+---
+- name: Setup default sudo access
+  template: src=fws.j2 dest=/etc/sudoers.d/fws owner=root group=root mode=440 validate='visudo -cf %s'
+  tags: sudo
+
+- name: Ensure sudo provider is only files in nss
+  lineinfile: dest=/etc/nsswitch.conf regexp="^sudoers{{ ':' }}.+" line="sudoers{{ ':' }}    files"
+  when: ad_auth | default(False)
+  tags: sudo

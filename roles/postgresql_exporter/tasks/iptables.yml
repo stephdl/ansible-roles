@@ -1,0 +1,9 @@
+---
+
+- name: Handle postgres exporter ports in the firewall
+  iptables_raw:
+    name: postgres-exporter
+    state: "{{ (pg_exporter_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ pg_exporter_port }} -s {{ pg_exporter_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: firewall,pg

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+USER=$1
+if [ -z $USER ]; then
+  echo "Need to get user as first argument"
+  exit 1
+fi
+getent passwd $USER >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "User $USER not found"
+  exit 1
+fi
+HOME=$(eval echo ~$USER)
+if [ ! -d $HOME ]; then
+  echo "Creating $USER home directory ($HOME)"
+  umask 022
+  mkdir -p $HOME
+  GROUP=$(id -gn $USER)
+  chown $USER:"$GROUP" $HOME
+  chmod 700 $HOME
+  restorecon -R $HOME
+fi

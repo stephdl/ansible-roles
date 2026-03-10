@@ -1,0 +1,8 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: mkdir
+  - role: mysql_server
+    when: bookstack_db_server in ['localhost','127.0.0.1']
+  - role: composer

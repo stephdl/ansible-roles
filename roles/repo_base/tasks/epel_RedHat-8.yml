@@ -1,0 +1,20 @@
+---
+
+- name: Configure EPEL repository
+  yum_repository:
+    name: epel
+    description: "Extra Package for Enterprise Linux"
+    baseurl: http://mirrors.ircam.fr/pub/fedora/epel/$releasever/Everything/$basearch http://mir01.syntis.net/epel/$releasever/Everything/$basearch
+    gpgcheck: True
+    gpgkey: https://mir01.syntis.net/epel/RPM-GPG-KEY-EPEL-8
+    exclude: dehydrated
+  tags: repo
+
+- name: Config EPEL Modular repository
+  yum_repository:
+    name: epel-modular
+    description: "Extra Packages for Enterprise Linux Modular $releasever - $basearch"
+    baseurl: http://mirrors.ircam.fr/pub/fedora/epel/$releasever/Modular/$basearch http://mir01.syntis.net/epel/$releasever/Modular/$basearch
+    gpgcheck: True
+    gpgkey: https://mir01.syntis.net/epel/RPM-GPG-KEY-EPEL-8
+  tags: repo

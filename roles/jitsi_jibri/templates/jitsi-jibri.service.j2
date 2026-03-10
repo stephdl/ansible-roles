@@ -1,0 +1,20 @@
+[Unit]
+Description=Jitsi Broadcasting Infrastructure
+After=network.target
+Requires=jitsi-jibri-xorg.service
+
+[Service]
+Type=simple
+SuccessExitStatus=143
+User={{ jitsi_jibri_user }}
+Group={{ jitsi_jibri_user }}
+PrivateTmp=true
+Restart=always
+StartLimitInterval=0
+RestartSec=30
+ExecStart=/bin/java -Dconfig.file={{ jitsi_root_dir }}/etc/jibri/jibri.conf -jar {{ jitsi_root_dir }}/jibri/jibri.jar
+SyslogIdentifier=jibri
+
+[Install]
+WantedBy=multi-user.target
+

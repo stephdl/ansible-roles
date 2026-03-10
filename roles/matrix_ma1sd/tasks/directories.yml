@@ -1,0 +1,18 @@
+---
+
+- name: Create needed directories
+  file: path={{ ma1sd_root_dir }}/{{ item.dir }} state=directory mode={{ item.mode }} group={{ ma1sd_user }}
+  with_items:
+    - dir: /
+      mode: 750
+    - dir: etc
+      mode: 770
+    - dir: db
+      mode: 770
+    - dir: archives
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: tmp
+      mode: 700
+  tags: matrix

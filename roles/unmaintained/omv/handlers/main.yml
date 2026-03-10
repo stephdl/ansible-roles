@@ -1,0 +1,12 @@
+---
+
+- name: expand samba config
+  command: /usr/share/openmediavault/mkconf/samba
+  changed_when: True
+  notify: restart smbd
+
+- name: restart smbd
+  service: name=smbd state=restarted
+
+- name: restart openmediavault-engined
+  service: name=openmediavault-engined state=restarted

@@ -1,0 +1,10 @@
+DATALIMIT={{ dnscache_data_limit }}
+CACHESIZE={{ dnscache_cache_size }}
+IP={{ dnscache_ip }}
+IPSEND=0.0.0.0
+UID={{ dnscache_uid }}
+GID={{ dnscache_gid }}
+ROOT=/etc/ndjbdns
+HIDETTL=
+FORWARDONLY={{ dnscache_forward_only | ternary('1','') }}
+DEBUG_LEVEL=1

@@ -1,0 +1,8 @@
+---
+allow_duplicates: true
+dependencies:
+  - role: mkdir
+  - role: httpd_php
+  - role: mysql_server
+    when: glpi_mysql_server == 'localhost' or glpi_mysql_server == '127.0.0.1'
+...

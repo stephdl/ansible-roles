@@ -1,0 +1,183 @@
+---
+
+- name: Install packages
+  yum: name={{ funkwhale_packages }}
+  tags: funkwhale
+
+- name: Check if mod_xsendfile is available
+  stat: path=/usr/lib64/httpd/modules/mod_xsendfile.so
+  register: funkwhale_xsendfile
+  tags: funkwhale
+
+- name: Download funkwhale frontend and api
+  get_url:
+    url: "{{ funkwhale_base_url }}?job=build_{{ item }}"
+    dest: "{{ funkwhale_root_dir }}/tmp/{{ item }}.zip"
+    checksum: sha1:{{ funkwhale_archive_sha1[item] }}
+  when: funkwhale_install_mode != 'none'
+  loop:
+    - front
+    - api
+  tags: funkwhale
+
+- name: Extract funkwhale archives
+  unarchive:
+    src: "{{ funkwhale_root_dir }}/tmp/{{ item }}.zip"
+    dest: "{{ funkwhale_root_dir }}/tmp/"
+    remote_src: True
+  when: funkwhale_install_mode != 'none'
+  loop:
+    - front
+    - api
+  tags: funkwhale
+
+- name: Move files to their final location
+  synchronize:
+    src: "{{ funkwhale_root_dir }}/tmp/{{ item }}/"
+    dest: "{{ funkwhale_root_dir }}/{{ item }}/"
+    recursive: True
+    delete: True
+  loop:
+    - api
+    - front
+  delegate_to: "{{ inventory_hostname }}"
+  when: funkwhale_install_mode != 'none'
+  tags: funkwhale
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ funkwhale_db_user }}"
+    password: "{{ funkwhale_db_pass }}"
+    login_host: "{{ funkwhale_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: funkwhale
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ funkwhale_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ funkwhale_db_user }}"
+    login_host: "{{ funkwhale_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: funkwhale
+
+- name: Enable required PostgreSQL extensions
+  postgresql_ext:
+    name: "{{ item }}"
+    db: "{{ funkwhale_db_name }}"
+    login_host: "{{ funkwhale_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  loop:
+    - unaccent
+    - citext
+  tags: funkwhale
+
+- name: Wipe the venv on upgrade
+  file: path={{ funkwhale_root_dir }}/venv state=absent
+  when: funkwhale_install_mode == 'upgrade'
+  tags: funkwhale
+
+- name: Create the venv dir
+  file: path={{ funkwhale_root_dir }}/venv state=directory
+  tags: funkwhale
+
+- name: Create the virtualenv
+  pip:
+    name:
+      - wheel
+      - pip
+      - virtualenv
+      - service_identity
+    virtualenv: "{{ funkwhale_root_dir }}/venv"
+    virtualenv_command: /bin/virtualenv-3
+    virtualenv_python: /bin/python3
+  when: funkwhale_install_mode != 'none'
+  notify: restart funkwhale
+  tags: funkwhale
+
+- name: Install python modules in the virtualenv
+  pip:
+    requirements: "{{ funkwhale_root_dir }}/api/requirements.txt"
+    virtualenv: "{{ funkwhale_root_dir }}/venv"
+    virtualenv_command: /bin/virtualenv-3
+    virtualenv_python: /bin/python3
+  when: funkwhale_install_mode != 'none'
+  notify: restart funkwhale
+  tags: funkwhale
+
+- name: Deploy funkwhale configuration
+  template: src=env.j2 dest={{ funkwhale_root_dir }}/config/.env group={{ funkwhale_user }}
+  notify: restart funkwhale
+  tags: funkwhale
+
+- name: Migrate database
+  django_manage:
+    command: migrate
+    app_path: "{{ funkwhale_root_dir }}/api"
+    virtualenv: "{{ funkwhale_root_dir }}/venv"
+  environment:
+    - FUNKWHALE_URL: "{{ funkwhale_public_url }}"
+  when: funkwhale_install_mode != 'none'
+  notify: restart funkwhale
+  tags: funkwhale
+
+- name: Collect static files
+  django_manage:
+    command: collectstatic
+    app_path: "{{ funkwhale_root_dir }}/api"
+    virtualenv: "{{ funkwhale_root_dir }}/venv"
+  when: funkwhale_install_mode != 'none'
+  tags: funkwhale
+
+- name: Deploy systemd units
+  template: src=funkwhale-{{ item }}.service.j2 dest=/etc/systemd/system/funkwhale_{{ funkwhale_id }}-{{ item }}.service
+  register: funkwhale_units
+  loop:
+    - server
+    - worker
+    - beat
+  notify: restart funkwhale
+  tags: funkwhale
+
+- name: Deploy library update units
+  template: src=funkwhale-update-media.{{ item }}.j2 dest=/etc/systemd/system/funkwhale_{{ funkwhale_id }}-update-media.{{ item }}
+  register: funkwhale_media_updater
+  loop:
+    - service
+    - timer
+  tags: funkwhale
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: (funkwhale_units.results + funkwhale_media_updater.results) | selectattr('changed','equalto',True) | list | length > 0
+  tags: funkwhale
+
+- name: Deploy pre and post backup scripts
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/funkwhale_{{ funkwhale_id }}.sh mode=750
+  loop:
+    - pre
+    - post
+  tags: funkwhale
+
+  # When upgrading to funkwhale 1.0, we have to rebuild thumbnails
+- block:
+    - name: Wipe the thumbnail directory
+      file: path={{ funkwhale_root_dir }}/data/media/__sized__ state=absent
+
+    - name: Rebuild thumbnails
+      django_manage:
+        command: fw media generate-thumbnails
+        app_path: "{{ funkwhale_root_dir }}/api"
+        virtualenv: "{{ funkwhale_root_dir }}/venv"
+
+  when:
+    - funkwhale_install_mode == 'upgrade'
+    - funkwhale_current_version is version('1.0', '<')
+  tags: funkwhale

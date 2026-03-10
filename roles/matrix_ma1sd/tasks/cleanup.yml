@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp files
+  file: path={{ ma1sd_root_dir }}/tmp/{{ item }} state=absent
+  loop:
+    - ma1sd
+    - ma1sd.zip
+  tags: matrix

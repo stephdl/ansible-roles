@@ -1,0 +1,9 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  with_items:
+    - "{{ pma_root_dir }}/tmp/phpMyAdmin-{{ pma_version }}-all-languages.zip"
+    - "{{ pma_root_dir }}/tmp/phpMyAdmin-{{ pma_version }}-all-languages"
+  tags: pma
+

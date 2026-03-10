@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eo pipefail
+
+sqlite3 {{ nd_root_dir }}/data/navidrome.db .dump | zstd -c > {{ nd_root_dir }}/backup/navidrome.sql.zst
+cp {{ nd_root_dir }}/etc/navidrome.toml {{ nd_root_dir }}/backup/

@@ -1,0 +1,8 @@
+---
+
+- name:  Handle miniflux port in the firewall
+  iptables_raw:
+    name: miniflux_port
+    state: "{{ (miniflux_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ miniflux_port }} -s {{ miniflux_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,miniflux

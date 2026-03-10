@@ -1,0 +1,323 @@
+---
+
+- name: Set default install mode to none
+  set_fact: bounca_install_mode="none"
+  tags: bounca
+
+- name: Check if bounca is installed
+  stat: path={{ bounca_root_dir }}/meta/ansible_version
+  register: bounca_version_file
+  tags: bounca
+
+- name: Check installed version
+  command:  cat {{ bounca_root_dir }}/meta/ansible_version
+  register: bounca_current_version
+  changed_when: False
+  when: bounca_version_file.stat.exists
+  tags: bounca
+
+- name: Set install mode to install
+  set_fact: bounca_install_mode='install'
+  when: not bounca_version_file.stat.exists
+  tags: bounca
+
+- name: Set install mode to upgrade
+  set_fact: bounca_install_mode='upgrade'
+  when:
+    - bounca_version_file.stat.exists
+    - bounca_current_version is defined
+    - bounca_current_version.stdout != bounca_version
+      #    - bounca_manage_upgrade
+  tags: bounca
+
+- name: Install dependencies
+  yum:
+    name:
+      - python34-virtualenv
+      - python34-pip
+      - uwsgi-plugin-python3
+      - uwsgi-logger-systemd
+      - python-psycopg2
+      - openssl-devel
+      - postgresql-devel
+      - postgresql
+      - gcc
+      - git
+  tags: bounca
+
+- name: Create user account for bounca
+  user:
+    name: bounca
+    system: True
+    shell: /sbin/nologin
+    home: "{{ bounca_root_dir }}"
+  tags: bounca
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ bounca_root_dir }}/tmp"
+    - dir: "{{ bounca_root_dir }}/app"
+    - dir: "{{ bounca_root_dir }}/data"
+      mode: 700
+      group: "{{ bounca_user }}"
+      owner: "{{ bounca_user }}"
+    - dir: "{{ bounca_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ bounca_root_dir }}/archives"
+      mode: 700
+    - dir: /etc/bounca
+      mode: 750
+      group: "{{ bounca_user }}"
+  tags: bounca
+
+- name: Create archive dir
+  file: path={{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }} state=directory mode=700
+  when: bounca_install_mode == "upgrade"
+  tags: bounca
+
+- name: Archive current BounCA install
+  synchronize:
+    src: "{{ bounca_root_dir }}/app"
+    dest: "{{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }}/app"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: bounca_install_mode == "upgrade"
+  tags: bounca
+
+- name: Dump database
+  postgresql_db:
+    name: "{{ bounca_db_name }}"
+    state: dump
+    login_host: "{{ bounca_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+    target: "{{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }}/{{ bounca_db_name }}.sql.gz"
+  when: bounca_install_mode == "upgrade"
+  tags: bounca
+
+- name: Compress previous version
+  command: tar cJf {{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }}.txz ./
+  environment:
+    XZ_OPT: -T0
+  args:
+    chdir: "{{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }}"
+  when: bounca_install_mode == 'upgrade'
+  tags: bounca
+
+- name: Remove the archive directory
+  file: path={{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }} state=absent
+  when: bounca_install_mode == 'upgrade'
+  tags: bounca
+
+- name: Download BounCA
+  get_url:
+    url: "{{ bounca_archive_url }}"
+    dest: "{{ bounca_root_dir }}/tmp"
+  when: bounca_install_mode != 'none'
+  tags: bounca
+
+- name: Extract BounCA
+  unarchive:
+    src: "{{ bounca_root_dir }}/tmp/bounca-{{ bounca_version }}.tar.gz"
+    dest: "{{ bounca_root_dir }}/tmp"
+    remote_src: yes
+  when: bounca_install_mode != "none"
+  tags: bounca
+
+- name: Move BounCA to it's directory
+  synchronize:
+    src: "{{ bounca_root_dir }}/tmp/bounca-{{ bounca_version }}/"
+    dest: "{{ bounca_root_dir }}/app/"
+    recursive: True
+    delete: True
+  when: bounca_install_mode != "none"
+  delegate_to: "{{ inventory_hostname }}"
+  tags: bounca
+
+  #- name: Clone GIT repo
+  #  git:
+  #    repo: "{{ bounca_git_url }}"
+  #    dest: "{{ bounca_root_dir }}/app"
+  #    version: "{{ bounca_version }}"
+  #    force: True
+  #  register: bounca_git
+  #  tags: bounca
+  #
+  #- name: Get new git commit
+  #  command: git rev-parse HEAD
+  #  args:
+  #    chdir: "{{ bounca_root_dir }}/app"
+  #  register: bounca_git_commit
+  #  changed_when: False
+  #  tags: bounca
+  #
+  #- name: Set install mode to upgrade
+  #  set_fact: bounca_install_mode='upgrade'
+  #  when:
+  #    - bounca_install_mode == 'none'
+  #    - bounca_git_commit.stdout != bounca_current_version.stdout
+  #  tags: bounca
+
+- name: Create archive dir
+  file: path={{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }} state=directory mode=700
+  when: bounca_install_mode == "upgrade"
+  tags: bounca
+
+- name: Dump database
+  postgresql_db:
+    name: "{{ bounca_db_name }}"
+    state: dump
+    login_host: "{{ bounca_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+    target: "{{ bounca_root_dir }}/archives/{{ bounca_current_version.stdout }}/{{ bounca_db_name }}.sql.gz"
+  when: bounca_install_mode == "upgrade"
+  tags: bounca
+
+- name: Create the virtualenv
+  pip:
+    state: latest
+    virtualenv: "{{ bounca_root_dir }}"
+    virtualenv_command: /usr/bin/virtualenv-3
+    requirements: "{{ bounca_root_dir }}/app/requirements.txt"
+  tags: bounca
+
+- name: Link pki to the data dir
+  file: src={{ bounca_root_dir }}/data dest={{ bounca_root_dir }}/app/pki state=link
+  tags: bounca
+
+- name: Handle bounca ports
+  iptables_raw:
+    name: bounca_ports
+    state: "{{ (bounca_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ bounca_port }} -s {{ bounca_src_ip | join(',') }} -j ACCEPT"
+  tags: [firewall,bounca]
+
+  #- name: Install additional python module
+  #  pip:
+  #    state: latest
+  #    virtualenv: "{{ bounca_root_dir }}"
+  #    name: "{{ item }}"
+  #  with_items:
+  #    - django-lemonldap
+  #  tags: bounca
+
+- name: Generate a random pass for the database
+  shell: openssl rand -base64 45 > {{ bounca_root_dir }}/meta/ansible_dbpass
+  args:
+    creates: "{{ bounca_root_dir }}/meta/ansible_dbpass"
+  when: bounca_db_pass is not defined
+  tags: bounca
+
+- name: Read database password
+  command: cat {{ bounca_root_dir }}/meta/ansible_dbpass
+  register: bounca_rand_pass
+  when: bounca_db_pass is not defined
+  changed_when: False
+  tags: bounca
+
+- name: Set database pass
+  set_fact: bounca_db_pass={{ bounca_rand_pass.stdout }}
+  when: bounca_db_pass is not defined
+  tags: bounca
+
+- name: Generate a random secret
+  shell: openssl rand -base64 45 > {{ bounca_root_dir }}/meta/ansible_secret
+  args:
+    creates: "{{ bounca_root_dir }}/meta/ansible_secret"
+  when: bounca_secret_key is not defined
+  tags: bounca
+
+- name: Read secret_key
+  command: cat {{ bounca_root_dir }}/meta/ansible_secret
+  register: bounca_rand_secret
+  when: bounca_secret_key is not defined
+  changed_when: False
+  tags: bounca
+
+- name: Set secret_key
+  set_fact: bounca_secret_key={{ bounca_rand_secret.stdout }}
+  when: bounca_secret_key is not defined
+  tags: bounca
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ bounca_db_user }}"
+    password: "{{ bounca_db_pass }}"
+    login_host: "{{ bounca_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: bounca
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ bounca_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ bounca_db_user }}"
+    login_host: "{{ bounca_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: bounca
+
+- name: Deploy configuration
+  template: src={{ item.src }} dest={{ item.dest }} owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - src: main.ini.j2
+      dest: /etc/bounca/main.ini
+      group: bounca
+      mode: 640
+    - src: uwsgi.ini.j2
+      dest: /etc/bounca/uwsgi.ini
+      group: bounca
+      mode: 640
+  notify: restart bounca
+  tags: bounca
+
+  #- name: Add a tmpfiles.d snippet
+  #  copy: content="d /run/bounca 750 bounca apache" dest=/etc/tmpfiles.d/bounca.conf
+  #  register: bounca_tmpfiles
+  #  tags: bounca
+  #
+  #- name: Create tmpdir
+  #  command: systemd-tmpfiles --create
+  #  when: bounca_tmpfiles.changed
+  #  tags: bounca
+
+- name: Deploy BounCA unit
+  template: src=bounca.service.j2 dest=/etc/systemd/system/bounca.service
+  register: bounca_unit
+  tags: bounca
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: bounca_unit.changed
+  tags: bounca
+
+- name: Stop BounCA daemon for DB upgrade
+  service: name=bounca state=stopped
+  when: bounca_install_mode == 'upgrade'
+  tags: bounca
+
+- name: Migrate BounCA DB
+  django_manage: command="migrate --noinput" app_path={{ bounca_root_dir }}/app virtualenv={{ bounca_root_dir }}
+  when: bounca_install_mode != 'none'
+  tags: bounca
+
+- name: Collect static assets
+  django_manage: command="collectstatic --noinput" app_path={{ bounca_root_dir }}/app virtualenv={{ bounca_root_dir }}
+  when: bounca_install_mode != 'none'
+  tags: bounca
+
+- name: Start and enable the daemon
+  service: name=bounca state=started enabled=True
+  tags: bounca
+
+- name: Write installed version
+  #  copy: content={{ bounca_git_commit.stdout}} dest={{ bounca_root_dir }}/meta/ansible_version
+  copy: content={{ bounca_version }} dest={{ bounca_root_dir }}/meta/ansible_version
+  tags: bounca

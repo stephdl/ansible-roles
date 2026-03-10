@@ -1,0 +1,9 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ bookstack_root_dir }}/archives/{{ bookstack_current_version }}"
+    - "{{ bookstack_root_dir }}/tmp/BookStack-{{ bookstack_version }}"
+    - "{{ bookstack_root_dir }}/tmp/BookStack-{{ bookstack_version }}.tar.gz"
+  tags: bookstack

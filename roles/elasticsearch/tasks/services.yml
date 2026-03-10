@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the service
+  service: name=elasticsearch state=started enabled=True
+  tags: es
+

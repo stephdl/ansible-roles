@@ -1,0 +1,103 @@
+---
+
+pki_version: '3.16.0'
+pki_archive_url: https://github.com/openxpki/openxpki/archive/v{{ pki_version }}.tar.gz
+pki_archive_sha1: 9bba585de36b81f70a7a315f8a591e388c516b38
+
+pki_config_version: '3.16'
+pki_config_archive_url: https://github.com/openxpki/openxpki-config/archive/v{{ pki_config_version }}.tar.gz
+pki_config_archive_sha1: f4673cf976d8d76032bbea14371d63d5e69cbb42
+
+# Should ansible handle updates or only initial install
+pki_manage_upgrade: True
+
+pki_root_dir: /opt/openxpki
+pki_user: openxpki
+
+# Database settings
+pki_db_server: "{{ mysql_server | default('localhost') }}"
+pki_db_port: 3306
+pki_db_name: openxpki
+pki_db_user: openxpki
+# If not defined, a random pass will be generated and stored in the meta directory
+# pki_db_pass: 
+
+# For sessions, use a distinct user, with only access to the frontend_session table
+pki_db_session_user: openxpki_session
+# pki_db_session_pass
+
+# Base URL of the PKI
+#pki_base_url: https://pki.domain.tld/openxpki
+# Just a shortcut to get only the path of the url
+pki_web_alias: "{{ pki_base_url | urlsplit('path') }}"
+
+# You may restrict access to the web interface by IP
+pki_src_ip:
+  - 0.0.0.0/0
+# This is to restrict access to the public endpoints. Eg downloads of CRL
+pki_pub_src_ip: "{{ pki_src_ip }}"
+
+# Optional prefix and suffix to append to the Root CA, vault and scep certificates
+pki_cn_prefix: ''
+pki_cn_suffix: ''
+pki_root_ca_cn: "{{ pki_cn_prefix }}Root CA{{ pki_cn_suffix }}"
+pki_vault_cn: "{{ pki_cn_prefix }}Vault Certificate{{ pki_cn_suffix }}"
+pki_scep_cn: "{{ pki_cn_prefix }}SCEP Certificate{{ pki_cn_suffix }}"
+pki_default_realm:
+  subj_c: FR
+  subj_st: Aquitaine
+  subj_l: Bordeaux
+  subj_o: Firewall Services
+  subj_ou: Security
+  validity: 7300 # Root CA will use the double of this value
+  keysize: 4096  # Root CA will use the double of this value
+  subj_suffix: DC=PKI,DC=Firewall Services,DC=com
+  scep:
+    enabled: True
+    iprange: 0.0.0.0/0
+    # hmac: SecretHMAC
+    # challenge: SecretChallenge
+    profile: I18N_OPENXPKI_PROFILE_TLS_SERVER
+  notif:
+    admin_email: "{{ system_admin_email }}"
+    expiry_send_requestor: False   # Should requestor be notified about expiry
+  auth:
+    ldap_uri: "{{ ad_auth | default(False) | ternary('ldap://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_uri) }}"
+    ldap_base: "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), ldap_base) }}"
+    ldap_start_tls: True
+    ldap_user_attr: "{{ ad_auth | default(False) | ternary('samaccountname','uid') }}"
+    #ldap_bind_dn:
+    #ldap_bind_pass:
+    role_map:
+      - priority: 10
+        filter: "{{ ad_auth | default(False) | ternary('|(memberOf=CN=Domain Admins,CN=Users,DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=') + ')(memberOf=CN=Domain Admins,OU=Groups,DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=') + ')', 'posixMemberOf=admins') }}"
+        role: 'RA Operator'
+      - priority: 20
+        filter: "{{ ad_auth | default(False) | ternary('memberOf=CN=Equipe,OU=Groups,DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'posixMemberOf=equipe') }}"
+        role: 'User'
+      - priority: 30
+        filter: 'cn=*'
+        role: 'Anonymous'
+  passwd_quality: normal
+  # passwd_quality can either be string none, normal or strong.
+
+# pki_extra_realm just lets you override some of the defaults, without
+# redefining the whole dict
+pki_extra_realm: {}
+pki_realm_conf: "{{ pki_default_realm | combine(pki_extra_realm, recursive=True) }}"
+
+# Auto-generated if not defined
+# those will be used as default HMAC and challenge for realms
+# which doesn't have them defined
+# pki_scep_hmac: 
+# pki_scep_challenge: 
+
+pki_realms:
+  - name: vpn
+    description: VPN CA
+  - name: users
+    description: Users CA
+
+pki_email_footer_txt: ''
+pki_email_footer_html: ''
+

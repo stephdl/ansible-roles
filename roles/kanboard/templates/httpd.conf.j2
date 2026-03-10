@@ -1,0 +1,32 @@
+{% if kanboard_alias is defined %}
+Alias /{{ kanboard_alias }} {{ kanboard_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ kanboard_root_dir }}/web>
+  AllowOverride None
+  Options FollowSymLinks
+{% if kanboard_src_ip is defined and kanboard_src_ip | length > 0 %}
+  Require ip {{ kanboard_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ kanboard_php_fpm_pool | default('kanboard_' + kanboard_id) }}.sock|fcgi://localhost"
+  </FilesMatch>
+  <IfModule mod_rewrite.c>
+    Options -MultiViews
+    SetEnv HTTP_MOD_REWRITE On
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+  </IfModule>
+  <FilesMatch "(kanboard|config.php|config.default.php|.ansible_version|.git.*)">
+    Require all denied
+  </FilesMatch>
+</Directory>
+
+<Directory {{ kanboard_root_dir }}/web/app>
+  Require all denied
+</Directory>

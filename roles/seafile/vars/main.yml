@@ -1,0 +1,3 @@
+---
+clam_user: "{{ seafile_user }}"
+clam_group: "{{ seafile_group }}"

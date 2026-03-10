@@ -1,0 +1,9 @@
+---
+
+- name: Start and enable psono-server
+  service: name=psono-server state=started enabled=True
+  tags: psono
+
+- name: Start and enable psono timer
+  systemd: name=psono-cleartoken.timer state=started enabled=True
+  tags: psono

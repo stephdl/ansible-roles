@@ -1,0 +1,24 @@
+---
+
+- name: Create directory structure
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ wp_root_dir }}"
+    - dir: "{{ wp_root_dir }}/web"
+      owner: "{{ wp_php_user }}"
+      group: "{{ wp_php_user }}"
+    - dir: "{{ wp_root_dir }}/tmp"
+      owner: "{{ wp_php_user }}"
+      group: "{{ wp_php_user }}"
+      mode: 700
+    - dir: "{{ wp_root_dir }}/sessions"
+      owner: "{{ wp_php_user }}"
+      group: "{{ wp_php_user }}"
+      mode: 700
+    - dir: "{{ wp_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ wp_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ wp_root_dir }}/archives"
+      mode: 700
+  tags: wp

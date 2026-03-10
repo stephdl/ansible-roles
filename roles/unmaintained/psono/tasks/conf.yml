@@ -1,0 +1,80 @@
+---
+
+- name: Check is secrets have been created
+  stat: path={{ psono_root_dir }}/meta/ansible_{{ item }}
+  register: psono_server_secrets
+  loop:
+    - SECRET_KEY
+    - ACTIVATION_LINK_SECRET
+    - DB_SECRET
+    - EMAIL_SECRET_SALT
+    - PRIVATE_KEY
+    - PUBLIC_KEY
+  tags: psono
+
+- when: psono_server_secrets.results | selectattr('stat.exists', 'equalto', True) | list | length < 6
+  tags: psono
+  block:
+  - name: Create temporary PSONO_HOME
+    file: path={{ psono_root_dir }}/tmp/.psono_server state=directory
+  
+  - name: Deploy a temp config
+    copy: src={{ psono_root_dir }}/server/app/configs/mainconfig/settings.yaml dest={{ psono_root_dir }}/tmp/.psono_server/ remote_src=True
+  
+  - name: Generate server's secrets
+    shell: |
+      {{ psono_root_dir }}/server/venv/bin/python3 \
+        {{ psono_root_dir }}/server/app/psono/manage.py \
+        generateserverkeys > {{ psono_root_dir }}/tmp/keys.tmp
+      {% for item in psono_server_secrets.results %}
+      [ -e {{ psono_root_dir }}/meta/ansible_{{ item.item }} ] || \
+        cat {{ psono_root_dir }}/tmp/keys.tmp | grep -P '^{{ item.item }}' | \
+        sed -e 's/^{{ item.item }}: //' | \
+        xargs > {{ psono_root_dir }}/meta/ansible_{{ item.item }}
+      chmod 600 {{ psono_root_dir }}/meta/ansible_{{ item.item }}
+      {% endfor %}
+      rm -f {{ psono_root_dir }}/tmp/keys.tmp
+    environment:
+      PSONO_HOME: "{{ psono_root_dir }}/tmp/"
+
+- name: Read secrets
+  command: cat {{ psono_root_dir }}/meta/ansible_{{ item }}
+  register: psono_tokens
+  loop:
+    - SECRET_KEY
+    - ACTIVATION_LINK_SECRET
+    - DB_SECRET
+    - EMAIL_SECRET_SALT
+    - PRIVATE_KEY
+    - PUBLIC_KEY
+  changed_when: False
+  tags: psono
+
+- name: Deploy configuration
+  template: src=settings.yaml.j2 dest={{ psono_root_dir }}/server/.psono_server/settings.yaml owner={{ psono_user }} group={{ psono_user }} mode=600
+  notify:
+    - restart psono-server
+  tags: psono
+
+- name: Migrate database
+  django_manage:
+    command: migrate
+    app_path: "{{ psono_root_dir }}/server/app/psono"
+    virtualenv: "{{ psono_root_dir }}/server/venv"
+  environment:
+    - PSONO_HOME: "{{ psono_root_dir }}/server"
+  when: psono_server_install_mode != 'none'
+  notify: restart psono-server
+  tags: psono
+
+- name: Deploy client and admin conf file
+  template: src=webclient.json.j2 dest={{ psono_root_dir }}/{{ item }}/config.json
+  loop:
+    - client
+    - admin
+  tags: psono
+
+- name: Deploy nginx configuration
+  template: src=nginx.conf.j2 dest=/etc/nginx/ansible_conf.d/31-psono.conf
+  notify: reload nginx
+  tags: psono

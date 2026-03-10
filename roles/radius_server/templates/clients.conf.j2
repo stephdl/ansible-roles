@@ -1,0 +1,7 @@
+{% for client in rad_clients %}
+client {{ client.name }} {
+  ipaddr = {{ client.ip }}
+  secret = {{ client.secret }}
+  nas_type = {{ client.nas_type | default('other') }}
+}
+{% endfor %}

@@ -1,0 +1,5 @@
+---
+allow_duplicates: True
+dependencies:
+  - role: httpd_php
+...

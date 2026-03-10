@@ -1,0 +1,9 @@
+---
+
+- name: Deploy n8n config
+  template: src={{ item }}.j2 dest={{ n8n_root_dir }}/etc/{{ item }} group={{ n8n_user }} mode=640
+  loop:
+    - n8n.json
+    - env
+  notify: restart n8n
+  tags: n8n

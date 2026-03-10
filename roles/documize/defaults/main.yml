@@ -1,0 +1,35 @@
+---
+
+# Version of cocumize to deploy
+documize_version: 4.1.1
+# URL of the binary to install
+documize_bin_url: https://github.com/documize/community/releases/download/v{{ documize_version }}/documize-community-linux-amd64
+# Expected sha1 of the binary
+documize_bin_sha1: 7362cb0b0479b1315399df86fabef81aa1a43124
+
+# Should documize handle upgrades or only initial install ?
+documize_manage_upgrade: True
+
+# Root directory where documize will be installed
+documize_root_dir: /opt/documize
+
+# User under which documize will run
+documize_user: documize
+
+# port on which documize will listen
+documize_port: 5001
+
+# List of IP / CIDR allowed to access documize port
+documize_src_ip: []
+
+# Database settings
+documize_db_engine: 'mysql'
+documize_db_server: "{{ (documize_db_engine == 'postgres') | ternary(pg_server,mysql_server) | default('localhost') }}"
+documize_db_port: "{{ (documize_db_engine == 'postgres') | ternary('5432','3306') }}"
+documize_db_user: documize
+documize_db_name: documize
+# If password is not defined, a random one will be generated and stored in meta/ansible_dbpass
+# documize_db_pass: S3Cr3t.
+
+# Salt for documize. A random one will be generated if not defined
+# documize_salt: tsu3Acndky8cdTNx3

@@ -1,0 +1,31 @@
+<Directory {{ pim_root_dir }}/app/public>
+  AllowOverride All
+  Options FollowSymLinks
+{% if pim_src_ip is defined and pim_src_ip | length > 0 %}
+  Require ip {{ pim_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ pim_php_fpm_pool | default('pim_' + pim_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+  RewriteEngine On
+
+  # Handle Authorization Header
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Send Requests To Front Controller...
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [QSA,L]
+
+  <FilesMatch "(\.git.*)">
+    Require all denied
+  </FilesMatch>
+
+</Directory>
+
+<Directory {{ pim_root_dir }}/app/public/bundles>
+  RewriteEngine Off
+</Directory>

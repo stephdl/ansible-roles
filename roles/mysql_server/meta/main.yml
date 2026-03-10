@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: repo_mariadb
+    when: mysql_engine == 'mariadb'
+  - role: mkdir

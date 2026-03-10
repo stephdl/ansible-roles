@@ -1,0 +1,17 @@
+---
+
+- name: Install sssd and the needed tools
+  apt:
+    name:
+      - sssd-ad
+      - libnss-sss
+      - libpam-sss
+      - oddjob-mkhomedir
+      - ca-certificates
+      - krb5-user
+      - sssd-tools
+      - adcli
+  notify:
+    - restart oddjobd
+    - restart sssd ad
+  tags: auth

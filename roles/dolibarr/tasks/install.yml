@@ -1,0 +1,142 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - tar
+      - mariadb
+      - acl
+      - patch
+  tags: dolibarr
+
+- name: Download Dolibarr
+  get_url:
+    url: "{{ dolibarr_archive_url }}"
+    dest: "{{ dolibarr_root_dir }}/tmp/"
+    checksum: "sha1:{{ dolibarr_archive_sha1 }}"
+  when: dolibarr_install_mode != 'none'
+  tags: dolibarr
+
+- name: Extract dolibarr archive
+  unarchive:
+    src: "{{ dolibarr_root_dir }}/tmp/dolibarr-{{ dolibarr_version }}.tgz"
+    dest: "{{ dolibarr_root_dir }}/tmp"
+    remote_src: yes
+  when: dolibarr_install_mode != 'none'
+  tags: dolibarr
+
+- name: Move files to the correct directory
+  synchronize:
+    src: "{{ dolibarr_root_dir }}/tmp/dolibarr-{{ dolibarr_version }}/"
+    dest: "{{ dolibarr_root_dir }}/web/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: dolibarr_install_mode != 'none'
+  tags: dolibarr
+
+- name: Apply local patches
+  patch:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    backup: True
+  loop:
+    - src: dolibarr_token.patch
+      dest: "{{ dolibarr_root_dir }}/web/htdocs/main.inc.php"
+  tags: dolibarr
+
+  # Custom dir is where custom modules are installed.
+  # This dir was in data previously, but this is not working with
+  # some modules which use relative path for their includes
+- name: Check if custom dir is linked to the data dir
+  stat: path={{ dolibarr_root_dir }}/web/htdocs/custom
+  register: dolibarr_custom_link
+  tags: dolibarr
+- stat: path={{ dolibarr_root_dir }}/data/custom
+  register: dolibarr_custom_data
+  tags: dolibarr
+
+- name: Remove custom symlink
+  file: path={{ dolibarr_root_dir }}/web/htdocs/custom state=absent
+  when:
+    - dolibarr_custom_link.stat.islnk is defined
+    - dolibarr_custom_link.stat.islnk == True
+  tags: dolibarr
+
+- name: Make sure the custom dir exists
+  file: path={{ dolibarr_root_dir }}/web/htdocs/custom state=directory
+  tags: dolibarr
+
+- name: Move custom content to the htdocs/custom dir
+  synchronize:
+    src: "{{ dolibarr_root_dir }}/data/custom/"
+    dest: "{{ dolibarr_root_dir }}/web/htdocs/custom/"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  when:
+    - dolibarr_custom_link.stat.islnk is defined
+    - dolibarr_custom_link.stat.islnk == True
+    - dolibarr_custom_data.stat.isdir is defined
+    - dolibarr_custom_data.stat.isdir == True
+  tags: dolibarr
+
+- name: Remove custom dir from the data dir
+  file: path={{ dolibarr_root_dir }}/data/custom/ state=absent
+  when:
+    - dolibarr_custom_data.stat.isdir is defined
+    - dolibarr_custom_data.stat.isdir == True
+  tags: dolibarr
+
+- name: Restore custom dir after an upgrade
+  synchronize:
+    src: "{{ dolibarr_root_dir }}/archives/{{ dolibarr_current_version }}/web/htdocs/custom/"
+    dest: "{{ dolibarr_root_dir }}/web/htdocs/custom/"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: dolibarr_install_mode == 'upgrade'
+  tags: dolibarr
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ dolibarr_db_name }}"
+    - db_user: "{{ dolibarr_db_user }}"
+    - db_server: "{{ dolibarr_db_server }}"
+    - db_pass: "{{ dolibarr_db_pass }}"
+  tags: dolibarr
+
+- name: Add a script to sync from LDAP
+  copy:
+    content: |
+      #!/bin/sh
+      /bin/php{{ dolibarr_php_version }} {{ dolibarr_root_dir }}/web/scripts/user/sync_users_ldap2dolibarr.php now -y
+      /bin/php{{ dolibarr_php_version }} {{ dolibarr_root_dir }}/web/scripts/user/sync_groups_ldap2dolibarr.php now -y
+    dest: "{{ dolibarr_root_dir }}/web/scripts/user/sync_ldap2dolibarr.sh"
+  tags: dolibarr
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/dolibarr_{{ dolibarr_id }} mode=750
+  loop:
+    - pre
+    - post
+  tags: dolibarr
+
+- name: Setup cron job to sync users and groups from LDAP
+  cron:
+    name: dolibarr_{{ dolibarr_id }}_ldap
+    minute: '*/15'
+    user: "{{ dolibarr_php_user }}"
+    job: "sleep $[ ( $RANDOM \\% 30 ) ] && {{ dolibarr_root_dir }}/web/scripts/user/sync_ldap2dolibarr.sh | /bin/systemd-cat -t dolibarr_{{ dolibarr_id }}"
+    cron_file: dolibarr_{{ dolibarr_id }}_ldap
+    state: "{{ (dolibarr_sync_from_ldap is defined and dolibarr_sync_from_ldap) | ternary('present','absent') }}"
+  tags: dolibarr
+
+- name: Set var_log_t context for log files
+  sefcontext:
+    target: '{{ dolibarr_root_dir }}/data/.*\.log'
+    setype: httpd_log_t
+  when: ansible_selinux.status == 'enabled'
+  tags: dolibarr
+
+- name: Install logrotate configuration
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/dolibarr_{{ dolibarr_id }}
+  tags: dolibarr

@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ etherpad_root_dir }}"
+    - version: "{{ current_version }}"
+  when: install_mode == 'upgrade'
+  tags: etherpad
+

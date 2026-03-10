@@ -1,0 +1,100 @@
+---
+
+# Version to deploy
+sftpgo_version: 2.1.2
+# URL of the archive
+sftpgo_archive_url: https://github.com/drakkan/sftpgo/releases/download/v{{ sftpgo_version }}/sftpgo_v{{ sftpgo_version }}_linux_x86_64.tar.xz
+# Expected sha1 of the archive
+sftpgo_archive_sha1: 6b9ea26c53d62b47eec3ad18afeb90b6651df10c
+
+# Should ansible handle upgrades ? If False, only initial install will be done
+sftpgo_manage_upgrade: True
+
+# Root dir where sftpgo will be installed
+sftpgo_root_dir: /opt/sftpgo
+
+# User account under which sftpgo will run
+sftpgo_user: sftpgo
+
+# Database settings
+sftpgo_db_server: "{{ mysql_server | default('localhost') }}"
+sftpgo_db_port: 3306
+sftpgo_db_name: sftpgo
+sftpgo_db_user: sftpgo
+# If the password is not defined, a random one will be created and stored under {{ sftpgo_root_dir }}/meta/ansible_dbpass
+# sftpgo_db_pass: S3cr3t.
+
+# You can restrict access per port. This can be a list of IP (or network in CIDR notation)
+# Access will be controlled by iptables
+sftpgo_src_ip: []
+sftpgo_sftp_src_ip: "{{ sftpgo_src_ip }}"
+sftpgo_ftp_src_ip: "{{ sftpgo_src_ip }}"
+sftpgo_webdav_src_ip: "{{ sftpgo_src_ip }}"
+sftpgo_http_src_ip: "{{ sftpgo_src_ip }}"
+
+# Base configuration of the service
+sftpgo_base_conf:
+  common:
+    upload_mode: 1
+    setstat_mode: 1
+    temp_path: "{{ sftpgo_root_dir }}/tmp"
+    max_total_connections: 500
+    max_per_host_connections: 20
+    defender:
+      enabled: True
+      ban_time: 5
+      ban_time_increment: 50
+      threshold: 20
+      score_invalid: 10
+      score_valid: 1
+      score_limit_exceeded: 10
+      observation_time: 10
+  sftpd:
+    bindings:
+      port: 2022
+      max_auth_tries: 4
+  ftpd:
+    bindings:
+      port: 2021
+    passive_port_range:
+      start: 50000
+      end: 50200
+      force_passive_ip: ''
+    disable_active_mode: True
+  webdavd:
+    bindings:
+      port: 2080
+      prefix: /dav
+      proxy_allowed: []
+  data_provider:
+    driver: mysql
+    name: "{{ sftpgo_db_name }}"
+    host: "{{ sftpgo_db_server }}"
+    port: "{{ sftpgo_db_port }}"
+    username: "{{ sftpgo_db_user }}"
+    password: "{{ sftpgo_db_pass }}"
+    track_quota: 1
+    delayed_quota_update: 60
+    pool_size: 5
+    users_base_dir: "{{ sftpgo_root_dir }}/data/home/"
+  httpd:
+    bindings:
+      port: 8080
+      address: ''
+      proxy_allowed: []
+    enable_web_admin: True
+    enable_web_client: True
+    templates_path: "{{ sftpgo_root_dir }}/app/templates"
+    static_files_path: "{{ sftpgo_root_dir }}/app/static"
+    backups_path: "{{ sftpgo_root_dir }}/backup"
+    max_upload_file_size: 1048576000
+  telemetry:
+    bind_port: 0
+
+# You can override and/or add custom settings here. Same format as sftpgo_base_conf
+# The extra conf will be merged on top of the base conf
+sftpgo_extra_conf: {}
+sftpgo_conf: "{{ sftpgo_base_conf | combine(sftpgo_extra_conf, recursive=True) }}"
+
+
+

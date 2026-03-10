@@ -1,0 +1,10 @@
+---
+
+- name: Handle Zimbra logger ports
+  iptables_raw:
+    name: zcs_logger_ports
+    state: "{{ (zcs_cluster_ip | length > 0 ) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p udp --dport 514 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs
+

@@ -1,0 +1,10 @@
+---
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: /etc/zabbix/ansible_db_pass
+  when: zabbix_server_db_pass is not defined
+  tags: zabbix
+- set_fact: zabbix_server_db_pass={{ rand_pass }}
+  when: zabbix_server_db_pass is not defined
+  tags: zabbix

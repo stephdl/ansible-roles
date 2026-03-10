@@ -1,0 +1,45 @@
+---
+
+- name: Create the archive dir
+  file: path={{ papermerge_root_dir }}/archives/{{ papermerge_current_version }} state=directory
+  tags: ged
+
+- name: Install postgresql client
+  package:
+    name:
+      - postgresql14
+  tags: ged
+
+- name: Stop sevices during upgrade
+  service: name={{ item }} state=stopped
+  loop:
+    - papermerge-web
+    - papermerge-worker
+  tags: ged
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ papermerge_root_dir }}/{{ item }}"
+    dest: "{{ papermerge_root_dir }}/archives/{{ papermerge_current_version }}/"
+    recursive: True
+    delete: True
+  loop:
+    - venv
+    - app
+  delegate_to: "{{ inventory_hostname }}"
+  tags: ged
+
+- name: Dump the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ papermerge_db_server | quote }}
+    --port={{ papermerge_db_port | quote }}
+    --username=sqladmin {{ papermerge_db_name | quote }}
+    --file="{{ papermerge_root_dir }}/archives/{{ papermerge_current_version }}/{{ papermerge_db_name }}.sql"
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  tags: ged
+
+

@@ -1,0 +1,5 @@
+---
+
+- name: Create user account
+  user: name={{ bookstack_php_user }} system=True shell=/sbin/nologin home={{ bookstack_root_dir }}
+  tags: bookstack

@@ -1,0 +1,17 @@
+---
+
+- name: Ensure ipsets exist
+  shell: |
+    ipset list crowdsec-blacklists || ipset create crowdsec-blacklists nethash timeout 300
+    ipset list crowdsec6-blacklists || ipset create crowdsec6-blacklists nethash timeout 300 family inet6
+  changed_when: False
+  tags: cs
+
+- name: Add DROP rules
+  iptables_raw:
+    name: cs_blacklist
+    weight: 9
+    rules: |
+      -A INPUT -m set --match-set crowdsec-blacklists src -j DROP
+      -A FORWARD -m set --match-set crowdsec-blacklists src -j DROP
+  tags: cs

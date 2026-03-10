@@ -1,0 +1,11 @@
+---
+- name: Configure Grafana repository
+  yum_repository:
+    name: grafana
+    description: Grafana
+    baseurl: https://packages.grafana.com/oss/rpm
+    gpgcheck: True
+    repo_gpgcheck: True
+    gpgkey: https://packages.grafana.com/gpg.key
+  tags: repo,grafana
+

@@ -1,0 +1,16 @@
+[Unit]
+Description=Seafile virtual drive
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/seadrive -c /etc/seadrive/{{ item.id }}.conf -d {{ item.data_dir | default('/var/cache/seadrive/' + item.id) }} -o {{ item.fuse_opts | default(['allow_other']) | join(',') }} -f -l - {{ item.drive_dir }}
+ExecStopPost=/bin/fusermount -uz {{ item.drive_dir }}
+RestartSec=5
+User={{ item.user | default('root') }}
+MemoryLimit=1024M
+SyslogIdentifier=seadrive-{{ item.id }}
+Restart=always
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

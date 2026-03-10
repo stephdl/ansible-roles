@@ -1,0 +1,16 @@
+---
+
+- name: Handle Synapse TLS port
+  iptables_raw:
+    name: synapse_tls_port
+    state: "{{ (synapse_tls_src_ip | length > 0) | ternary('present', 'absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ synapse_tls_port }} -s {{ synapse_tls_src_ip | join(',') }} -j ACCEPT"
+  tags: matrix,firewall
+
+- name: Handle Synapse port
+  iptables_raw:
+    name: synapse_port
+    state: "{{ (synapse_src_ip | length > 0) | ternary('present', 'absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ synapse_port }} -s {{ synapse_src_ip | join(',') }} -j ACCEPT"
+  tags: matrix,firewall
+

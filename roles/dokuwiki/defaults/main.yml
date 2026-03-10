@@ -1,0 +1,204 @@
+---
+
+# A unique ID for this instance. You can deploy several dokuwiki instances on the same machine
+dokuwiki_id: 1
+
+# Version to deploy
+dokuwiki_version: 2020-07-29
+# The sha1 checksum of the archive
+dokuwiki_archive_sha1: 119f3875d023d15070068a6aca1e23acd7f9a19a
+
+# Root dir where the app will be installed. Each instance must have a different install path
+dokuwiki_root_dir: /opt/dokuwiki_{{ dokuwiki_id }}
+
+# Should upgrades be handled by ansible
+dokuwiki_manage_upgrade: True
+
+# The URL to download dokuwiki archive
+dokuwiki_archive_url: https://download.dokuwiki.org/src/dokuwiki/dokuwiki-{{ dokuwiki_version }}.tgz
+
+# The user account under which PHP is executed
+dokuwiki_php_user: php-dokuwiki_{{ dokuwiki_id }}
+
+dokuwiki_php_version: 74
+
+# The name of the PHP-FPM pool to use
+# dokuwiki_php_fpm_pool: php70
+
+# List of default DokuWiki plugins
+dokuwiki_plugins:
+  todo:
+    archive_name: dokuwiki-plugin-todo-stable.zip
+    url: https://github.com/leibler/dokuwiki-plugin-todo/archive/stable.zip
+  note:
+    archive_name: dokuwiki_note-master.zip
+    url: https://github.com/LarsGit223/dokuwiki_note/archive/master.zip
+  odt:
+    archive_name: dokuwiki-plugin-odt-master.zip
+    url: https://github.com/LarsGit223/dokuwiki-plugin-odt/archive/master.zip
+  dw2pdf:
+    archive_name: dokuwiki-plugin-dw2pdf-master.zip
+    url: https://github.com/splitbrain/dokuwiki-plugin-dw2pdf/archive/master.zip
+  color:
+    archive_name: dokuwiki_plugin_color-master.zip
+    url: https://github.com/leeyc0/dokuwiki_plugin_color/archive/master.zip
+  hidden:
+    archive_name: hidden-master.zip
+    url: https://github.com/gturri/hidden/archive/master.zip
+  encryptedpasswords:
+    archive_name: dw-plugin-encryptedpasswords-master.zip
+    url: https://github.com/ssahara/dw-plugin-encryptedpasswords/archive/master.zip
+  tag:
+    archive_name: plugin-tag-master.zip
+    url: https://github.com/dokufreaks/plugin-tag/archive/master.zip
+  pagelist:
+    archive_name: plugin-pagelist-master.zip
+    url: https://github.com/dokufreaks/plugin-pagelist/archive/master.zip
+  nspages:
+    archive_name: nspages-master.zip
+    url: https://github.com/gturri/nspages/archive/master.zip
+  changes:
+    archive_name: changes-master.zip
+    url: https://github.com/cosmocode/changes/archive/master.zip
+  pagemove:
+    archive_name: DokuWiki-Pagemove-Plugin-master.zip
+    url: https://github.com/desolat/DokuWiki-Pagemove-Plugin/archive/master.zip
+  loglog:
+    archive_name: dokuwiki-plugin-loglog-master.zip
+    url: https://github.com/splitbrain/dokuwiki-plugin-loglog/archive/master.zip
+  ckgdoku:
+    archive_name: ckgdoku-master.zip
+    url: https://github.com/turnermm/ckgdoku/archive/master.zip
+  ckgedit:
+    archive_name: ckgedit-master.zip
+    url: https://github.com/turnermm/ckgedit/archive/master.zip
+  edittable:
+    archive_name: edittable-master.zip
+    url: https://github.com/cosmocode/edittable/archive/master.zip
+  sortablejs:
+    archive_name: sortablejs-master.zip
+    url: https://github.com/FyiurAmron/sortablejs/archive/master.zip
+  howhard:
+    archive_name: howhard-master.zip
+    url: https://github.com/chtiland/howhard/archive/master.zip
+  indexmenu:
+    url: https://github.com/samuelet/indexmenu/archive/master.zip
+    archive_name: indexmenu-master.zip
+  discussion:
+    url: https://github.com/dokufreaks/plugin-discussion/archive/master.zip
+    archive_name: plugin-discussion-master.zip
+  piwik2:
+    url: https://github.com/Bravehartk2/dokuwiki-piwik2/archive/master.zip
+    archive_name: dokuwiki-piwik2-master.zip
+  authorstats:
+    url: https://github.com/ConX/dokuwiki-plugin-authorstats/archive/master.zip
+    archive_name: dokuwiki-plugin-authorstats-master.zip
+  gallery:
+    url: https://github.com/splitbrain/dokuwiki-plugin-gallery/archive/master.zip
+    archive_name: dokuwiki-plugin-gallery-master.zip
+  custombuttons:
+    url: https://github.com/ConX/dokuwiki-plugin-custombuttons/archive/master.zip
+    archive_name: dokuwiki-plugin-custombuttons-master.zip
+  include:
+    url: https://github.com/dokufreaks/plugin-include/archive/master.zip
+    archive_name: plugin-include-master.zip
+  blockquote:
+    url: https://github.com/dokufreaks/plugin-blockquote/archive/master.zip
+    archive_name: plugin-blockquote-master.zip
+  wrap:
+    url: https://github.com/selfthinker/dokuwiki_plugin_wrap/archive/master.zip
+    archive_name: dokuwiki_plugin_wrap-master.zip
+  bureaucracy:
+    url: https://github.com/splitbrain/dokuwiki-plugin-bureaucracy/archive/master.zip
+    archive_name: dokuwiki-plugin-bureaucracy-master.zip
+  struct:
+    url: https://github.com/cosmocode/dokuwiki-plugin-struct/archive/master.zip
+    archive_name: dokuwiki-plugin-struct-master.zip
+  bootstrap3:
+    url: https://github.com/LotarProject/dokuwiki-template-bootstrap3/archive/master.zip
+    archive_name: dokuwiki-template-bootstrap3-master.zip
+    type: tpl
+  material:
+    url: https://github.com/LeonStaufer/material-dokuwiki/archive/master.zip
+    archive_name: material-dokuwiki-master.zip
+    type: tpl
+
+# List of core plugins which won't be uninstalled
+dokuwiki_core_plugins:
+  - acl
+  - authhttpldap
+  - authad
+  - authldap
+  - authmysql
+  - authpdo
+  - authpgsql
+  - authplain
+  - config
+  - extension
+  - info
+  - popularity
+  - revert
+  - safefnrecode
+  - styling
+  - usermanager
+
+# List of plugin to install
+dokuwiki_base_plugins_to_install:
+  - edittable
+  - todo
+  - color
+  - hidden
+  - indexmenu
+  - odt
+  - dw2pdf
+  - loglog
+  - changes
+  - pagemove
+  - authorstats
+  - note
+# An additional list, so you can just keep the default and add more if needed, in hosts_var
+dokuwiki_extra_plugins_to_install: []
+dokuwiki_plugins_to_install: "{{ dokuwiki_base_plugins_to_install + dokuwiki_extra_plugins_to_install }}"
+
+# List of templates to install
+dokuwiki_base_tpl_to_install:
+  - bootstrap3
+  - material
+dokuwiki_extra_tpl_to_install: []
+dokuwiki_tpl_to_install: "{{ dokuwiki_base_tpl_to_install + dokuwiki_extra_tpl_to_install }}"
+
+dokuwiki_remove_unmanaged_plugins: True
+dokuwiki_remove_unmanaged_tpl: True
+
+# An alias for httpd config
+# dokuwiki_alias: wiki
+
+# A list of ip address allowed to access dokuwiki
+# dokuwiki_src_ip:
+#   - 192.168.7.0/24
+#   - 10.99.0.0/16
+
+
+# Auth plugin. Can be authldap, authhttpldap, authplain
+dokuwiki_auth: "{{  ad_auth | default(False) | ternary('authad', ldap_auth | default(False) | ternary('authhttpldap', 'authplain')) }}"
+
+# LDAP Auth settings
+dokuwiki_ldap_uri: "{{ ldap_uri | default('ldap://ldap.' ~ ansible_domain) }}"
+dokuwiki_ldap_starttls: True
+dokuwiki_ldap_user_base: "{{ ldap_user_base | default('ou=Users') + ',' + ldap_base | default(ansible_domain | regex_replace('\\.',',dc=')) }}"
+dokuwiki_ldap_group_base: "{{ ldap_group_base | default('ou=Groups') + ',' + ldap_base | default(ansible_domain | regex_replace('\\.',',dc=')) }}"
+dokuwiki_ldap_user_filter: '(&(uid=%{user})(objectClass=inetOrgPerson))'
+dokuwiki_ldap_group_filter: '(&(objectClass=posixGroup)(memberUid=%{user}))'
+dokuwiki_ldap_group_key: cn
+# dokuwiki_ldap_bind_dn:
+# dokuwiki_ldap_bind_pass:
+
+# AD Settings
+dokuwiki_ad_dc: "{{ ad_ldap_servers | default(ansible_domain) }}"
+dokuwiki_ad_starttls: True
+dokuwiki_ad_user_base: "{{ ad_ldap_user_search_base | default('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')) }}"
+dokuwiki_ad_domain: "{{ samba_realm | default(ansible_domain) }}"
+# AD user. Do not use full DN notation, just simple login
+# dokuwiki_ad_bind_user:
+# dokuwiki_ad_bind_pass:
+...

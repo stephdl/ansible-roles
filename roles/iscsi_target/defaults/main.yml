@@ -1,0 +1,10 @@
+---
+
+iscsi_src_ip: []
+iscsi_ports:
+  - 3260
+# Can be used to restrict firewall on the specified interface
+# iscsi_bind_interface: eno4.33
+
+# Should the target service be started and enabled automaticaly
+iscsi_enabled: True

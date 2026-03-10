@@ -1,0 +1,18 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ jitsi_root_dir }}/src/jibri"
+      owner: "{{ jitsi_jibri_user }}"
+    - dir: "{{ jitsi_root_dir }}/jibri"
+      owner: "{{ jitsi_jibri_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/etc/jibri"
+      group: "{{ jitsi_jibri_user }}"
+      mode: 750
+    - dir: "{{ jitsi_root_dir }}/data/recordings"
+      owner: "{{ jitsi_jibri_user }}"
+      group: nginx
+      mode: 750
+  tags: jitsi

@@ -1,0 +1,19 @@
+[Unit]
+Description=Jibri Xorg Process
+After=network.target
+
+[Service]
+Type=simple
+User={{ jitsi_jibri_user }}
+Group={{ jitsi_jibri_user }}
+Environment=DISPLAY=:0
+WorkingDirectory={{ jitsi_root_dir }}/etc/jibri/
+ExecStart=/usr/bin/Xorg -nocursor -noreset +extension RANDR +extension RENDER -config jibri.conf :0
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=255
+SyslogIdentifier=jibri-xorg
+
+[Install]
+WantedBy=jitsi-jibri.service

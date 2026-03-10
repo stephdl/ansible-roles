@@ -1,0 +1,41 @@
+---
+
+- name: Create archive directory
+  file: path={{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }} state=directory
+  tags: seafile
+
+- name: Stop services during upgrade
+  systemd: name={{ item }} state=stopped
+  loop:
+    - seafile.service
+    - seahub.service
+    - seafile-clean-db.timer
+    - seafile-gc.timer
+  tags: seafile
+
+- name: Backup the databases
+  mysql_db:
+    state: dump
+    name: "{{ item }}"
+    target: "{{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }}/{{ item }}.sql"
+    login_host: "{{ seafile_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  with_items:
+    - "{{ seafile_db_seafile }}"
+    - "{{ seafile_db_ccnet }}"
+    - "{{ seafile_db_seahub }}"
+  tags: seafile
+
+- name: Archive seafile server
+  synchronize:
+    src: "{{ seafile_root_dir }}/seafile-server"
+    dest: "{{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }}/"
+    recursive: True
+    delete: True
+    compress: False
+  delegate_to: "{{ inventory_hostname }}"
+  tags: seafile
+

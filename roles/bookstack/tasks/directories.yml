@@ -1,0 +1,23 @@
+---
+
+- name: Create required directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ bookstack_root_dir }}"
+    - dir: "{{ bookstack_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ bookstack_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ bookstack_root_dir }}/archives"
+      mode: 700
+    - dir: "{{ bookstack_root_dir }}/app"
+    - dir: "{{ bookstack_root_dir }}/sessions"
+      group: "{{ bookstack_php_user }}"
+      mode: 770
+    - dir: "{{ bookstack_root_dir }}/tmp"
+      group: "{{ bookstack_php_user }}"
+      mode: 770
+    - dir: "{{ bookstack_root_dir }}/data"
+      group: "{{ bookstack_php_user }}"
+      mod: 700
+  tags: bookstack

@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and unused files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ metabase_root_dir }}/archives/{{ metabase_current_version }}"
+    - "{{ metabase_root_dir }}/tmp/metabase.jar"
+  tags: metabase

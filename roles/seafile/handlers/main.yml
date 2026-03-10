@@ -1,0 +1,11 @@
+---
+
+- include: ../common/handlers/main.yml
+
+- name: restart seafile
+  service: name=seafile state=restarted
+  when: seafile_install_mode != 'upgrade'
+
+- name: restart seahub
+  service: name=seahub state=restarted
+  when: seafile_install_mode != 'upgrade'

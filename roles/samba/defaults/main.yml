@@ -1,0 +1,100 @@
+---
+
+# Can be dc, standalone, or member
+samba_role: member
+
+# Netbios name. Default is the hostname part of the dns name
+# samba_netbios_name: 
+
+# The following settings are only needed when role is dc or member
+#
+# Default samba domain will be your domain name without the TLD
+# samba_domain: FWS
+# samba_realm: ad.fws.fr
+# Must be defined manually
+# samba_dc_admin_pass:
+
+# log level directive in smb.conf
+samba_log_level: >
+  1
+  auth_audit:3@/var/log/samba/auth.log
+  auth_json_audit:4@/var/log/samba/json/auth.log
+  dsdb_json_audit:5@/var/log/samba/json/dsdb.log
+  dsdb_password_json_audit:5@/var/log/samba/json/dsdb_password.log
+  dsdb_transaction_json_audit:5@/var/log/samba/json/dsdb_transaction.log
+  dns:3@/var/log/samba/dns.log
+  kerberos:2@/var/log/samba/kerberos.log
+  ldb:2@/var/log/samba/ldb.log
+
+samba_serve_homes: False
+
+# The following are only used when role is dc
+
+# There's no real "primary" DC, but you should set this to the
+# first DC. It'll be provisionned, get the FSMO roles and setup
+# rsync share for the sysvol. Others DC will replicate its sysvol
+# samba_primary_dc: dc1.domain.net
+
+# Password used for rsyncd. Used to fetch sysvol from the primary DC
+samba_sysvol_rsync_pass: "{{ samba_dc_admin_pass | password_hash('sha512', 65534 | random(seed=samba_realm) | string) }}"
+
+# The following are for the password policy to apply to the domain
+samba_base_pwd_policy:
+  complexity: 'off'
+  min-pwd-length: 6
+  max-pwd-age: 0
+  min-pwd-age: 0
+  history-length: 1
+  account-lockout-duration: 30
+  account-lockout-threshold: 0
+  reset-account-lockout-after: 30
+samba_pwd_policy: {}
+
+# Used to parse the output of samba-tool domain passwordsettings show. You shouldn't modify this
+samba_pwd_policy_descriptions:
+  complexity: Password complexity
+  min-pwd-length: Minimum password length
+  max-pwd-age: Maximum password age \(days\)
+  min-pwd-age: Minimum password age \(days\)
+  history-length: Password history length
+  account-lockout-duration: Account lockout duration \(mins\)
+  account-lockout-threshold: Account lockout threshold \(attempts\)
+  reset-account-lockout-after: Reset account lockout after \(mins\)
+
+# List of DNS servers to which requests for non local domains should be forwarded
+# samba_dns_forwarder:
+
+# Ports used by the internal DNS server, and the IP allowed to access this
+# This port will be opened for both TCP and UDP
+samba_dns_ports: [53]
+# Empty list means nobody can access the service
+samba_dns_src_ip: []
+
+# Ports needed when acting as a DC
+samba_dc_tcp_ports: [389,636,88,135,137,138,139,445,464,3268,3269,'49152:65535']
+samba_dc_udp_ports: [389,88,464,123,137,138]
+
+samba_dc_src_ip: []
+
+# Ports needed when acting as a file server
+samba_file_tcp_ports: [137,138,139,445]
+samba_file_udp_ports: [137,138]
+samba_file_src_ip: []
+
+samba_trusted_domains: {}
+# samba_trusted_domains:
+#   - name: ad.fws.fr
+#     admin_user: administrator
+#     admin_pass: s3cret
+
+# samba_tls_cert: 
+# samba_tls_key: 
+# samba_tls_ca: 
+#
+# Or
+#
+# samba_tls_letsencrypt_cert: 
+
+
+# samba_min_protocol: NT1
+# samba_max_protocol: SMB3

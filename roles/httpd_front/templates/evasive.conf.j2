@@ -1,0 +1,17 @@
+DOSHashTableSize    3097
+DOSPageCount        {{ httpd_dos_page_count | default('40') }}
+DOSSiteCount        {{ httpd_dos_site_count | default('150') }}
+DOSPageInterval     {{ httpd_dos_page_interval | default('1') }}
+DOSSiteInterval     {{ httpd_dos_site_interval | default('5') }}
+DOSBlockingPeriod   {{ httpd_dos_block_time | default('30') }}
+{% if system_admin_email is defined %}
+DOSEmailNotify      {{ system_admin_email }}
+{% endif %}
+
+DOSWhitelist   127.0.0.1
+{% for ip in trusted_ip | default([]) %}
+DOSWhitelist {{ ip }}
+{% endfor %}
+{% for ip in httpd_dos_whitelisted_ip | default([])%}
+DOSWhitelist {{ ip }}
+{% endfor %}

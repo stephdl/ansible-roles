@@ -1,0 +1,11 @@
+---
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ dolibarr_root_dir }}/tmp/dolibarr-{{ dolibarr_version }}.tgz"
+    - "{{ dolibarr_root_dir }}/tmp/dolibarr-{{ dolibarr_version }}"
+    - /etc/backup/pre.d/dolibarr_{{ dolibarr_id }}_dump_db
+    - /etc/backup/post.d/dolibarr_{{ dolibarr_id }}_rm_dump
+  tags: dolibarr
+

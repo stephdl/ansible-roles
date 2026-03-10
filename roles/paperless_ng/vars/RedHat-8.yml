@@ -1,0 +1,24 @@
+---
+
+paperless_packages:
+  - python39-pip
+  - python39-setuptools
+  - python39-devel
+  - make
+  - gcc
+  - gcc-c++
+  - ImageMagick
+  - liberation-fonts
+  - optipng
+  - libpq-devel
+  - file-libs
+  - tesseract
+  - tesseract-osd
+  - tesseract-langpack-fra
+  - tesseract-langpack-deu
+  - tesseract-langpack-spa
+  - tesseract-langpack-ita
+  - policycoreutils
+  - unpaper
+  - ghostscript
+  - postgresql14

@@ -1,0 +1,105 @@
+matrix:
+  domain: '{{ mxisd_matrix_domain | default(synapse_server_name) }}'
+server:
+  port: {{ mxisd_port }}
+{% if mxisd_server_name is defined %}
+  name: '{{ mxisd_server_name }}'
+{% endif %}
+  publicUrl: '{{ mxisd_public_url | default('https://' + synapse_server_name) }}'
+key:
+  path: '{{ mxisd_root_dir }}/etc/signing.key'
+lookup:
+  recursive:
+    enabled: {{ mxisd_recursive_lookups | default(True) | ternary('true','false') }}
+{% if mxisd_recursive_lookups_ip is defined and mxisd_recursive_lookups_ip | length > 0 %}
+    allowedCidr:
+{% for net in mxisd_recursive_lookups_ip %}
+{% if net | ipaddr %}
+      - {{ net }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if mxisd_ldap_lookup | default(synapse_ldap_auth) | default(False) %}
+ldap:
+  enabled: True
+{% if mxisd_ldap_filter is defined %}
+  filter: {{ mxisd_ldap_filter }}
+{% elif synapse_ldap_filter is defined %}
+  filter: {{ synapse_ldap_filter }}
+{% endif %}
+  connection:
+    tls: {{ mxisd_ldap_tls | default(True) | ternary('true','false') }}
+    host: {{ mxisd_ldap_server | default(synapse_ldap_uri) | regex_replace('^(ldaps?://)?(?P<host>[a-zA-Z0-9\-\.]+)(:\d+)?','\\g<host>') | default('localhost') }}
+    port: {{ mxisd_ldap_port | default(mxisd_ldap_tls | ternary('636','389')) }}
+{% if mxisd_ldap_bind_dn is defined and mxisd_ldap_bind_pass is defined %}
+    bindDn: {{ mxisd_ldap_bind_dn }}
+    bindPassword: {{ mxisd_ldap_bind_pass }}
+{% elif synapse_ldap_bind_dn is defined and synapse_ldap_bind_pass is defined %}
+    bindDn: {{ synapse_ldap_bind_dn }}
+    bindPassword: {{ synapse_ldap_bind_pass }}
+{% endif %}
+    baseDn: {{ mxisd_ldap_base | default(synapse_ldap_user_base) }}
+  attribute:
+    uid:
+      type: {{ mxisd_ldap_uid_type | default('uid') }}
+      value: {{ mxisd_ldap_uid_value | default(ad_auth | default(False) | ternary('samaccountname','uid')) }}
+    name: {{ mxisd_ldap_attr_name | default(synapse_ldap_attr_name) | default('cn') }}
+{% if mxisd_ldap_attr_mail is defined and mxisd_ldap_attr_mail | length > 0 %}
+    threepid:
+      email:
+{% for attr in mxisd_ldap_attr_mail %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% if mxisd_ldap_attr_tel is defined and mxisd_ldap_attr_tel | length > 0 %}
+      msisdn:
+{% for attr in mxisd_ldap_attr_tel %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% if mxisd_ldap_attr_other is defined and mxisd_ldap_attr_other | length > 0 %}
+      other:
+{% for attr in mxisd_ldap_attr_other %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if mxisd_forwarders is defined and mxisd_forwarders | length > 0 %}
+forward:
+  servers:
+{% for server in mxisd_forwarders %}
+    - {{ server }}
+{% endfor %}
+{% endif %}
+threepid:
+  medium:
+    email:
+      connectors:
+        smtp:
+          host: {{ mxisd_smtp_server | default(synapse_smtp_server) }}
+          port: {{ mxisd_smtp_port | default(synapse_smtp_port) }}
+          tls: {{ (mxisd_smtp_tls | default(synapse_smtp_tls)) | ternary('2', '1') }}
+{% if mxisd_smtp_user is defined and mxisd_smtp_pass is defined %}
+          login: "{{ mxisd_smtp_user }}"
+          password: "{{ mxisd_smtp_pass }}"
+{% elif synapse_smtp_user is defined and synapse_smtp_pass is defined %}
+          login: "{{ synapse_smtp_user }}"
+          password: "{{ synapse_smtp_pass }}"
+{% endif %}
+      identity:
+        from: "{{ mxisd_smtp_from | default('no-reply@' + ansible_domain) }}"
+storage:
+  backend: 'sqlite'
+  provider:
+    sqlite:
+      database: '{{ mxisd_root_dir }}/db/mxisd.sqlite'
+{% if mxisd_dns_overwrite is defined and mxisd_dns_overwrite | length > 0 %}
+dns:
+  overwrite:
+    homeserver:
+      client:
+{% for overwrite in mxisd_dns_overwrite %}
+        - name: {{ overwrite.name }}
+          value: '{{ overwrite.value }}'
+{% endfor %}
+{% endif %}

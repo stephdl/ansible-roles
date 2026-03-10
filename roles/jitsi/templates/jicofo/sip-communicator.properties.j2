@@ -1,0 +1,11 @@
+{% if jitsi_auth == 'sso' %}
+org.jitsi.jicofo.auth.URL=shibboleth:default
+{% elif jitsi_auth == 'ldap' %}
+org.jitsi.jicofo.auth.URL=XMPP:{{ jitsi_domain }}
+{% endif %}
+org.jitsi.jicofo.BRIDGE_MUC=JvbBrewery@internal.{{ jitsi_auth_domain }}
+{% if jitsi_jigasi %}
+org.jitsi.jicofo.jigasi.BREWERY=JigasiBrewery@internal.{{ jitsi_auth_domain }}
+{% endif %}
+org.jitsi.jicofo.jibri.BREWERY=JibriBrewery@internal.{{ jitsi_auth_domain }}
+org.jitsi.jicofo.jibri.PENDING_TIMEOUT=90

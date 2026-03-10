@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: httpd_common
+  - role: mkdir
+  - role: mysql_server
+    when: pki_db_server in ['localhost', '127.0.0.1']

@@ -1,0 +1,36 @@
+---
+
+dolibarr_id: 1
+dolibarr_manage_upgrade: True
+dolibarr_version: 14.0.5
+dolibarr_archive_url: https://downloads.sourceforge.net/project/dolibarr/Dolibarr%20ERP-CRM/{{ dolibarr_version }}/dolibarr-{{ dolibarr_version }}.tgz
+dolibarr_archive_sha1: c7ed0c409ab3ad96a7a7a6073af440a22b0c2ba7
+
+dolibarr_root_dir: /opt/dolibarr_{{ dolibarr_id }}
+dolibarr_php_user: php-dolibarr_{{ dolibarr_id }}
+dolibarr_php_version: 74
+
+# If you prefer using a custom PHP FPM pool, set it's name.
+# You might need to adjust dolibarr_php_user
+# dolibarr_php_fpm_pool: php56
+
+dolibarr_db_server: "{{ mysql_server | default('localhost') }}"
+# dolibarr_db_port: 3306
+dolibarr_db_name: dolibarr_{{ dolibarr_id }}
+dolibarr_db_user: dolibarr_{{ dolibarr_id }}
+# If not defined, a random pass will be generated and stored in the meta directory
+# dolibarr_db_pass: dolibarr
+
+# dolibarr_alias: dolibarr
+# dolibarr_src_ip:
+#   - 192.168.7.0/24
+#   - 10.2.0.0/24
+
+# Must be set to the public URL of Dolibarr
+# dolibarr_public_url: https://dolibarr.domain.net
+
+# Can be dolibarr, http, ldap, openid
+dolibarr_auth: dolibarr
+# Should a cron job be added to sync users from LDAP to Dolibarr
+# LDAP module must be configured
+dolibarr_sync_from_ldap: False

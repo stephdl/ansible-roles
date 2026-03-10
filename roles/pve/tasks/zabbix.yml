@@ -1,0 +1,16 @@
+---
+
+- name: Check if check_pve_sudo is installed
+  stat: path=/var/lib/zabbix/bin/util_populate_pve_cache
+  register: pve_zabbix_scripts
+  tags: pve,zabbix
+
+- name: Setup a cron job for Zabbix monitoring cache population
+  cron:
+    name: pve_zabbix_cache
+    cron_file: pve_zabbix_cache
+    user: root
+    job: "/var/lib/zabbix/bin/util_populate_pve_cache"
+    minute: "*/5"
+    state: "{{ (pve_zabbix_cache and pve_zabbix_scripts.stat.exists) | ternary('present','absent') }}"
+  tags: pve,zabbix

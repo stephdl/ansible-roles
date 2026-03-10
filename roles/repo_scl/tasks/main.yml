@@ -1,0 +1,21 @@
+---
+
+- name: Configure SCL RH repository
+  yum_repository:
+    name: centos-sclo-rh
+    file: centos-scl
+    description: SCLo rh
+    baseurl: http://mirror.centos.org/centos/$releasever/sclo/$basearch/rh/
+    gpgcheck: True
+    gpgkey: https://www.centos.org/keys/RPM-GPG-KEY-CentOS-SIG-SCLo
+  tags: repo
+
+- name: Configure community SCL repository
+  yum_repository:
+    name: centos-sclo
+    file: centos-scl
+    description: SCLo
+    baseurl: http://mirror.centos.org/centos/$releasever/sclo/$basearch/sclo/
+    gpgcheck: True
+    gpgkey: https://www.centos.org/keys/RPM-GPG-KEY-CentOS-SIG-SCLo
+  tags: repo

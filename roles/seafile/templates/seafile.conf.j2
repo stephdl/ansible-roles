@@ -1,0 +1,41 @@
+[general]
+enable_syslog = true
+
+[database]
+type = mysql
+host = {{ seafile_db_server }}
+port = {{ seafile_db_port }}
+user = {{ seafile_db_user }}
+password = {{ seafile_db_pass }}
+db_name = {{ seafile_db_seafile }}
+connection_charset = utf8
+
+[quota]
+{% if seafile_default_quota is defined %}
+default = {{ seafile_default_quota }}
+{% endif %}
+
+[history]
+{% if seafile_default_history is defined %}
+keep_days = {{ seafile_default_history }}
+{% endif %}
+
+[fileserver]
+port = {{ seafile_seafile_port }}
+{% if seafile_max_upload_size is defined %}
+max_upload_size = {{ seafile_max_upload_size }}
+{% endif %}
+{% if seafile_max_download_dir_size is defined %}
+max_download_dir_size = {{ seafile_max_download_dir_size }}
+{% endif %}
+web_token_expire_time = 7200
+{% if seafile_version is version('9.0.1', '>') %}
+use_go_fileserver = true
+{% endif %}
+
+{% if seafile_license is defined and seafile_scan_av == True %}
+[virus_scan]
+scan_command = {{ seafile_root_dir }}/seafile-server/clamdscan.sh
+virus_code = 1
+nonvirus_code = 0
+{% endif %}

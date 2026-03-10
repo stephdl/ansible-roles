@@ -1,0 +1,96 @@
+---
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ mailman_root_dir }}"
+    - version: "{{ mailman_version.core }}"
+    - version_file: 'ansible_core_version'
+  tags: mailman
+
+- block:
+    - set_fact: mailman_core_install_mode={{ (install_mode == 'upgrade' and not mailman_manage_upgrade) | ternary('none', install_mode) }}
+    - set_fact: mailman_core_current_version={{ current_version | default('') }}
+  tags: mailman
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ mailman_root_dir }}"
+    - version: "{{ mailman_version.postorius }}"
+    - version_file: 'ansible_postorius_version'
+  tags: mailman
+
+- block:
+    - set_fact: mailman_postorius_install_mode={{ (install_mode == 'upgrade' and not mailman_manage_upgrade) | ternary('none', install_mode) }}
+    - set_fact: mailman_postorius_current_version={{ current_version | default('') }}
+  tags: mailman
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ mailman_root_dir }}"
+    - version: "{{ mailman_version.hyperkitty }}"
+    - version_file: 'ansible_hyperkitty_version'
+  tags: mailman
+
+- block:
+    - set_fact: mailman_hyperkitty_install_mode={{ (install_mode == 'upgrade' and not mailman_manage_upgrade) | ternary('none', install_mode) }}
+    - set_fact: mailman_hyperkitty_current_version={{ current_version | default('') }}
+  tags: mailman
+
+- set_fact: mailman_install_mode='none'
+  tags: mailman
+- set_fact: mailman_install_mode='upgrade'
+  when: >
+    'upgrade' in [mailman_core_install_mode, mailman_postorius_install_mode, mailman_hyperkitty_install_mode] and
+    'install' not in [mailman_core_install_mode, mailman_postorius_install_mode, mailman_hyperkitty_install_mode]
+  tags: mailman
+
+# Create a random pass for the DB if needed
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ mailman_root_dir }}/meta/ansible_dbpass"
+        - complex: False
+    - set_fact: mailman_db_pass={{ rand_pass }}
+  when: mailman_db_pass is not defined
+  tags: mailman
+
+# Random secret key
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ mailman_root_dir }}/meta/ansible_secret_key"
+    - set_fact: mailman_secret_key={{ rand_pass }}
+  when: mailman_secret_key is not defined
+  tags: mailman
+
+# Random API password
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ mailman_root_dir }}/meta/ansible_rest_pass"
+        - complex: False
+    - set_fact: mailman_rest_pass={{ rand_pass }}
+  when: mailman_rest_pass is not defined
+  tags: mailman
+
+# HyperKitty API Key
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ mailman_root_dir }}/meta/ansible_hyperkitty_api_key"
+        - complex: False
+    - set_fact: mailman_hyperkitty_api_key={{ rand_pass }}
+  when: mailman_hyperkitty_api_key is not defined
+  tags: mailman
+
+# Random password for the admin account
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ mailman_root_dir }}/meta/ansible_admin_pass"
+    - set_fact: mailman_admin_pass={{ rand_pass }}
+  tags: mailman
+
+# Shortcut for the archive dir, used to backup current install during upgades
+- set_fact: mailman_archive_dir={{ mailman_root_dir }}/archives/core_{{ mailman_core_current_version }}_postorius_{{ mailman_postorius_current_version }}_hyperkitty_{{ mailman_hyperkitty_current_version }}
+  tags: mailman

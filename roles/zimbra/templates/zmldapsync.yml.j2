@@ -1,0 +1,14 @@
+---
+general:
+  notify:
+    from: zimbra@{{ ansible_domain }}
+    to: {{ system_admin_email }}
+
+domains:
+{% for domain in zcs_domains.keys() %}
+{% if zcs_domains[domain].ldapsync is defined %}
+  {{ domain }}:
+{{ zcs_domains[domain].ldapsync | to_nice_yaml(indent=2) | indent(width=4, first=True) }}
+{% endif %}
+{% endfor %}
+

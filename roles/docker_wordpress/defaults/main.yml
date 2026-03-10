@@ -1,0 +1,21 @@
+---
+
+# Default Docker configuration
+wh_docker_name: wordpress
+wh_docker_email: technique@iptek.fr
+wh_docker_root_dir: /opt/docker
+
+# Default Wordpress configuration
+wh_docker_wp_image: wordpress:php8.1-apache
+wh_docker_wp_port: 8000
+wh_docker_url: wordpress.org
+
+# Default DB config
+wh_docker_db_host: localhost
+wh_docker_db_user: wordpress
+wh_docker_db_pass: "S3cr3t."
+wh_docker_db_name: wordpress
+
+# Default phpMyAdmin configuration
+wh_docker_pma_image: phpmyadmin:latest
+wh_docker_pma_port: 9000

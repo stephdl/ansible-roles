@@ -1,0 +1,25 @@
+---
+
+openproject_db_server: "{{ pg_server | default('localhost') }}"
+openproject_db_port: 5432
+openproject_db_name: openproject
+openproject_db_user: openproject
+# a random one will be created if not defined
+# openproject_db_pass: S3cret.
+
+# openproject_secret_key_base: <random string>
+# openproject_secret_token: <random_string>
+
+openproject_memcached_server: 127.0.0.1:11211
+openproject_admin_email: openproject@{{ ansible_domain }}
+
+openproject_data_dir: /var/db/openproject
+
+openproject_port: 6000
+openproject_src_ip: []
+
+# SSO integration.
+# Define an optional header where your revproxy / loadbalancer
+# set the loggedin username. Must be passed as $user:$secret
+# openproject_sso_header: Auth-User
+# openproject_sso_secret: 

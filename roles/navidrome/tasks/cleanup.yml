@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ nd_root_dir }}/tmp/navidrome"
+    - "{{ nd_root_dir }}/tmp/navidrome_{{ nd_version }}_Linux_x86_64.tar.gz"
+  tags: navidrome

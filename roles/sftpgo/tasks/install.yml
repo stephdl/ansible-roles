@@ -1,0 +1,72 @@
+---
+
+- name: Install dependencies
+  package:
+    name: "{{ sftpgo_packages }}"
+  tags: sftpgo
+
+- name: Stop the service during upgrades
+  service: name=sftpgo state=stopped
+  when: sftpgo_install_mode == 'upgrade'
+  tags: sftpgo
+
+- when: sftpgo_install_mode != 'none'
+  block:
+
+    - name: Download sftpgo
+      get_url:
+        url: "{{ sftpgo_archive_url }}"
+        dest: "{{ sftpgo_root_dir }}/tmp/"
+        checksum: sha1:{{ sftpgo_archive_sha1 }}
+
+    - name: Create tmp dir
+      file: path={{ sftpgo_root_dir }}/tmp/{{ sftpgo_version }} state=directory
+
+    - name: Extract sftpgo archive
+      unarchive:
+        src: "{{ sftpgo_root_dir }}/tmp/sftpgo_v{{ sftpgo_version }}_linux_x86_64.tar.xz"
+        dest: "{{ sftpgo_root_dir }}/tmp/{{ sftpgo_version }}"
+        remote_src: True
+
+    - name: Install or update the app
+      synchronize:
+        src: "{{ sftpgo_root_dir }}/tmp/{{ sftpgo_version }}/{{ item }}"
+        dest: "{{ sftpgo_root_dir }}/app/"
+        compress: False
+        delete: True
+      loop:
+        - sftpgo
+        - templates
+        - static
+      delegate_to: "{{ inventory_hostname }}"
+      notify: restart sftpgo
+
+  tags: sftpgo
+
+- name: Install systemd unit
+  template: src=sftpgo.service.j2 dest=/etc/systemd/system/sftpgo.service
+  notify: restart sftpgo
+  register: sftpgo_unit
+  tags: sftpgo
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: sftpgo_unit.changed
+  tags: sftpgo
+
+  # Create MySQL database
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ sftpgo_db_name }}"
+    - db_user: "{{ sftpgo_db_user }}"
+    - db_server: "{{ sftpgo_db_server }}"
+    - db_port: "{{ sftpgo_db_port }}"
+    - db_pass: "{{ sftpgo_db_pass }}"
+  tags: sftpgo
+
+- name: Install backups hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/sftpgo mode=700
+  loop:
+    - pre
+    - post
+  tags: sftpgo

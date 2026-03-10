@@ -1,0 +1,10 @@
+---
+
+sudo_admin_groups: "{{ system_admin_groups | default(ad_auth | default(False) | ternary(['Domain\ Admins'],['admins'])) }}"
+
+sudo_base_defaults:
+  secure_path: /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+sudo_extra_defaults: {}
+# sudo_defaults:
+#   timestamp_timeout: 10
+sudo_defaults: "{{ sudo_base_defaults | combine(sudo_extra_defaults, recursive=True) }}"

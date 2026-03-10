@@ -1,0 +1,32 @@
+[DATABASE]
+type = mysql
+host = {{ seafile_db_server }}
+port = {{ seafile_db_port }}
+username = {{ seafile_db_user }}
+password = {{ seafile_db_pass }}
+name = {{ seafile_db_seahub }}
+
+[Syslog]
+enabled = true
+
+[AUDIT]
+enabled = true
+
+[STATISTICS]
+enabled = true
+
+[INDEX FILES]
+enabled = true
+interval = 10m
+index_office_pdf = true
+
+[OFFICE CONVERTER]
+enabled = true
+workers = 2
+max-pages = 200
+max-size = 20
+
+[SEAHUB EMAIL]
+enabled = true
+interval = 30m
+

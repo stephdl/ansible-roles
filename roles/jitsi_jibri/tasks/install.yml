@@ -1,0 +1,94 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - java-1.8.0-openjdk
+      - git
+      - google-chrome-stable
+      - ffmpeg
+      - curl
+      - alsa-utils
+      - xdotool
+      #- xorg-x11-drv-void
+      - xorg-x11-drv-dummy
+      - perl-YAML-Tiny
+      - perl-Email-MIME
+      - perl-Email-Sender
+  tags: jitsi
+
+  # If the repo changed since the last run, we rebuild and restart the bridge
+- name: Clone jibri repo
+  git:
+    repo: "{{ jitsi_jibri_git_url }}"
+    dest: "{{ jitsi_root_dir }}/src/jibri"
+    force: True
+  become_user: "{{ jitsi_jibri_user }}"
+  register: jitsi_jibri_git
+  tags: jitsi
+
+- name: Install or update ChromeDriver
+  block:
+    - name: Download ChromeDriver
+      get_url:
+        url: http://chromedriver.storage.googleapis.com/{{ jitsi_jibri_chromedriver_latest_version.content }}/chromedriver_linux64.zip
+        dest: "{{ jitsi_root_dir }}/tmp"
+
+    - name: Extract ChromeDriver
+      unarchive:
+        src: "{{ jitsi_root_dir }}/tmp/chromedriver_linux64.zip"
+        dest: "{{ jitsi_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move ChromeDriver bin
+      copy:
+        src: "{{ jitsi_root_dir }}/tmp/chromedriver"
+        dest: /usr/local/bin/chromedriver
+        mode: 755
+        remote_src: True
+
+  when: not jitsi_jibri_chromedriver_bin.stat.exists or jitsi_jibri_chromedriver_current_version.stdout != jitsi_jibri_chromedriver_latest_version.content
+  tags: jitsi
+
+- name: Install or update jibri
+  block:
+    - name: Build jibri
+      command: /opt/maven/apache-maven/bin/mvn package -DskipTests -Dassembly.skipAssembly=false
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/jibri"
+      become_user: "{{ jitsi_jibri_user }}"
+
+    - name: Move jibri to its final directory
+      copy:
+        src: "{{ jitsi_root_dir }}/src/jibri/target/jibri-8.0-SNAPSHOT-jar-with-dependencies.jar"
+        dest: "{{ jitsi_root_dir }}/jibri/jibri.jar"
+        remote_src: True
+      notify: restart jitsi-jibri
+
+  when: (jitsi_jibri_git.changed and jitsi_jibri_manage_upgrade) or not jitsi_jibri_jar.stat.exists
+  tags: jitsi
+
+- name: Deploy systemd units
+  template: src=jitsi-{{ item }}.j2 dest=/etc/systemd/system/jitsi-{{ item }}
+  loop:
+    - jibri.service
+    - jibri-xorg.service
+    - jibri-cleaner.service
+    - jibri-cleaner.timer
+  register: jitsi_jibri_unit
+  notify: restart jitsi-jibri
+  tags: jitsi
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: jitsi_jibri_unit.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: jitsi
+
+- name: Install finalize script
+  template: src=finalize.pl.j2 dest={{ jitsi_root_dir }}/jibri/finalize.pl mode=755
+  tags: jitsi
+
+- name: Install record cleaning script
+  template: src=clean_records.sh.j2 dest={{ jitsi_root_dir }}/jibri/clean_records.sh mode=755
+  tags: jitsi
+

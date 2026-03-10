@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ ma1sd_root_dir }}"
+    - version: "{{ ma1sd_current_version }}"
+  tags: matrix
+

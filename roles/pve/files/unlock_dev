@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+
+use JSON;
+use Term::ReadKey;
+use File::Which;
+
+my $pvesh = which('pvesh');
+
+# Are we using the new pvesh for which we have to specify the output format ?
+my $pvesh_opt = (system("$pvesh get /version --output-format=json >/dev/null 2>&1") == 0) ? '--output-format=json' : '';
+
+# Get a list of every iSCSI storages defined on the cluster
+my $stor_iscsi = from_json(qx($pvesh get storage --type=iscsi $pvesh_opt 2>/dev/null));
+my @luks_dev = ();
+
+# Now, check if it's encrypted using luks
+foreach my $stor (@{$stor_iscsi}){
+  push @luks_dev, $stor if (is_luks(dev_from_stor($stor)));
+}
+
+# If we have at least one device, we must ask for the password to unlock
+if (scalar @luks_dev gt 0){   
+  ReadMode( "noecho");
+  print "Enter the password to unlock encrypted devices :";
+  chomp (my $pwd = <>);
+  print "\n";
+  ReadMode ("original");
+  foreach my $stor (@luks_dev){
+    open $cmd,'|-', '/sbin/cryptsetup', 'open', '--type=luks', dev_from_stor($stor), $stor->{storage}, '--key-file=-';
+    print $cmd $pwd;
+  }
+}
+
+# Return 1 if the device is a luks container
+sub is_luks {
+  my $dev = shift;
+  my $blkid = qx(/sbin/blkid $dev);
+  my $type = 'unknown';
+  if ($blkid =~ m/TYPE="(\w+)"/){
+    $type = $1;
+  }
+  return ($type eq 'crypto_LUKS') ? 1 : 0;
+}
+
+# Return the device node from the JSON storage object
+sub dev_from_stor {
+  my $stor = shift;
+  my $dev = '';
+  if ($stor->{type} eq 'iscsi'){
+    my $portal = ($stor->{portal} =~ m/:(\d+)$/) ? $stor->{portal} : $stor->{portal} . ':3260';
+    $dev = '/dev/disk/by-path/ip-' . $portal . '-iscsi-' . $stor->{target} . '-lun-0';
+  }
+  return $dev;
+}
+
+# If ocfs2 is used, o2cb must be restarted as it's started too early to setup everything correctly
+#if (-e '/etc/init.d/o2cb'){
+#  print "Restarting o2cb and mounting other filesystems";
+#  system('/bin/systemctl', 'restart', 'o2cb');
+#  sleep 20;
+#  system('/bin/mount', '-a');
+#  # Not sure why but OCFS2 seems to fail on first mount
+#  system('/bin/mount', '-a');
+#  print "\n";
+#}

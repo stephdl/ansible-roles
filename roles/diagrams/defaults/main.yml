@@ -1,0 +1,17 @@
+---
+
+# Veresion of diagrams to deploy
+diagrams_version: 15.7.4
+# URL of the WAR file to deploy
+diagrams_war_url: https://github.com/jgraph/drawio/releases/download/v{{ diagrams_version }}/draw.war
+# Expected sha1 of the WAR file
+diagrams_war_sha1: 6ec509cba9c0cb7ed5a6872bcfc3711f6bfb1933
+# root directory of the installation
+diagrams_root_dir: /opt/diagrams
+# Should ansible manage upgrades, or just initial install ?
+diagrams_manage_upgrade: True
+# Port on which the tomcat instance will listen.
+# Note that it'll also use this port +1 for shutdown requests, but only on 127.0.0.1
+diagrams_port: 8182
+# List of IP addresses (or CIDR) allowed to access tomcat port
+diagrams_src_ip: []

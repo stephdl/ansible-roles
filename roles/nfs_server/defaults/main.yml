@@ -1,0 +1,9 @@
+---
+
+nfs_ports: [111,2049,20048]
+nfs_src_ip: [0.0.0.0/0]
+nfs_exports: []
+        #  - path: /data
+        #    access:
+        #      - '-rw,sync,nohide,insecure,no_root_squash,no_subtree_check'
+        #      - mbox.domain.tld(rw,async)

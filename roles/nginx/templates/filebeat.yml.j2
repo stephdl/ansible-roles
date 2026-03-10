@@ -1,0 +1,10 @@
+- module: nginx
+  access:
+    enabled: True
+    input:
+      exclude_files: [ '\.[gx]z$' ]
+
+  error:
+    enabled: True
+    input:
+      exclude_files: [ '\.[gx]z$' ]

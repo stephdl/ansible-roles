@@ -1,0 +1,48 @@
+---
+
+- name: Install openproject
+  yum:
+    name:
+      - openproject
+      - python-psycopg2
+      - pgloader-ccl
+      - postgresql11
+  tags: openproject
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ openproject_db_user }}"
+    password: "{{ openproject_db_pass }}"
+    login_host: "{{ openproject_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: openproject
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ openproject_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ openproject_db_user }}"
+    login_host: "{{ openproject_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: openproject
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/openproject mode=755
+  loop:
+    - pre
+    - post
+  tags: openproject
+
+- name: Make openproject user a member of postdrop group
+  user:
+    name: openproject
+    groups: postdrop
+    append: True
+  notify: restart openproject
+  tags: openproject

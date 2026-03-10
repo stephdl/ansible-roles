@@ -1,0 +1,5 @@
+# Serve recordings through nginx
+location /recordings {
+  alias /opt/jitsi/data/recordings;
+  add_header Content-disposition "attachment";
+}

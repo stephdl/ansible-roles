@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ matomo_root_dir }}"
+    - version: "{{ matomo_current_version }}"
+    - db_name: "{{ matomo_db_name }}"
+  tags: matomo

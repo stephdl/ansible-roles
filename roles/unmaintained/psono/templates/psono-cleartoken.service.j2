@@ -1,0 +1,9 @@
+[Unit]
+Description=Psono cleartoken
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+User={{ psono_user }}
+Group={{ psono_user }}
+ExecStart={{ psono_root_dir }}/server/venv/bin/python3 {{ psono_root_dir }}server/app/psono/manage.py cleartoken

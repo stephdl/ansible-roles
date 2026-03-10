@@ -1,0 +1,4 @@
+---
+
+- name: restart bluemind
+  command: bmctl restart

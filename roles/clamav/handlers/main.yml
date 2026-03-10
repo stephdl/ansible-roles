@@ -1,0 +1,9 @@
+---
+
+- include: ../common/handlers/main.yml
+
+- name: restart freshclam
+  service: name=freshclam state=restarted
+
+- name: restart clamd
+  service: name=clamd state={{ clam_enable_clamd | ternary('restarted','stopped') }}

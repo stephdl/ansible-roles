@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenXPKI Trustcenter Backend
+After=network.target
+
+[Service]
+Type=forking
+Environment=PERL5LIB={{ pki_root_dir }}/lib/perl5
+ExecStart={{ pki_root_dir }}/bin/openxpkictl --config={{ pki_root_dir }}/etc/config.d/ start
+ExecStop={{ pki_root_dir }}/bin/openxpkictl --config={{ pki_root_dir }}/etc/config.d/ stop
+ExecReload={{ pki_root_dir }}/bin/openxpkictl --config={{ pki_root_dir }}/etc/config.d/ reload
+KillMode=process
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /etc/crowdsec/cs-firewall-bouncer
+    - dir: /etc/crowdsec/meta
+      mode: 700
+  tags: cs

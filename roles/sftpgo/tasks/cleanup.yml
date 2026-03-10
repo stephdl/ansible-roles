@@ -1,0 +1,9 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ sftpgo_root_dir }}/archives/{{ sftpgo_current_version }}"
+    - "{{ sftpgo_root_dir }}/tmp/sftpgo_v{{ sftpgo_version }}_linux_x86_64.tar.xz"
+    - "{{ sftpgo_root_dir }}/tmp/{{ sftpgo_version }}"
+  tags: sftpgo

@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ mailman_archive_dir }}.tar.zst --use-compress-program=zstd ./
+  environment:
+    ZST_CLEVEL: 10
+  args:
+    chdir: "{{ mailman_archive_dir }}"
+    warn: False
+  tags: mailman

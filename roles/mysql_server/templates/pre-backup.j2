@@ -1,0 +1,46 @@
+#!/bin/sh
+
+set -eo pipefail
+
+# Get the .my.cnf from root
+HOME=/root
+PATH=/usr/bin:$PATH
+DEST=/home/lbkp/mysql
+
+[ -d $DEST ] || mkdir -p $DEST
+
+for DB in $(/usr/bin/mysqlshow | /bin/awk '{print $2}' | /bin/grep -v Databases)
+do
+  if [[ "$DB" == "information_schema" ]]; then
+    continue
+  fi
+{% for db in mysql_skip_backup %}
+  # {{ db }} is configured not to be backed up
+  if [[ "$DB" == "{{ db }}" ]]; then
+    echo "Skiping $DB as per configuration"
+    continue
+  fi
+{% endfor %}
+{% if mysql_compress_cmd %}
+{% if mysql_compress_cmd is search('p?xz') %}
+{% set compext = 'xz' %}
+{% elif mysql_compress_cmd is search('p?bzip2') %}
+{% set compext = 'bz2' %}
+{% elif mysql_compress_cmd is search('(pi)?gz') %}
+{% set compext = 'gz' %}
+{% elif mysql_compress_cmd is search('lzop') %}
+{% set compext = 'lzo' %}
+{% elif mysql_compress_cmd is search('lz4') %}
+{% set compext = 'lz4' %}
+{% elif mysql_compress_cmd is search('zstd') %}
+{% set compext = 'zst' %}
+{% else %}
+{% set compext = 'z' %}
+{% endif %}
+  echo "Dumping $DB to $DEST/$DB.sql.{{ compext }}"
+  /usr/bin/mysqldump --ignore-table=mysql.event --single-transaction --add-drop-table $DB | /bin/nice -n 10 {{ mysql_compress_cmd }} > $DEST/$DB.sql.{{ compext }}
+{% else %}
+  echo "Dumping $DB to $DEST/$DB.sql"
+  /usr/bin/mysqldump --ignore-table=mysql.event --single-transaction --add-drop-table $DB -r $DEST/$DB.sql
+{% endif %}
+done

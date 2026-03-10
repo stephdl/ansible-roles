@@ -1,0 +1,7 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: repo_mongodb # MongoDB isn't in base repo anymore on EL8
+    vars:
+      - mongo_major_version: 3.4 # Unifi recommends Mong 3.4

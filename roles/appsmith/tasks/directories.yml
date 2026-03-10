@@ -1,0 +1,28 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ appsmith_root_dir }}"
+      mode: 755
+    - dir: "{{ appsmith_root_dir }}/archives"
+      mode: 700
+    - dir: "{{ appsmith_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ appsmith_root_dir }}/tmp"
+      owner: "{{ appsmith_user }}"
+      mode: 700
+    - dir: "{{ appsmith_root_dir }}/src"
+      owner: "{{ appsmith_user }}"
+    - dir: "{{ appsmith_root_dir }}/server"
+      owner: "{{ appsmith_user }}"
+    - dir: "{{ appsmith_root_dir }}/server/plugins"
+      owner: "{{ appsmith_user }}"
+    - dir: "{{ appsmith_root_dir }}/client"
+    - dir: "{{ appsmith_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ appsmith_root_dir }}/etc"
+      group: "{{ appsmith_user }}"
+      mode: 750
+    - dir: "{{ appsmith_root_dir }}/bin"
+  tags: appsmith

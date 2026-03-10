@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+{% for client in wh_clients %}
+{% for app in client.apps | default([]) %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+mysqldump --add-drop-table --single-transaction \
+    --host={{ (wh_default_app | combine(app)).database.server | default(mysql_server) }} \
+    --user={{ client.name[0:7] }}_{{ app.name[0:7] }} \
+    --password="{{ (wh_default_app | combine(app)).database.pass | default((wh_pass_seed | password_hash('sha256', 65534 | random(seed=client.name + app.name) | string))[9:27] ) }}" \
+    {{ client.name[0:7] }}_{{ app.name[0:7] }} | \
+	    lz4 -c > /opt/wh/{{ client.name }}/apps/{{ app.name }}/db_dumps/{{ client.name[0:7] }}_{{ app.name[0:7] }}.sql.lz4
+{% endfor %}
+{% endfor %}

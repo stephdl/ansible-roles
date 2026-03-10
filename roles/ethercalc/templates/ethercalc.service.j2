@@ -1,0 +1,21 @@
+[Unit]
+Description=Ethercalc ({{ ethercalc_id }} Instance)
+After=syslog.target network.target redis.service
+
+[Service]
+Type=simple
+User={{ ethercalc_user }}
+Group={{ ethercalc_group }}
+ExecStart={{ ethercalc_root_dir }}/app/bin/ethercalc --host 0.0.0.0 --port {{ ethercalc_port }} --expire {{ ethercalc_expire }} --key=${KEY}
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=512M
+SyslogIdentifier=ethercalc-{{ ethercalc_id }}
+Restart=on-failure
+EnvironmentFile={{ ethercalc_root_dir }}/env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+DatabaseDirectory /var/lib/clamav
+LogVerbose yes
+LogSyslog yes
+Checks {{ clam_safebrowsing | ternary('48','12') }}
+DatabaseOwner clamupdate
+DatabaseMirror {{ clam_mirror }}
+{% for custom in clam_custom_db_url %}
+DatabaseCustomURL={{ custom }}
+{% endfor %}
+NotifyClamd /etc/clamd.conf
+Foreground yes
+SafeBrowsing {{ clam_safebrowsing | ternary('yes','no') }}

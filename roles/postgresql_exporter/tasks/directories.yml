@@ -1,0 +1,16 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ pg_exporter_root_dir }}"
+    - dir: "{{ pg_exporter_root_dir }}/meta"
+      mode: '700'
+    - dir: "{{ pg_exporter_root_dir }}/archives"
+      mode: '700'
+    - dir: "{{ pg_exporter_root_dir }}/app"
+    - dir: "{{ pg_exporter_root_dir }}/tmp"
+    - dir: "{{ pg_exporter_root_dir }}/etc"
+      group: "{{ pg_exporter_user }}"
+      mode: '750'
+  tags: pg

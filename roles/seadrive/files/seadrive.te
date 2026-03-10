@@ -1,0 +1,10 @@
+module seadrive 1.0;
+
+require {
+        type init_t;
+        type fusermount_exec_t;
+        class file execute;
+}
+
+#============= init_t ==============
+allow init_t fusermount_exec_t:file execute;

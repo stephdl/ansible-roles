@@ -1,0 +1,6 @@
+---
+
+- name: Deploy configuration
+  template: src=navidrome.toml.j2 dest={{ nd_root_dir }}/etc/navidrome.toml
+  notify: restart navidrome
+  tags: navidrome

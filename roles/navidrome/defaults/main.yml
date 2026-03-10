@@ -1,0 +1,35 @@
+---
+
+# Version to deploy
+nd_version: 0.47.0
+# URL of the archive
+nd_archive_url: https://github.com/navidrome/navidrome/releases/download/v{{ nd_version }}/navidrome_{{ nd_version }}_Linux_x86_64.tar.gz
+# Expected sha1 of the archive
+nd_archive_sha1: 3d06456e26953931399d001f1d3c412f48ac9f34
+
+# Should ansible handle upgrades, or only initial install ?
+nd_manage_upgrade: True
+
+# Where navidrome will be installed
+nd_root_dir: /opt/navidrome
+
+# User account under which the service will run. Will be created
+nd_user: navidrome
+
+# Port navidrome will listen on
+nd_port: 4533
+# List of IP addresses or CIDR allowed to access the port (only if iptables_manage is True)
+nd_src_ip: {}
+
+
+# Directory where music is available (can, and should be read only for nd_user
+nd_music_dir: '{{ nd_root_dir }}/music'
+# Size of the cache for transcoding
+nd_transcoding_cache_size: 200M
+# Image cache
+nd_image_cache_size: 100M
+
+# Proxy authentication. Set nd_header_auth to the name of the header containing the user name
+# nd_header_auth: Auth-User
+nd_proxy_whitelist: "{{ nd_src_ip }}"
+

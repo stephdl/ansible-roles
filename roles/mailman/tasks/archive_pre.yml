@@ -1,0 +1,51 @@
+---
+
+- name: Create the archive dir
+  file:
+    path: "{{ mailman_archive_dir }}"
+    state: directory
+  tags: mailman
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ mailman_root_dir }}/{{ item }}"
+    dest: "{{ mailman_archive_dir }}/"
+    delete: True
+    compress: False
+  loop:
+    - venv
+    - data
+  delegate_to: "{{ inventory_hostname }}"
+  tags: mailman
+
+- name: Dump the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ mailman_db_server | quote }}
+    --port={{ mailman_db_port | quote }}
+    --username=sqladmin {{ mailman_db_name[item] | quote }}
+    --file="{{ mailman_archive_dir }}/{{ mailman_db_name[item] }}.sql"
+  loop: "{{ mailman_db_name.keys() | list }}"
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  when: mailman_db_engine == 'postgres'
+  tags: mailman
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ mailman_db_name[item] }}"
+    target: "{{ mailman_archive_dir }}/{{ mailman_db_name[item] }}.sql.xz"
+    login_host: "{{ mailman_db_server }}"
+    login_port: "{{ mailman_db_port }}"
+    login_user: "{{ mailman_db_user }}"
+    login_password: "{{ mailman_db_pass }}"
+    quick: True
+    single_transaction: True
+  loop: "{{ mailman_db_name.keys() | list }}"
+  environment:
+    XZ_OPT: -T0
+  when: mailman_db_engine == 'mysql'
+  tags: mailman

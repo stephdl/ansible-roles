@@ -1,0 +1,13 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ root_dir }}/archives/{{ version }}.tar.zst --use-compress-program=zstd ./
+  environment:
+    ZSTD_CLEVEL: 10
+  args:
+    chdir: "{{ root_dir }}/archives/{{ version }}"
+    warn: False
+
+- name: Remove archive dir
+  file: path={{ root_dir }}/archives/{{ version }} state=absent
+

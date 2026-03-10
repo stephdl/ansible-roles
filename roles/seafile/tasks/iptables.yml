@@ -1,0 +1,10 @@
+---
+
+- name: Handle seafile ports
+  iptables_raw:
+    name: seafile_ports
+    state: "{{ (seafile_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ seafile_ports | join(',') }} -s {{ seafile_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: seafile
+

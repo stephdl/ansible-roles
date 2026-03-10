@@ -1,0 +1,80 @@
+---
+
+prosody_c2s_ports: [ 5222 ]
+prosody_s2s_ports: [ 5269 ]
+prosody_http_ports: [ 5280 ]
+prosody_component_ports: [ 5347 ]
+
+prosody_c2s_src_ip:
+  - 0.0.0.0/0
+prosody_s2s_src_ip:
+  - 0.0.0.0/0
+prosody_http_src_ip: []
+prosody_component_src_ip: []
+
+prosody_admin_users: []
+
+# 3rd party modules to install
+prosody_base_modules:
+  - name: mod_auth_ldap
+  - name: ext_events.lib
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/ext_events.lib.lua
+  - name: util.lib
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/util.lib.lua
+  - name: mod_speakerstats
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_speakerstats.lua
+  - name: mod_speakerstats_component
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_speakerstats_component.lua
+  - name: mod_turncredentials
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_turncredentials.lua
+  - name: mod_conference_duration
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_conference_duration.lua
+  - name: mod_conference_duration_component
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_conference_duration_component.lua
+  - name: mod_client_proxy
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_client_proxy.lua
+  - name: mod_roster_command
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_roster_command.lua
+  - name: mod_muc_lobby_rooms
+    url: https://raw.githubusercontent.com/jitsi/jitsi-meet/master/resources/prosody-plugins/mod_muc_lobby_rooms.lua
+
+prosody_extra_modules: []
+prosody_modules: "{{ (prosody_base_modules + prosody_extra_modules) | unique }}"
+
+prosody_base_modules_enabled:
+  - roster
+  - saslauth
+  - tls
+  - dialback
+  - disco
+  - carbons
+  - pep
+  - private
+  - blocklist
+  - vcard4
+  - vcard_legacy
+  - version
+  - uptime
+  - time
+  - ping
+  - register
+  - admin_adhoc
+  - bosh
+  - pubsub
+prosody_extra_modules_enabled: []
+prosody_modules_enabled: "{{ (prosody_base_modules_enabled + prosody_extra_modules_enabled) | unique }}"
+
+prosody_base_modules_disabled: []
+prosody_extra_modules_disabled: []
+prosody_modules_disabled: "{{ (prosody_base_modules_disabled + prosody_extra_modules_disabled) | unique }}"
+
+# Wether registration is alowed or not. Not available with all auth backends (not compatible with LDAP for example)
+prosody_allow_registration: False
+
+prosody_auth_provider: "{{ (ad_auth | default(False) or ldap_auth | default(False)) | ternary('ldap','internal_hashed') }}"
+prosody_ldap_servers: "{{ ad_ldap_servers | default([ad_auth | default(False) | ternary(ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_uri | default('ldap://' + ansible_domain) | urlsplit('hostname'))]) }}"
+prosody_ldap_base: "{{ ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_user_base | default('ou=Users') + ',' + ldap_base | default(ansible_domain | regex_replace('\\.',',dc='))) }}"
+prosody_ldap_filter: "{{ ad_auth | default(False) | ternary('(&(objectClass=user)(sAMAccountName=%s))','(&(objectClass=inetOrgPerson)(uid=%s))') }}"
+prosody_ldap_starttls: True
+# prosody_ldap_bind_dn: CN=prosody,OU=Apps,DC=domain,DC=tld
+# prosody_ldap_bind_pass: S3cr3t.

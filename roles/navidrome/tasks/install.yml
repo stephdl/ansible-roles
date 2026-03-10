@@ -1,0 +1,43 @@
+---
+
+- name: Install dependencies
+  package:
+    name:
+      - ffmpeg
+  tags: navidrome
+
+- when: nd_install_mode != 'none'
+  block:
+    - name: Download navidrome
+      get_url:
+        url: "{{ nd_archive_url }}"
+        dest: "{{ nd_root_dir }}/tmp/"
+        checksum: sha1:{{ nd_archive_sha1 }}
+
+    - name: Extract navidrome
+      unarchive:
+        src: "{{ nd_root_dir }}/tmp/navidrome_{{ nd_version }}_Linux_x86_64.tar.gz"
+        dest: "{{ nd_root_dir }}/tmp/"
+        remote_src: True
+
+    - name: Install navidrome binary
+      copy: src={{ nd_root_dir }}/tmp/navidrome dest={{ nd_root_dir }}/bin/navidrome mode=755 remote_src=True
+
+  tags: navidrome
+
+- name: Install systemd unit
+  template: src=navidrome.service.j2 dest=/etc/systemd/system/navidrome.service
+  register: nd_systemd_unit
+  tags: navidrome
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: nd_systemd_unit.changed
+  tags: navidrome
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/navidrom mode=755
+  loop:
+    - pre
+    - post
+  tags: navidrome

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eo pipefail
+
+rm -f {{ sftpgo_root_dir }}/backup/*.sql.zst {{ sftpgo_root_dir }}/backup/id_*

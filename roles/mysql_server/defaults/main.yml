@@ -1,0 +1,44 @@
+---
+
+mysql_port: 3306
+mysql_networking: True
+mysql_src_ip: []
+mysql_innodb_file_per_table: True
+mysql_innodb_buffer_pool_size: "{{ (ansible_memtotal_mb * 0.2) | int }}M"
+#mysql_innodb_buffer_pool_instances: 8
+mysql_innodb_log_buffer_size: 8M
+mysql_innodb_flush_log_at_trx_commit: 2
+mysql_innodb_flush_method: O_DIRECT
+mysql_open_files_limit: 8192
+mysql_max_allowed_packet: 32M
+mysql_max_connections: 300
+
+# Engine can be either mariadb or mysql
+mysql_engine: mariadb
+
+mysql_sql_mode: []
+#  - ERROR_FOR_DIVISION_BY_ZERO
+#  - NO_AUTO_CREATE_USER
+#  - NO_ENGINE_SUBSTITUTION
+
+# Databases and users to create
+mysql_databases: []
+mysql_users: []
+
+# Databases and users to remove
+# Eg:
+# mysql_databases_to_remove:
+#   - vtiger
+# mysql_users_to_remove:
+#   - name: vtiger
+#     host: 10.99.3.10
+#
+mysql_databases_to_remove: []
+mysql_users_to_remove: []
+
+# Command to use to compress dumps. Will read from stdin and write to stdout. Set to False to disable compression
+mysql_compress_cmd: zstd -T0 -c
+
+# List of database which shouldn't be backed up
+mysql_skip_backup: []
+...

@@ -1,0 +1,29 @@
+---
+
+- name: Remove uneeded files
+  file: path={{ matomo_root_dir }}/{{ item }} state=absent
+  with_items:
+    - web/vendor/maxmind-db/reader/autoload.php
+  tags: matomo
+
+- name: Remove temp files
+  file: path={{ matomo_root_dir }}/tmp/{{ item }} state=absent
+  with_items:
+    - matomo
+    - "How to install Matomo.html"
+    - matomo-{{ matomo_version }}.tar.gz
+    - matomo.sql
+  tags: matomo
+
+- name: Remove plugins archives
+  file: path={{ matomo_root_dir }}/tmp/{{ item }}-{{ matomo_plugins[item].version }}.zip state=absent
+  with_items: "{{ matomo_plugins.keys() | list }}"
+  tags: matomo
+
+- name: Remove obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/backup/pre.d/matomo_{{ matomo_id }}_pre-backup
+    - /etc/backup/post.d/matomo_{{ matomo_id }}_post-backup
+    - "{{ matomo_root_dir }}/db_dumps"
+  tags: matomo

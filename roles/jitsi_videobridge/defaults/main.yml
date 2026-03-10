@@ -1,0 +1,23 @@
+---
+
+jitsi_root_dir: /opt/jitsi
+jitsi_user: jitsi
+
+jitsi_videobridge_git_url: https://github.com/jitsi/jitsi-videobridge.git
+
+# Should ansible manage upgrades or only initial install
+jitsi_videobridge_manage_upgrade: "{{ jitsi_manage_upgrade | default(True) }}"
+
+jitsi_videobridge_rtp_port: 10000
+jitsi_videobridge_src_ip:
+  - 0.0.0.0/0
+
+jitsi_videobridge_domain: "{{ jitsi_domain | default(inventory_hostname) }}"
+jitsi_videobridge_auth_domain: "{{ jitsi_auth_domain | default('auth.' ~ jitsi_domain) }}"
+
+# XMPP password to connect to
+jitsi_videobridge_xmpp_server: "{{ jitsi_xmpp_server | default(inventory_hostname) }}"
+jitsi_videobridge_xmpp_user: jvb
+jitsi_videobridge_xmpp_domain: "{{ jitsi_videobridge_auth_domain }}"
+# A random pass will be created if not defined
+# jitsi_videobridge_xmpp_pass:

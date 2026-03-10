@@ -1,0 +1,5 @@
+---
+
+- name: Install patrix
+  yum: name=patrix
+  tags: patrix

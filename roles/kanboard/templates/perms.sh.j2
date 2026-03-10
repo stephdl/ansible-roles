@@ -1,0 +1,18 @@
+#!/bin/sh
+
+restorecon -R {{ kanboard_root_dir }}
+chown root:root {{ kanboard_root_dir }}
+chmod 700 {{ kanboard_root_dir }}
+chown root:root {{ kanboard_root_dir }}/meta
+chmod 700 {{ kanboard_root_dir }}/meta
+setfacl -k -b {{ kanboard_root_dir }}
+setfacl -m u:{{ kanboard_php_user }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ kanboard_root_dir }}
+chown -R root:root {{ kanboard_root_dir }}/web
+chown -R {{ kanboard_php_user }} {{ kanboard_root_dir }}/{tmp,sessions,cache,data}
+chmod 700 {{ kanboard_root_dir }}/{tmp,sessions,cache,data}
+find {{ kanboard_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ kanboard_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown :{{ kanboard_php_user }} {{ kanboard_root_dir }}/web/config.php
+chmod 640 {{ kanboard_root_dir }}/web/config.php
+chmod 755 {{ kanboard_root_dir }}/web/cli
+restorecon -R {{ kanboard_root_dir }}

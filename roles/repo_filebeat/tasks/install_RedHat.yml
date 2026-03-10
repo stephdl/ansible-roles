@@ -1,0 +1,11 @@
+---
+- name: Add Filebeat repository
+  yum_repository:
+    name: filebeat
+    description: Filebeat
+    baseurl: https://artifacts.elastic.co/packages/oss-{{ filebeat_major_version }}.x/yum
+    gpgcheck: True
+    repo_gpgcheck: True
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    includepkgs: filebeat* journalbeat*
+  tags: repo,logs

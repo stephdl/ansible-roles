@@ -1,0 +1,53 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: ntp
+
+- name: Check if systemd-timesyncd is available
+  stat: path=/lib/systemd/systemd-timesyncd
+  register: systemd_timesyncd
+  tags: ntp
+
+- name: Disable systemd-timesyncd
+  service: name=systemd-timesyncd state=stopped enabled=False
+  when: systemd_timesyncd.stat.exists
+  tags: ntp
+
+- name: Install Chrony
+  package: name=chrony
+  tags: ntp
+
+- name: Deploy chrony configuration
+  template: src=chrony.conf.j2 dest={{ ntp_chrony_conf }}
+  notify: restart chrony
+  tags: ntp
+
+  # Always close port, it's only used as a server on samba DC, where port 123 is opened
+  # by the samba role
+- name: Handle ntpd port
+  iptables_raw:
+    name: ntpd_port
+    state: absent
+  when: iptables_manage | default(True)
+  tags: ntp
+
+- name: Check if ntpd is installed
+  stat: path=/lib/systemd/system/{{ ntp_ntpd_service }}.service
+  register: ntp_unit
+  tags: ntp
+
+  # If ntpd is installed, stop and disable it
+- name: Handle ntpd service
+  service: name={{ ntp_ntpd_service }} state=stopped enabled=False
+  when: ntp_unit.stat.exists
+  tags: ntp
+
+- name: Start and enable chrony
+  service: name={{ ntp_chrony_service }} state=started enabled=True
+  tags: ntp
+

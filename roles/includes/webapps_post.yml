@@ -1,0 +1,18 @@
+---
+
+- name: Deploy permission script
+  template: src=perms.sh.j2 dest={{ root_dir }}/perms.sh mode=755
+
+- name: Set correct SELinux context
+  sefcontext:
+    target: "{{ root_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  when: ansible_selinux.status == 'enabled'
+
+- name: Set optimal permissions
+  command: "{{ root_dir }}/perms.sh"
+  changed_when: False
+
+- name: Write version
+  copy: content={{ version }} dest={{ root_dir }}/meta/ansible_version

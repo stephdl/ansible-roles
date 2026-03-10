@@ -1,0 +1,57 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - nodejs
+      - git
+  tags: wbo
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: wbo_{{ wbo_id }}
+    - home: "{{ wbo_root_dir }}"
+    - comment: "Online collaborative Whiteboard {{ wbo_id }}"
+  tags: wbo
+
+- name: Clone wbo repo
+  git:
+    repo: "{{ wbo_git_url }}"
+    dest: "{{ wbo_root_dir }}/app"
+    force: True
+  notify: restart wbo
+  register: wbo_git
+  tags: wbo
+
+- name: Install wbo
+  command: npm i
+  args:
+    chdir: "{{ wbo_root_dir }}/app"
+  when: wbo_git.changed
+  tags: wbo
+
+- name: Set permissions on server data dir
+  file: path={{ wbo_root_dir }}/app/server-data owner=wbo_{{ wbo_id }} mode=700
+  tags: wbo
+
+- name: Deploy systemd unit
+  template: src=wbo.service.j2 dest=/etc/systemd/system/wbo-{{ wbo_id }}.service
+  register: wbo_unit
+  tags: wbo
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: wbo_unit.changed
+  tags: wbo
+
+- name: Handle wbo port
+  iptables_raw:
+    name: wbo_port_{{ wbo_id }}
+    state: "{{ (wbo_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ wbo_port }} -s {{ wbo_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: wbo
+
+- name: Start and enable wbo daemon
+  service: name=wbo-{{ wbo_id }} state=started enabled=True
+  tags: wbo

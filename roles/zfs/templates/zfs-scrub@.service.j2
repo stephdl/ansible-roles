@@ -1,0 +1,9 @@
+[Unit]
+Description=ZFS pool scrub
+Requires=zfs.target
+After=zfs.target
+
+[Service]
+Type=oneshot
+ExecStartPre=-/sbin/zpool scrub -s %I
+ExecStart=/sbin/zpool scrub %I

@@ -1,0 +1,9 @@
+---
+
+dependencies:
+  - role: rust
+  - role: nginx
+  - role: repo_mariadb
+    when: vaultwarden_db_engine == 'mysql'
+  - role: mysql_server
+    when: vaultwarden_db_engine == 'mysql' and (vaultwarden_db_server in ['localhost', '127.0.0.1'])

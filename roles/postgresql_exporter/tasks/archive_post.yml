@@ -1,0 +1,5 @@
+---
+
+- name: Remove archive dir
+  file: path={{ pg_exporter_root_dir }}/archives/{{ pg_exporter_current_version }} state=absent
+  tags: pg

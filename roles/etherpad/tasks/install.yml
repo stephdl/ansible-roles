@@ -1,0 +1,78 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - nodejs
+  notify: restart etherpad
+  tags: etherpad
+
+- when: etherpad_install_mode != 'none'
+  block:
+    - name: Download etherpad
+      get_url:
+        url: "{{ etherpad_archive_url }}"
+        dest: "{{ etherpad_root_dir }}/tmp"
+        checksum: "sha1:{{ etherpad_archive_sha1 }}"
+    
+    - name: Extract etherpad
+      unarchive:
+        src: "{{ etherpad_root_dir }}/tmp/etherpad-lite-{{ etherpad_version }}.tar.gz"
+        dest: "{{ etherpad_root_dir }}/tmp/"
+        remote_src: True
+    
+    - name: Move etherpad to its correct dir
+      synchronize:
+        src: "{{ etherpad_root_dir }}/tmp/etherpad-lite-{{ etherpad_version }}/"
+        dest: "{{ etherpad_root_dir }}/app/"
+        recursive: True
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      become_user: "{{ etherpad_user }}"
+
+  tags: etherpad
+
+- name: Install node modules
+  npm:
+    path: "{{ etherpad_root_dir }}/app/src"
+    state: "{{ (etherpad_install_mode == 'none') | ternary('present','latest') }}"
+  become_user: "{{ etherpad_user }}"
+  notify: restart etherpad
+  tags: etherpad
+
+- name: Install plugins
+  npm:
+    name: ep_{{ item }}
+    path: "{{ etherpad_root_dir }}/app/src"
+    state: "{{ (etherpad_install_mode == 'none') | ternary('present','latest') }}"
+  loop: "{{ etherpad_plugins }}"
+  become_user: "{{ etherpad_user }}"
+  notify: restart etherpad
+  tags: etherpad
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ etherpad_db_name }}"
+    - db_user: "{{ etherpad_db_user }}"
+    - db_server: "{{ etherpad_db_server }}"
+    - db_pass: "{{ etherpad_db_pass }}"
+  tags: etherpad
+
+- name: Deploy systemd unit
+  template: src=etherpad.service.j2 dest=/etc/systemd/system/etherpad_{{ etherpad_id }}.service
+  register: etherpad_unit
+  notify: restart etherpad
+  tags: etherpad
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: etherpad_unit.changed
+  tags: etherpad
+
+- name: Deploy pre/post backup scripts
+  template: src={{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/etherpad_{{ etherpad_id }}.sh mode=750
+  loop:
+    - pre
+    - post
+  tags: etherpad

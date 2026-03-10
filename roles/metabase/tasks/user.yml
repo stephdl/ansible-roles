@@ -1,0 +1,5 @@
+---
+
+- name: Create metabase user account
+  user: name={{ metabase_user }} home={{ metabase_root_dir }} system=True
+  tags: metabase

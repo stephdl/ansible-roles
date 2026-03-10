@@ -1,0 +1,21 @@
+[Unit]
+Description=Ubiquiti's UniFi Controller
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=unifi
+WorkingDirectory={{ unifi_root_dir }}/app
+ExecStart=/usr/bin/java -Djava.awt.headless=true -Xmx{{ unifi_mem_limit }}M -Xms{{ unifi_mem_limit }}M -Djava.net.preferIPv4Stack=true {% if system_proxy is defined and system_proxy != '' %}-Dhttp.proxyHost={{ system_proxy | urlsplit('hostname') }} -Dhttp.proxyPort={{ system_proxy | urlsplit('port') }} -Dhttps.proxyHost={{ system_proxy | urlsplit('hostname') }} -Dhttps.proxyPort={{ system_proxy | urlsplit('port') }} {% endif %}-jar {{ unifi_root_dir }}/app/lib/ace.jar start
+ExecStop=/usr/bin/java -jar {{ unifi_root_dir }}/app/lib/ace.jar stop
+SuccessExitStatus=143
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit={{ unifi_mem_limit * 2 }}M
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

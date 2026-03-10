@@ -1,0 +1,12 @@
+---
+- include: install.yml
+- include: facts.yml
+- include: ssl.yml
+- include: dir.yml
+- include: conf.yml
+- include: letsencrypt.yml
+- include: selinux.yml
+- include: iptables.yml
+- include: htpasswd.yml
+- include: service.yml
+- include: filebeat.yml

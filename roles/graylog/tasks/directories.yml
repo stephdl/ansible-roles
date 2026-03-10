@@ -1,0 +1,39 @@
+---
+
+- name: Create dir
+  file:
+    path: "{{ graylog_root_dir }}/{{ item.dir }}"
+    state: directory
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop:
+    - dir: /
+    - dir: etc
+      owner: root
+      group: graylog
+      mode: 750
+    - dir: app
+    - dir: state
+      owner: graylog
+      group: graylog
+    - dir: data/journal
+      owner: graylog
+      group: graylog
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: ssl
+      owner: root
+      group: graylog
+      mode: 750
+    - dir: archives
+      mode: 700
+    - dir: tmp
+    - dir: logs
+      owner: graylog
+      group: graylog
+      mode: 700
+    - dir: backup
+      mode: 700
+  tags: graylog

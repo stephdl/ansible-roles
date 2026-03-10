@@ -1,0 +1,62 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - java-1.8.0-openjdk-devel
+      - git
+    state: latest
+
+- name: Create mxisd user account
+  user: name={{ mxisd_user }} home={{ mxisd_root_dir }} shell=/bin/bash state=present
+
+- name: Create needed directories
+  file: path={{ mxisd_root_dir }}/{{ item.dir }} state=directory mode={{ item.mode }} group={{ mxisd_user }}
+  with_items:
+    - { dir: /,   mode: 750 }
+    - { dir: etc, mode: 770 }
+    - { dir: db,  mode: 770 }
+
+- name: Clone mxisd repo
+  git:
+    depth: 1
+    repo: "{{ mxisd_git_uri }}"
+    dest: "{{ mxisd_root_dir }}/app"
+    version: "{{ mxisd_version }}"
+  become_user: "{{ mxisd_user }}"
+  register: mxisd_git
+  become: True
+
+- name: Setup proxy settings for gradle
+  template: src=gradle.properties.j2 dest={{ mxisd_root_dir }}/app/gradle.properties
+
+- name: Check if the jar already exists
+  stat: path={{ mxisd_root_dir }}/app/build/libs/app.jar
+  register: mxisd_jar
+
+- name: Build mxisd
+  command: ./gradlew --no-daemon build
+  args:
+    chdir: "{{ mxisd_root_dir }}/app"
+  become: True
+  become_user: "{{ mxisd_user }}"
+  when: mxisd_git.changed or not mxisd_jar.stat.exists
+  notify: restart mxisd
+
+- name: Handle mxisd port
+  iptables_raw:
+    name=mxisd_port
+    state={{ (mxisd_src_ip is defined and mxisd_src_ip | length > 0) | ternary('present','absent') }}
+    rules="-A INPUT -m state --state NEW -p tcp --dport {{ mxisd_port }} -s {{ mxisd_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+
+- name: Deploy service config
+  template: src=mxisd.yaml.j2 dest={{ mxisd_root_dir }}/etc/mxisd.yaml group={{ mxisd_user }} mode=640
+  notify: restart mxisd
+
+- name: Deploy systemd unit
+  template: src=matrix-mxisd.service.j2 dest=/etc/systemd/system/matrix-mxisd.service
+  notify: reload systemd
+
+- name: Start and enable the service
+  service: name=matrix-mxisd state=started enabled=yes

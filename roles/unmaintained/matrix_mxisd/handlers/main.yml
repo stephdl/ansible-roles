@@ -1,0 +1,8 @@
+---
+
+- include: ../common/handlers/main.yml
+
+- name: restart mxisd
+  service: name=matrix-mxisd state=restarted
+
+...

@@ -1,0 +1,5 @@
+---
+
+- name: Create vaultwarden user
+  user: name={{ vaultwarden_user }} home={{ vaultwarden_root_dir }} system=True
+  tags: vaultwarden

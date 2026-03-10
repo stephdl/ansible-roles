@@ -1,0 +1,3 @@
+{% for module in httpd_front_modules %}
+LoadModule {{ module }}_module modules/mod_{{ module }}.so
+{% endfor %}

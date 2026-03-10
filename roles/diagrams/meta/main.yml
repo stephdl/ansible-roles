@@ -1,0 +1,7 @@
+---
+
+dependencies:
+  - role: repo_lux # EL8 doesn't have tomcat anymore
+    when:
+      - ansible_os_family == 'RedHat'
+      - ansible_distribution_major_version is version('8','>=')

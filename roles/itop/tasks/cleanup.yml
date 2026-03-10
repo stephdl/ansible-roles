@@ -1,0 +1,13 @@
+---
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ itop_root_dir }}/tmp/iTop-{{ itop_version }}-{{ itop_build }}.zip"
+    - "{{ itop_root_dir }}/tmp/web"
+    - "{{ itop_root_dir }}/tmp/INSTALL"
+    - "{{ itop_root_dir }}/tmp/README"
+    - "{{ itop_root_dir }}/tmp/LICENSE"
+    - "{{ itop_root_dir }}/tmp/CAS-{{ itop_php_cas_version }}"
+    - "{{ itop_root_dir }}/tmp/CAS-{{ itop_php_cas_version }}.tgz"
+  tags: itop

@@ -1,0 +1,36 @@
+---
+
+- block:
+  - name: Download pg_exporter
+    get_url:
+      url: "{{ pg_exporter_archive_url }}"
+      dest: "{{ pg_exporter_root_dir }}/tmp/"
+      checksum: sha1:{{ pg_exporter_archive_sha1 }}
+  
+  - name: Extract pg_exporter
+    unarchive:
+      src: "{{ pg_exporter_root_dir }}/tmp/postgres_exporter_v{{ pg_exporter_version }}_linux-amd64.tar.gz"
+      dest: "{{ pg_exporter_root_dir }}/tmp/"
+      remote_src: True
+
+  - name: Move the binary to its final location
+    copy:
+      src: "{{ pg_exporter_root_dir }}/tmp/postgres_exporter_v{{ pg_exporter_version }}_linux-amd64/postgres_exporter"
+      dest: "{{ pg_exporter_root_dir }}/app/"
+      mode: '755'
+      remote_src: True
+    notify: restart postgres-exporter
+
+  when: pg_exporter_install_mode != 'none'
+  tags: pg
+
+- name: Deploy systemd unit
+  template: src=postgres-exporter.service.j2 dest=/etc/systemd/system/postgres-exporter.service
+  register: pg_exporter_unit
+  notify: restart postgres-exporter
+  tags: pg
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pg_exporter_unit.changed
+  tags: pg

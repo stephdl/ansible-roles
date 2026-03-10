@@ -1,0 +1,5 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: repo_rpmfusion # For ffmpeg

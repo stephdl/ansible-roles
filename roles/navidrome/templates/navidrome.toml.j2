@@ -1,0 +1,9 @@
+Port = '{{ nd_port }}'
+MusicFolder = '{{ nd_music_dir }}'
+DataFolder = '{{ nd_root_dir }}/data'
+TranscodingCacheSize = '{{ nd_transcoding_cache_size }}'
+ImageCacheSize = '{{ nd_image_cache_size }}'
+{% if nd_proxy_auth is defined %}
+ReverseProxyUserHeader = '{{ nd_proxy_auth }}'
+ReverseProxyWhitelist = '{{ nd_proxy_whitelist | join(',') }}'
+{% endif %}

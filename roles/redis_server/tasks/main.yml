@@ -1,0 +1,42 @@
+---
+
+- name: Install redis server
+  yum: name=redis state=present
+  tags: redis
+
+- name: Check if /etc/redis dir exists
+  stat: path=/etc/redis
+  register: redis_etc_dir
+  tags: redis
+
+- name: Deploy redis configuration
+  template: src=redis.conf.j2 dest={{ (redis_etc_dir.stat.exists and redis_etc_dir.stat.isdir) | ternary('/etc/redis/redis.conf','/etc/redis.conf') }}
+  notify: restart redis
+  tags: redis
+
+- name: Deploy pre and post backup hooks
+  copy: src={{ item.script }} dest=/etc/backup/{{ item.hook }}.d/{{ item.script }} mode=755
+  with_items:
+    - script: 'redis_copy_dumps.sh'
+      hook: pre
+    - script: 'redis_delete_dumps.sh'
+      hook: post
+  tags: redis
+
+- name: Disable redis-sentinel
+  service: name=redis-sentinel state=stopped enabled=no
+  tags: redis
+
+- name: Handle redis port
+  iptables_raw:
+    name: redis_port
+    state: "{{ (redis_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ redis_port }} -s {{ redis_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: redis
+
+- name: Start and enable the service
+  service: name=redis state=started enabled=True
+  tags: redis
+
+...

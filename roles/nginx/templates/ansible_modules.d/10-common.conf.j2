@@ -1,0 +1,3 @@
+{% for module in nginx_modules %}
+load_module "/usr/lib64/nginx/modules/{{ (module is search('\.so$')) | ternary(module,'ngx_' + module + '_module.so') }}";
+{% endfor %}

@@ -1,0 +1,7 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: httpd_php
+  - role: mysql_server
+    when: pma_db_server in ['localhost','127.0.0.1']

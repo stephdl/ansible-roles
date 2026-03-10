@@ -1,0 +1,16 @@
+---
+
+funkwhale_packages:
+  - gcc
+  - git
+  - postgresql14
+  - postgresql-devel
+  - openldap-devel
+  - cyrus-sasl-devel
+  - libjpeg-turbo-devel
+  - python3-psycopg2
+  - python3-setuptools
+  - python3-virtualenv
+  - python3-pip
+  - ffmpeg
+  - mod_xsendfile

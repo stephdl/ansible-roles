@@ -1,0 +1,94 @@
+---
+
+- name: Create script dir
+  file: path=/opt/ansible/timers state=directory
+  tags: system,cron
+
+- name: List unmanaged scripts
+  shell: find /opt/ansible/timers -maxdepth 1 -mindepth 1 -type f -exec basename "{}" \;
+  changed_when: False
+  register: system_timers_current_scripts
+  tags: system,cron
+
+- name: Remove unmanaged timer's scripts
+  file: path=/opt/ansible/timers/{{ item }} state=absent
+  when: item not in system_timers_managed
+  loop: "{{ system_timers_current_scripts.stdout_lines }}"
+  tags: system,cron
+
+- name: List unmanaged timers service unit
+  shell: find /etc/systemd/system -maxdepth 1 -mindepth 1 -type f -name timer-ansible-*.service -exec basename "{}" \; | perl -pe 's/timer\-ansible\-([\w\-_]+)\.service/$1/g'
+  changed_when: False
+  register: system_timers_current_service
+  tags: system,cron
+
+- name: Disable unmanaged timers
+  systemd: name=timer-ansible-{{ item }}.timer state=stopped enabled=False
+  when: item not in system_timers_managed
+  loop: "{{ system_timers_current_service.stdout_lines }}"
+  tags: system,cron
+
+- name: Remove unmanaged timers service unit
+  file: path=/etc/systemd/system/timer-ansible-{{ item.0 }}.{{ item.1 }} state=absent
+  when: item.0 not in system_timers_managed
+  with_nested:
+    - "{{ system_timers_current_service.stdout_lines }}"
+    - - service
+      - timer
+  tags: system,cron
+
+- name: Deploy scripts
+  copy:
+    content: |
+      {% if not item.command is search('^#!') %}
+      #!/bin/bash -e
+      {% endif %}
+      {{ item.command }}
+    dest: /opt/ansible/timers/{{ item.id }}
+    mode: 0700
+    owner: "{{ item.user }}"
+  loop: "{{ system_timers }}"
+  tags: system,cron
+
+- name: Deploy service units
+  copy:
+    content: |
+      [Unit]
+      Description={{ item.description }}
+
+      [Service]
+      Type=oneshot
+      PrivateTmp=yes
+      ExecStart=/opt/ansible/timers/{{ item.id }}
+      User={{ item.user }}
+      TimeoutSec={{ item.max_duration }}
+      StandardOutput=journal
+      StandardError=journal
+    dest: /etc/systemd/system/timer-ansible-{{ item.id }}.service
+  loop: "{{ system_timers }}"
+  tags: system,cron
+
+- name: Deploy timer units
+  copy:
+    content: |
+      [Unit]
+      Description={{ item.description }}
+
+      [Timer]
+      OnCalendar={{ item.calendar }}
+      Persistent={{ item.persistent | ternary('True','False') }}
+
+      [Install]
+      WantedBy=timers.target
+    dest: /etc/systemd/system/timer-ansible-{{ item.id }}.timer
+  loop: "{{ system_timers }}"
+  tags: system,cron
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  tags: system,cron
+
+- name: Enable timers
+  systemd: name=timer-ansible-{{ item.id }}.timer state={{ item.enabled | ternary('started','stopped') }} enabled={{ item.enabled }}
+  loop: "{{ system_timers }}"
+  tags: system,cron

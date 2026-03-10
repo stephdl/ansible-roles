@@ -1,0 +1,16 @@
+---
+
+- name: Install packages
+  apt: name=iptables-persistent
+  tags: firewall
+
+- name: Use iptables-legacy
+  alternatives:
+    name: "{{ item.key }}"
+    path: "{{ item.value }}"
+  with_dict:
+    iptables: /usr/sbin/iptables-legacy
+    ip6tables: /usr/sbin/ip6tables-legacy
+  when: ansible_distribution_major_version | int >= 10
+  tags: firewall
+

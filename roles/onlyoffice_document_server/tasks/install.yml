@@ -1,0 +1,89 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - onlyoffice-documentserver
+  tags: oo
+
+  # Font generation migh fail during upgrades, which can result in a broken install
+  # like https://github.com/ONLYOFFICE/DocumentServer/issues/1106
+- when: oo_install_mode != 'none'
+  block:
+    - name: Stop services
+      service: name={{ item }} state=stopped
+      loop: "{{ oo_services }}"
+      failed_when: False # don't fail on initial install when the services doesn't exist yet
+
+    - name: Generate fonts
+      command: documentserver-generate-allfonts.sh true
+  tags: oo
+
+- name: Fix permissions on onlyoffice web resources
+  file: path=/var/www/onlyoffice state=directory mode=755
+  tags: oo
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ oo_db_name }}"
+    - db_user: "{{ oo_db_user }}"
+    - db_server: "{{ oo_db_server }}"
+    - db_pass: "{{ oo_db_pass }}"
+  tags: oo
+
+- name: Load MySQL schema
+  mysql_db:
+    name: "{{ oo_db_name }}"
+    state: import
+    target: /var/www/onlyoffice/documentserver/server/schema/mysql/createdb.sql
+    login_host: "{{ oo_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when: db_created.changed
+  tags: oo
+
+- name: Set permissions for default conf
+  file: path=/etc/onlyoffice/documentserver/{{ item }} mode=644
+  loop:
+    - default.json
+    - development-mac.json
+    - development-windows.json
+    - production-linux.json
+    - log4js/development.json
+    - log4js/production.json
+  tags: oo
+
+- name: Set permission on config directory
+  file: path=/etc/onlyoffice state=directory mode=755
+  tags: oo
+
+- name: Fix permissions on data dir
+  command: chown -R ds:ds /var/lib/onlyoffice/documentserver/
+  args:
+    warn: False
+  changed_when: False
+  tags: oo
+
+- name: Deploy systemd service units
+  template: src={{ item }}.service.j2 dest=/etc/systemd/system/{{ item }}.service
+  loop: "{{ oo_services }}"
+  register: oo_units
+  notify: restart documentserver
+  tags: oo
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: oo_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: oo
+
+- name: Remove obsolete services
+  file: path=/etc/systemd/system/{{ item }}.service state=absent
+  loop:
+    - documentserver-gc
+  register: oo_obsolete_units
+  tags: oo
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: oo_obsolete_units.changed
+  tags: oo

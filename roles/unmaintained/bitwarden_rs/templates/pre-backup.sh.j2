@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/bitwarden_rs/
+cp {{ bitwarden_root_dir }}/data/rsa* {{ bitwarden_root_dir }}/backup/
+{% if bitwarden_db_engine == 'mysql' %}
+/usr/bin/mysqldump \
+{% if bitwarden_db_server != 'localhost' and bitwarden_db_server != '127.0.0.1' %}
+        --user={{ bitwarden_db_user }} \
+        --password={{ bitwarden_db_pass | quote }} \
+        --host={{ bitwarden_db_server }} \
+{% endif %}
+        --quick --single-transaction \
+        --add-drop-table {{ bitwarden_db_name }} | zstd -T0 -c > {{ bitwarden_root_dir }}/backup/{{ bitwarden_db_name }}.sql.zst
+{% else %}
+sqlite3 {{ bitwarden_root_dir }}/data/db.sqlite3 ".backup '{{ bitwarden_root_dir }}/backup/db.sqlite3'"
+{% endif %}
+mountpoint -q /home/lbkp/bitwarden_rs/ || mount -o bind,ro {{ bitwarden_root_dir }}/backup/ /home/lbkp/bitwarden_rs/

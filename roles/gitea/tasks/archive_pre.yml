@@ -1,0 +1,23 @@
+---
+- name: Create archive directory
+  file: path={{ gitea_root_dir }}/archives/{{ gitea_current_version }} state=directory mode=700
+  tags: gitea
+
+- name: Archive previous version
+  copy: src={{ gitea_root_dir }}/bin/gitea dest={{ gitea_root_dir }}/archives/{{ gitea_current_version }} remote_src=True
+  tags: gitea
+
+- name: Archive the database
+  mysql_db:
+    state: dump
+    name: "{{ gitea_db_name }}"
+    target: "{{ gitea_root_dir }}/archives/{{ gitea_current_version }}/{{ gitea_db_name }}.sql.xz"
+    login_host: "{{ gitea_db_server | default(mysql_server) }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: gitea
+

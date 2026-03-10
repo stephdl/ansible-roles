@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: repo_zabbix
+  - role: snmp_mibs

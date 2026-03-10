@@ -1,0 +1,112 @@
+---
+
+# List of UNIX group which will have full root access, using sudo
+system_admin_groups: ['admins','Domain\ Admins']
+
+# Email address of the admin (will receive root email)
+# system_admin_email: admin@domain.net
+
+# List of basic system utilisties to install
+# (Common list for EL and Debian based distro)
+system_utils:
+  - htop
+  - screen
+  - iftop
+  - tcpdump
+  - bzip2
+  - pbzip2
+  - lzop
+  - vim
+  - bash-completion
+  - rsync
+  - lsof
+  - net-tools
+  - sysstat
+  - pciutils
+  - strace
+  - wget
+  - man-db
+  - unzip
+  - openssl
+  - pv
+  - less
+  - nano
+  - tree
+  - mc
+  - tar
+
+# Kernel modules to load
+system_kmods: []
+
+# List of extra package to install
+system_extra_pkgs: []
+
+# MegaCLI tool version
+megacli_version: 8.07.14-1
+
+# List of FS to mount
+fstab: []
+# fstab:
+#   - name: /mnt/data
+#     src: files.domain.org:/data
+#     opts: noatime
+#     fstype: nfs
+#     state: present
+#     boot: yes
+
+# Various SELinux booleans
+sebool: []
+# sebool:
+#   - name: httpd_use_fusefs
+#     state: True
+#     persistent: True
+
+system_swappiness: 10
+system_sysctl: {}
+# system_sysctl:
+#   vm.vfs_cache_pressure: 500
+#   vm.dirty_ratio: 10
+#   vm.dirty_background_ratio: 5
+
+# Disable traditional rsyslog daemon
+system_disable_syslog: False
+
+# Send journald logs to a remote server using systemd-journal-upload
+# system_journal_remote_uri: http://logs.example.com:19532
+
+# Max disk space used by the Journal. Default is 10% of the available space. But must be exressed as an absolute value in the conf
+# We can specify the max amount of space used, and the min amount of space left free. The smallest limit will apply
+system_journal_max_use: 3G
+system_journal_keep_free: 2G
+
+# System Timezone
+system_tz: 'Europe/Paris'
+
+# Tuned profile to apply. If undefined, virt-host and virt-guest are applied automatically when needed
+# system_tuned_profile: enterprise-storage
+
+# Frquency of the fstrim cron job. Can be daily, weekly or monthly
+system_fstrim_freq: weekly
+
+system_base_bash_aliases:
+  ls: 'ls $LS_OPTIONS'
+  ll: 'ls $LS_OPTIONS -l'
+  l: 'ls $LS_OPTIONS -lA'
+  rm: 'rm -i'
+  cp: 'cp -i'
+  mv: 'mv -i'
+
+system_extra_bash_aliases: {}
+system_bash_aliases: "{{ system_base_bash_aliases | combine(system_extra_bash_aliases, recursive=True) }}"
+
+# shell scriplet to exec on boot
+system_rc_local_base_cmd: []
+system_rc_local_extra_cmd: []
+system_rc_local_cmd: "{{ system_rc_local_base_cmd + system_rc_local_extra_cmd }}"
+
+# shell scriplet to exec on shutdown
+system_rc_local_shutdown_base_cmd: []
+system_rc_local_shutdown_extra_cmd: []
+system_rc_local_shutdown_cmd: "{{ system_rc_local_shutdown_base_cmd + system_rc_local_shutdown_extra_cmd }}"
+
+...

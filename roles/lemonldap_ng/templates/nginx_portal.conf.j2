@@ -1,0 +1,106 @@
+server {
+  listen 80;
+  listen 443 ssl http2;
+  server_name {{ llng_portal_vhost }};
+
+  include /etc/nginx/ansible_conf.d/acme.inc;
+  include /etc/nginx/ansible_conf.d/perf.inc;
+  include /etc/nginx/ansible_conf.d/force_ssl.inc;
+  root /usr/share/lemonldap-ng/portal/htdocs/;
+
+{% if llng_portal_ssl is defined %}
+{% if llng_portal_ssl.cert is defined and llng_portal_ssl.key is defined %}
+  ssl_certificate {{ llng_portal_ssl.cert }};
+  ssl_certificate_key {{ llng_portal_ssl.key }};
+{% elif llng_portal_ssl.letsencrypt_cert is defined %}
+  ssl_certificate /var/lib/dehydrated/certificates/certs/{{ llng_portal_ssl.letsencrypt_cert }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ llng_portal_ssl.letsencrypt_cert }}/privkey.pem;
+{% endif %}
+{% endif %}
+
+  if ($uri !~ ^/((static|javascript|favicon|\.well\-known/acme\-challenge/).*|.*\.psgi)) {
+    rewrite ^/(.*)$ /index.psgi/$1 break;
+  }
+
+  location ~ ^(?<sc>/.*\.psgi)(?:$|/) {
+    include /etc/nginx/fastcgi_params;
+
+    fastcgi_pass unix:/var/run/llng-fastcgi-server/llng-fastcgi.sock;
+    fastcgi_param LLTYPE psgi;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_split_path_info ^(.*\.psgi)(/.*)$;
+    fastcgi_param PATH_INFO  $fastcgi_path_info;
+
+{% if llng_portal_ssl is defined and llng_portal_ssl.ca is defined %}
+    map $ssl_client_s_dn $ssl_client_s_dn_cn {
+      default           "";
+      ~/CN=(?<CN>[^/]+) $CN;
+    }
+    fastcgi_param  SSL_CLIENT_S_DN_CN $ssl_client_s_dn_cn;
+{% endif %}
+  }
+
+  index index.psgi;
+  location / {
+    try_files $uri $uri/ =404;
+  }
+
+  location /index.psgi/adminSessions {
+    deny all;
+  }
+
+  location /index.psgi/sessions {
+    deny all;
+  }
+
+  location /index.psgi/config {
+    deny all;
+  }
+
+  location /index.psgi/notification {
+    deny all;
+  }
+}
+
+{% if llng_api_src_ip | length > 0 or llng_api_pass is defined %}
+server {
+  listen 443 ssl http2;
+  server_name {{ llng_api_vhost }};
+
+  include /etc/nginx/ansible_conf.d/acme.inc;
+  include /etc/nginx/ansible_conf.d/perf.inc;
+  root /usr/share/lemonldap-ng/portal/htdocs/;
+
+{% if llng_api_ssl is defined %}
+{% if llng_api_ssl.cert is defined and llng_api_ssl.key is defined %}
+  ssl_certificate {{ llng_api_ssl.cert }};
+  ssl_certificate_key {{ llng_api_ssl.key }};
+{% elif llng_api_ssl.letsencrypt_cert is defined %}
+  ssl_certificate  /var/lib/dehydrated/certificates/certs/{{ llng_api_ssl.letsencrypt_cert }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ llng_api_ssl.letsencrypt_cert }}/privkey.pem;
+{% endif %}
+{% endif %}
+
+  location ~ /index.psgi/(adminSessions|sessions|config|notification) {
+    include /etc/nginx/fastcgi_params;
+    fastcgi_pass unix:/var/run/llng-fastcgi-server/llng-fastcgi.sock;
+    fastcgi_param LLTYPE psgi;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_split_path_info ^(.*\.psgi)(/.*)$;
+    fastcgi_param PATH_INFO  $fastcgi_path_info;
+{% for ip in llng_api_src_ip %}
+    allow {{ ip }};
+{% endfor %}
+    deny all;
+{% if llng_api_pass is defined %}
+    auth_basic "Lemonldap::NG SOAP endpoint";
+    auth_basic_user_file /etc/lemonldap-ng/api.htpasswd;
+    satisfy all;
+{% endif %}
+  }
+
+  location / {
+    deny all;
+  }
+}
+{% endif %}

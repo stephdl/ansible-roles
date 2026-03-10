@@ -1,0 +1,32 @@
+---
+- name: List http ports
+  set_fact: nginx_ports={{ nginx_ports + (nginx_vhosts | selectattr('port','defined') | map(attribute='port') | list) | flatten | unique }}
+  tags: [firewall,web]
+
+- name: List https ports
+  set_fact: nginx_ssl_ports={{ nginx_ssl_ports + (nginx_vhosts | selectattr('ssl','defined') | selectattr('ssl.port','defined') | map(attribute='ssl.port') | list) | flatten | unique }}
+  tags: [firewall,web]
+
+- set_fact: nginx_cert_path={{ '/var/lib/dehydrated/certificates/certs/' + nginx_letsencrypt_cert + '/fullchain.pem' }}
+  when: nginx_letsencrypt_cert is defined
+  tags: [web,conf]
+- set_fact: nginx_key_path={{ '/var/lib/dehydrated/certificates/certs/' + nginx_letsencrypt_cert + '/privkey.pem' }}
+  when: nginx_letsencrypt_cert is defined
+  tags: [web,conf]
+
+- name: Merge vhosts settings with defaults
+  set_fact: nginx_vhosts_conf={{ nginx_vhosts_conf | default([]) + [ nginx_default_vhost | combine(item, recursive=True) ] }}
+  with_items: "{{ nginx_vhosts }}"
+  tags: [web,conf]
+- set_fact: nginx_vhosts={{ nginx_vhosts_conf | default([]) }}
+  tags: [web,conf]
+
+- name: Check if Lemonldap::NG is installed
+  stat: path=/etc/lemonldap-ng/lemonldap-ng.ini
+  register: nginx_llng
+  tags: web
+
+- name: Check if llng_header.inc conf is installed
+  stat: path=/etc/nginx/ansible_conf.d/llng_headers.inc
+  register: nginx_llng_headers
+  tags: web

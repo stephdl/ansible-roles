@@ -1,0 +1,19 @@
+---
+
+- name: Install common utilities
+  package:
+    name: "{{ system_utils + system_distro_utils }}"
+
+- name: Install extra softwares
+  package:
+    name: "{{ system_extra_pkgs }}"
+
+  # Screendump is not used, and prevent using tab to use screen quickly, so remove it
+- name: Check if screendump is present
+  stat: path=/usr/bin/screendump
+  register: system_screendump
+
+- name: Rename screendump
+  command: mv -f /usr/bin/screendump /usr/bin/_screendump
+  when: system_screendump.stat.exists
+...

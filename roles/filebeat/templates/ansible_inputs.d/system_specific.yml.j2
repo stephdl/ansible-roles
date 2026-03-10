@@ -1,0 +1,13 @@
+- type: log
+  enabled: True
+  paths:
+{% if ansible_os_family == 'RedHat' %}
+    - /var/log/yum.log
+{% elif ansible_os_family == 'Debian' %}
+    - /var/log/dpkg.log
+    - /var/log/apt/*.log
+    - /var/log/alternatives.log
+{% endif %}
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

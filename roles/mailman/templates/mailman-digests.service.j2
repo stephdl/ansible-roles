@@ -1,0 +1,9 @@
+[Unit]
+Description=Mailman digests sender
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+User={{ mailman_user }}
+Group={{ mailman_user }}
+ExecStart={{ mailman_root_dir }}/venv/bin/mailman digests --periodic

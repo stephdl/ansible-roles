@@ -1,0 +1,10 @@
+---
+
+- name: Configure MongoDB repository
+  yum_repository:
+    name: mongodb
+    description: MongoDB
+    baseurl: https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/{{ mongo_major_version }}/$basearch/
+    gpgcheck: True
+    gpgkey: https://www.mongodb.org/static/pgp/server-{{ mongo_major_version }}.asc
+  tags: repo

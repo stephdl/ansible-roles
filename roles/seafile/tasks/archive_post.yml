@@ -1,0 +1,15 @@
+---
+
+- name: Compress previous version
+  command: tar cJf {{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }}.txz ./
+  environment:
+    XZ_OPT: -T0
+  args:
+    chdir: "{{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }}"
+    warn: False
+  tags: seafile
+
+- name: Remove archive directory
+  file: path={{ seafile_root_dir }}/archives/{{ seafile_current_version.stdout }} state=absent
+  tags: seafile
+

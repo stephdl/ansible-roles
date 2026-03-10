@@ -1,0 +1,46 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - mate-desktop
+      - mate-backgrounds
+      - mate-media
+      - mate-power-manager
+      - mate-screensaver
+      - mate-settings-daemon
+      - mate-themes
+      - mate-themes-extras
+      - xorg-x11-server-Xorg
+      - xorg-x11-fonts-Type1
+
+- name: Install base applications
+  yum:
+    name:
+      - nautilus
+      - gvfs-archive
+      - gvfs-smb
+      - gvfs-fuse
+      - gnome-terminal
+      - evince
+      - libreoffice
+      - libreoffice-langpack-fr
+      - firefox
+      - thunderbird
+      - evolution
+      - file-roller
+      - remmina-plugins-xdmcp
+      - remmina-plugins-rdp
+      - remmina-plugins-vnc
+      - remmina-plugins-nx
+      - remmina-plugins-gnome
+      - inkscape
+      - gimp
+      - gajim
+      - gnome-calculator
+      - gedit
+      - simple-scan
+      - virt-manager
+      - eog
+      - baobab
+      - google-chrome-stable

@@ -1,0 +1,56 @@
+---
+
+- name: Install transmission daemon
+  yum: name=transmission-daemon state=present
+  tags: torrent
+
+- name: Create user
+  user: name={{ transmission_user }} comment="Transmission Daemon" system=yes shell=/sbin/nologin
+  tags: torrent
+
+- name: Create directories
+  file: path={{ transmission_data_dir }}/{{ item }} state=directory owner={{ transmission_user }}
+  with_items:
+    - finished
+    - incomplete
+    - watch
+  failed_when: False # can fail if a fuse based FS is mounted here
+  tags: torrent
+
+- name: Deploy default config
+  template: src=sysconfig.j2 dest=/etc/sysconfig/transmission
+  notify: restart transmission
+  tags: torrent
+
+- name: Override default systemd unit
+  template: src=transmission-daemon.service.j2 dest=/etc/systemd/system/transmission-daemon.service
+  register: transmission_unit
+  notify: restart transmission
+  tags: torrent
+
+- name: Handle transmission port
+  iptables_raw:
+    name: transmission_port
+    state: "{{ (transmission_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: |
+      -A INPUT -m state --state NEW -p tcp --dport {{ transmission_port }} -s {{ transmission_src_ip | join(',') }} -j ACCEPT
+      -A INPUT -p udp --dport {{ transmission_port }} -s {{ transmission_src_ip | join(',') }} -j ACCEPT
+  when: iptables_manage | default(True)
+  tags: torrent,firewall
+
+- name: Handle transmission RPC port
+  iptables_raw:
+    name=transmission_rpc_port
+    state={{ (transmission_rpc_src_ip | length > 0) | ternary('present','absent') }}
+    rules="-A INPUT -m state --state NEW -p tcp --dport {{ transmission_rpc_port }} -s {{ transmission_rpc_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: torrent,firewall
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: transmission_unit.changed
+  tags: torrent
+
+- name: Start and enable the service
+  service: name=transmission-daemon state=started enabled=yes
+  tags: torrent

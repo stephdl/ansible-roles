@@ -1,0 +1,117 @@
+---
+
+- name: Deploy configuration
+  template: src=env.j2 dest={{ pim_root_dir }}/app/.env.local group={{ pim_user }} mode=640
+  tags: pim
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: pim_{{ pim_id }}
+    - php_version: "{{ pim_php_version }}"
+    - php_fpm_pool: "{{ pim_php_fpm_pool | default('') }}"
+  tags: pim
+
+- name: Build and update frontend components
+  command: scl enable php{{ pim_php_version }} -- make upgrade-front
+  args:
+    chdir: "{{ pim_root_dir }}/app"
+  environment:
+    NO_DOCKER: true
+    APP_ENV: prod
+  become_user: "{{ pim_user }}"
+  when: pim_install_mode != 'none'
+  tags: pim
+
+- name: Initialize the database
+  command: scl enable php{{ pim_php_version }} -- make database O="--catalog vendor/akeneo/pim-community-dev/src/Akeneo/Platform/Bundle/InstallerBundle/Resources/fixtures/minimal"
+  args:
+    chdir: "{{ pim_root_dir }}/app"
+  environment:
+    NO_DOCKER: true
+    APP_ENV: prod
+  become_user: "{{ pim_user }}"
+  when: pim_install_mode == 'install'
+  tags: pim
+
+- name: Upgrade database
+  command: /bin/php{{ pim_php_version }} {{ pim_root_dir }}/app/bin/console doctrine:migrations:migrate --no-interaction
+  args:
+    chdir: "{{ pim_root_dir }}/app"
+  become_user: "{{ pim_user }}"
+  when: pim_install_mode == 'upgrade'
+  tags: pim
+
+- name: Deploy permission script
+  template: src=perms.sh.j2 dest={{ pim_root_dir }}/perms.sh mode=755
+  register: pim_perm_script
+  tags: pim
+
+- name: Apply permissions
+  command: "{{ pim_root_dir }}/perms.sh"
+  when: pim_perm_script.changed or pim_install_mode != 'none'
+  tags: pim
+
+- name: Setup cron jobs
+  cron:
+    cron_file: akeneopim_{{ pim_id }}
+    user: "{{ pim_user }}"
+    name: "{{ item.name }}"
+    job: /bin/php{{ pim_php_version }} {{ pim_root_dir }}/app/bin/console {{ item.job }}
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+  loop:
+    - name: refresh
+      job: pim:versioning:refresh
+      minute: 30
+      hour: 1
+    - name: purge
+      job: pim:versioning:purge --more-than-days 90 --no-interaction --force
+      minute: 30
+      hour: 2
+    - name: update-data
+      job: akeneo:connectivity-audit:update-data
+      minute: 1
+    - name: purge-errors
+      job: akeneo:connectivity-connection:purge-error
+      minute: 10
+    - name: purge-job-execution
+      job: akeneo:batch:purge-job-execution
+      minute: 20
+      hour: 0
+      day: 1
+    - name: purge-error-count
+      job: akeneo:connectivity-audit:purge-error-count
+      minute: 40
+      hour: 0
+    - name: aggregate
+      job: pim:volume:aggregate
+      minute: 30
+      hour: 4
+    - name: schedule-periodic-tasks
+      job: pim:data-quality-insights:schedule-periodic-tasks
+      minute: 15
+      hour: 0
+    - name: prepare-evaluations
+      job: pim:data-quality-insights:prepare-evaluations
+      minute: '*/10'
+    - name: evaluations
+      job: pim:data-quality-insights:evaluations
+      minute: '*/30'
+    - name: purge-messages
+      job: akeneo:messenger:doctrine:purge-messages messenger_messages default
+      minute: 0
+      hour: '*/2'
+  tags: pim
+
+- name: Create the admin user
+  command: /bin/php{{ pim_php_version }} {{ pim_root_dir }}/app/bin/console pim:user:create --admin -n -- admin {{ pim_admin_pass | quote }} admin@example.org Admin Admin fr_FR
+  when: pim_install_mode == 'install'
+  become_user: "{{ pim_user }}"
+  tags: pim
+
+- name: Deploy logrotate conf
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/akeneopim_{{ pim_id }}
+  tags: pim

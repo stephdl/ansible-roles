@@ -1,0 +1,55 @@
+[global]
+  netbios name = {{ samba_netbios_name | default(inventory_hostname | regex_replace('^([^\.]+)\..*','\\1') | upper ) }}
+  realm = {{ samba_realm | upper }}
+  workgroup = {{ samba_domain | upper }}
+  kerberos method = secrets and keytab
+  idmap config * : backend = tdb
+  idmap config * : range = 10000-19999
+  idmap config {{ samba_realm | upper }} : backend = sss
+{% for domain in samba_trusted_domains %}
+  idmap config {{ domain.name | upper }} : backend = sss
+{% endfor %}
+{% if samba_role == 'dc' %}
+  server role = active directory domain controller
+{% if samba_dns_forwarder is defined %}
+  dns forwarder = {{ samba_dns_forwarder }}
+{% endif %}
+{% elif samba_role == 'member' %}
+  server role = member server
+{% elif samba_role == 'standalone' %}
+  server role = standalone
+{% endif %}
+  logging = systemd@1 file
+  log level = {{ samba_log_level }}
+{% if samba_min_protocol is defined %}
+  server min protocol = {{ samba_min_protocol }}
+{% endif %}
+{% if samba_max_protocol is defined %}
+  server max protocol = {{ samba_max_protocol }}
+{% endif %}
+
+  # Log rotation is handled by logrotate
+  max log size = 0
+
+{% if samba_role == 'dc' or samba_role == 'rodc' %}
+  tls dh params file = tls/dhparam.pem
+{% if samba_tls_cert is defined and samba_tls_key is defined %}
+{% if samba_tls_ca is defined %}
+  tls cafile = {{ samba_tls_ca }}
+{% else %}
+  tls cafile = /etc/pki/tls/cert.pem
+{% endif %}
+  tls certfile = {{ samba_tls_cert }}
+  tls keyfile = {{ samba_tls_key }}
+{% endif %}
+
+[netlogon]
+  path = /var/lib/samba/sysvol/{{ samba_realm }}/scripts
+  read only = no
+
+[sysvol]
+  path = /var/lib/samba/sysvol
+  read only = no
+{% endif %}
+
+include = /etc/samba/smb.conf.d/shares.conf

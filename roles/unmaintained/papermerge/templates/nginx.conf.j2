@@ -1,0 +1,18 @@
+server {
+  server_name papermerge;
+  listen {{ papermerge_port }};
+
+  location /static/ {
+    alias {{ papermerge_root_dir }}/app/static/;
+  }
+
+  location /media/ {
+    alias {{ papermerge_root_dir }}/app/media/;
+  }
+
+  location / {
+    proxy_pass http://127.0.0.1:{{ papermerge_port | int + 1}};
+    # Don't restrict size here. You will probably put another front proxy anyway
+    client_max_body_size 200m;
+  }
+}

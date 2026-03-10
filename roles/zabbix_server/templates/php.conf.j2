@@ -1,0 +1,36 @@
+; {{ ansible_managed }}
+
+[zabbix_server]
+
+listen.owner = root
+listen.group = apache
+listen.mode = 0660
+listen = /run/php-fpm/zabbix_server.sock
+user = apache
+group = apache
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 5m
+
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = 512M
+php_admin_value[session.save_path] = /var/lib/zabbix/sessions
+php_admin_value[upload_tmp_dir] = /tmp
+php_admin_value[post_max_size] = 32M
+php_admin_value[upload_max_filesize] = 5M
+php_admin_value[disable_functions] = system, show_source, symlink, exec, dl, shell_exec, passthru, phpinfo, escapeshellarg, escapeshellcmd
+php_admin_value[open_basedir] = /usr/share/zabbix:/etc/zabbix:/tmp:/var/lib/zabbix/sessions:/etc/alternative/:/usr/share/fonts/dejavu/
+php_admin_value[max_execution_time] = 600
+php_admin_value[max_input_time] = 600
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = off
+php_admin_flag[file_uploads] = on
+php_admin_flag[session.cookie_httponly] = on

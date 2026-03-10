@@ -1,0 +1,5 @@
+---
+
+dependencies:
+  - role: repo_elasticsearch
+  - role: mkdir

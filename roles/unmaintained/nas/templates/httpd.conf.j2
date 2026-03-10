@@ -1,0 +1,51 @@
+{% for share in nas_shares %}
+{% if share.protocols.http.enabled %}
+Alias /{{ share.name }} {{ share.path | default(nas_root_dir + '/data/' + share.name) }}
+RewriteEngine On
+{% if share.protocols.http.force_ssl %}
+RewriteCond %{HTTPS} =off
+RewriteRule ^/{{ share.name }}(/.*|$) https://%{HTTP_HOST}/{{ share.name }}$1
+{% endif %}
+
+<Directory {{ share.path | default(nas_root_dir + '/data/' + share.name) }}>
+  Options None
+  Options +FollowSymlinks
+{% if share.protocols.http.force_ssl %}
+  SSLRequireSSL On
+{% endif %}
+{% if share.protocols.http.indexes %}
+  Options +Indexes
+{% endif %}
+{% if share.protocols.http.webdav %}
+  Dav On
+{% endif %}
+{% if not share.protocols.http.public %}
+  AuthType Basic
+  AuthName "Authenicated zone"
+  AuthBasicProvider external
+  AuthExternal pwauth
+  
+  # Read only access
+  <Limit GET PROPFIND OPTIONS LOCK UNLOCK REPORT>
+{% for user in share.acl.read_users %}
+    Require user {{ user }}
+{% endfor %}
+{% for group in share.acl.read_groups %}
+    Require unix-group {{ group }}
+{% endfor %}
+  </Limit>
+  # Write access through webdav always requires authentication
+  <LimitExcept GET PROPFIND OPTIONS LOCK UNLOCK REPORT>
+{% for user in share.acl.write_users %}
+    Require user {{ user }}
+{% endfor %}
+{% for group in share.acl.write_groups %}
+    Require unix-group {{ group }}
+{% endfor %}
+  </LimitExcept>
+{% endif %}
+</Directory>
+
+
+{% endif %}
+{% endfor %}

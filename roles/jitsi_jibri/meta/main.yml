@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: repo_rpmfusion      # For ffmpeg
+  - role: repo_google_chrome  # For, well, Google Chrome ;-)
+  - role: nginx               # For nginx, to expose recordings

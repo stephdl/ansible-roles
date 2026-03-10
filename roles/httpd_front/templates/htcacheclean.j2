@@ -1,0 +1,4 @@
+INTERVAL=60
+CACHE_ROOT=/var/cache/httpd/proxy/
+LIMIT={{ httpd_cache_limit | default('200M') }}
+OPTIONS="-t"

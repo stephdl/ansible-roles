@@ -1,0 +1,15 @@
+[Unit]
+Description=Journal Remote Sink Service
+Requires=systemd-journal-remote.socket
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-journal-remote \
+          --listen-{{ ((journal_remote_crt is defined and journal_remote_key is defined) or journal_remote_letsencrypt_cert is defined) | ternary('https','http') }}={{ journal_remote_port }} \
+          --output=/var/log/journal/remote/
+User=systemd-journal-remote
+Group=systemd-journal-remote
+PrivateTmp=yes
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target

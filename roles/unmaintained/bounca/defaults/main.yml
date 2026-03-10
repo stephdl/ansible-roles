@@ -1,0 +1,19 @@
+---
+
+bounca_version: 0.1.1
+#bounca_version: master
+#bounca_git_url: https://github.com/repleo/bounca.git
+bounca_archive_url: https://github.com/repleo/bounca/archive/v{{ bounca_version }}.tar.gz
+bounca_root_dir: /opt/bounca
+bounca_port: 8084
+bounca_src_ip: []
+bounca_user: bounca
+bounca_db_server: "{{ pg_server | default('localhost') }}"
+bounca_db_name: bounca
+bounca_db_user: bounca
+# Will be generated if not defined
+# bounca_db_pass: 
+# bounca_secret_key: 
+
+bounca_admin_mail: "{{ system_admin_email }}"
+bounca_from_mail: bounca@{{ ansible_domain }}

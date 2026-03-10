@@ -1,0 +1,11 @@
+---
+
+- name: Configure rpm fusion repository
+  yum_repository:
+    name: rpmfusion-free-updates
+    file: rpmfusion
+    description: RPM Fusion for EL - Free - Updates
+    baseurl: http://download1.rpmfusion.org/free/el/updates/$releasever/$basearch/
+    gpgcheck: True
+    gpgkey: https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-el-$releasever
+  tags: repo

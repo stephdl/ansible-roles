@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/bin/rpm -qa --qf "%{NAME}\t%{VERSION}\t%{RELEASE}\n" | grep -v gpg-pubkey | sort > /home/lbkp/rpms.list

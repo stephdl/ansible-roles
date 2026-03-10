@@ -1,0 +1,104 @@
+---
+
+- name: Build config for shares
+  set_fact: nas_shares_conf={{ nas_shares_conf | default([]) + [nas_default_share | combine(item,recursive=True)] }}
+  with_items: "{{ nas_shares }}"
+  tags: nas
+- set_fact: nas_shares={{ nas_shares_conf | default([]) }}
+  tags: nas
+
+- name: Install needed packages
+  yum:
+    name:
+      - rssh
+  tags: nas
+
+- name: Allow every user to use rssh
+  file: path=/bin/rssh mode=755
+  tags: nas
+
+- name: Create directories
+  file: path={{ nas_root_dir }}/{{ item[1] }}/{{ item[0].name }} state=directory
+  with_nested:
+    - "{{ nas_shares }}"
+    - [data,meta]
+  tags: nas
+
+- name: Create rsync system user
+  user:
+    name: rsync
+    system: True
+    shell: /sbin/nologin
+  tags: nas
+
+- name: Deploy samba shares config
+  template: src=smb.conf.j2 dest=/etc/samba/smb.conf.d/shares.conf
+  notify: reload samba
+  tags: nas
+
+- name: Deploy NFS exports
+  template: src=exports.j2 dest=/etc/exports.d/shares.exports
+  notify: reload nfs
+  tags: nas
+
+- name: Deploy rsyncd shares config
+  template: src=rsyncd.conf.j2 dest=/etc/rsyncd.conf.d/shares.conf
+  tags: nas
+
+- name: Deploy rsync auth files
+  template: src=rsync.secrets.j2 dest={{ nas_root_dir }}/meta/{{ item.name }}/rsync.secrets owner=root group=root mode=600
+  with_items: "{{ nas_shares }}"
+  tags: nas
+
+- name: Deploy httpd conf
+  template: src={{ item.src }} dest={{ item.dest }} mode={{ item.mode | default(omit) }}
+  loop:
+    - src: httpd.conf.j2
+      dest: /etc/httpd/ansible_conf.d/50-shares.conf
+      mode: 640
+    - src: mod_dav.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/30-mod_dav.conf
+    - src: mod_authnz_external.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/30-mod_authnz_external.conf
+  notify:
+    - reload httpd
+  tags: nas
+
+- name: Allow http to use PAM auth
+  seboolean: name=httpd_mod_auth_pam state=True persistent=True
+  when: ansible_selinux.status == 'enabled'
+  tags: nas
+
+- name: Deploy setfacl script
+  template: src=setfacl.sh.j2 dest={{ nas_root_dir }}/meta/{{ item.name }}/setfacl.sh mode=755
+  with_items: "{{ nas_shares }}"
+  register: nas_acl
+  tags: nas
+
+- name: Reset acls
+  command: "{{ nas_root_dir }}/meta/{{ item.item.name }}/setfacl.sh"
+  when: item.changed
+  with_items: "{{ nas_acl.results }}"
+  tags: nas
+
+- name: Set SELinux content
+  sefcontext:
+    target: "{{ nas_root_dir }}/data(/.*)?"
+    setype: public_content_rw_t
+    state: present
+  when: ansible_selinux.status == 'enabled'
+  tags: nas
+
+- name: Set SEbool
+  seboolean: name={{ item }} state=True persistent=True
+  with_items:
+    - samba_enable_home_dirs
+    - samba_create_home_dirs
+    - samba_export_all_rw
+  tags: nas
+
+- name: Deploy scripts
+  copy: src={{ item }} dest=/var/lib/samba/scripts/{{ item }}
+  with_items:
+    - mkhomedir
+  tags: nas

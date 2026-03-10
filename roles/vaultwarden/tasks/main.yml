@@ -1,0 +1,18 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: vaultwarden_install_mode == 'upgrade' or vaultwarden_web_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: migrate_bitwarden_rs.yml
+  when: vaultwarden_migrate_from_bitwarden
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: service.yml
+- include: write_version.yml
+- include: archive_post.yml
+  when: vaultwarden_install_mode == 'upgrade' or vaultwarden_web_install_mode == 'upgrade'
+- include: cleanup.yml

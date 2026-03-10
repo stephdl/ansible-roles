@@ -1,0 +1,6 @@
+---
+
+- include: directories.yml
+- include: facts.yml
+- include: install.yml
+- include: cleanup.yml

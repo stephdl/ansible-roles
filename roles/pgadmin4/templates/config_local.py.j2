@@ -1,0 +1,38 @@
+SERVER_MODE={{ (pga_auth | length >= 1) | ternary('True','False') }}
+DEFAULT_SERVER='0.0.0.0'
+DEFAULT_SERVER_PORT={{ pga_port }}
+DATA_DIR='{{ pga_root_dir }}/data'
+LOG_FILE='{{ pga_root_dir }}/logs/pgadmin4.log'
+STORAGE_DIR='{{ pga_root_dir }}/data'
+SQLITE_PATH='{{ pga_root_dir }}/data/pgadmin4.db'
+SECURITY_EMAIL_SENDER='pgadmin4@{{ ansible_domain }}'
+SESSION_DB_PATH='{{ pga_root_dir }}/sessions'
+CONSOLE_LOG_FORMAT='%(levelname)s\t%(name)s:\t%(message)s'
+SHOW_GRAVATAR_IMAGE=False
+SECURITY_EMAIL_SENDER='no-reply@{{ ansible_domain }}'
+UPGRADE_CHECK_ENABLED=False
+DEFAULT_BINARY_PATHS = {
+  "pg": "/usr/pgsql-14/bin/"
+}
+{% if pga_auth | length >= 1 %}
+AUTHENTICATION_SOURCES=['{{ pga_auth | join('\',\'') }}']
+{% endif %}
+{% if 'oauth2' in pga_auth %}
+OAUTH2_CONFIG=[{
+  'OAUTH2_NAME': 'oidc',
+  'OAUTH2_DISPLAY_NAME': '{{ pga_oidc_display_name }}',
+  'OAUTH2_CLIENT_ID': '{{ pga_oidc_client_id }}',
+  'OAUTH2_CLIENT_SECRET': '{{ pga_oidc_client_secret }}',
+  'OAUTH2_API_BASE_URL': '{{ pga_oidc_base_url }}',
+  'OAUTH2_TOKEN_URL': '{{ pga_oidc_token_url }}',
+  'OAUTH2_AUTHORIZATION_URL': '{{ pga_oidc_auth_url }}',
+  'OAUTH2_USERINFO_ENDPOINT': '{{ pga_oidc_userinfo_url }}',
+  'OAUTH2_SCOPE': '{{ pga_oidc_scope }}',
+  'OAUTH2_AUTO_CREATE_USER': True
+}]
+{% endif %}
+{% if 'webserver' in pga_auth %}
+WEBSERVER_AUTO_CREATE_USER=True
+WEBSERVER_REMOTE_USER='{{ pga_webserver_header }}'
+{% endif %}
+

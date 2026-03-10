@@ -1,0 +1,17 @@
+---
+
+- name: Remove FWS Extra repository for samba4
+  yum_repository:
+    name: fws-extra-samba
+    description: "Firewall Services Extra"
+    state: absent
+  tags: repo,samba
+
+- name: Configure TIS samba repo
+  yum_repository:
+    name: tis-samba
+    description: Samba4 repo from TranquiIT
+    baseurl: http://samba.tranquil.it/centos$releasever/{{ samba_major_version }}/
+    gpgcheck: True
+    gpgkey: https://samba.tranquil.it/RPM-GPG-KEY-TISSAMBA-{{ ansible_distribution_major_version }}
+  tags: repo,samba

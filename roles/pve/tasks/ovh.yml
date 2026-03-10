@@ -1,0 +1,6 @@
+---
+
+- name: Add vrack routing table
+  copy:
+    content: "1 vrack"
+    dest: /etc/iproute2/rt_tables.d/ovh.conf

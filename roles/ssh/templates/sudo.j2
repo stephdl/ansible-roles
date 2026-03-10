@@ -1,0 +1,11 @@
+{% for user in ssh_users | default([]) %}
+{% if user.sudo_defaults is defined and user.sudo_defaults | length > 0 %}
+Defaults:{{ user.name }} {{ user.sudo_defaults | join(',') }}
+{% endif %}
+{% if user.sudo is defined %}
+{% for command in user.sudo %}
+{{ user.name }} ALL=({{ command.run_as | default('root') }}) {% if command.nopasswd is defined and command.nopasswd %} NOPASSWD: {% endif %} {{ command.cmd | join(',') }}
+
+{% endfor %}
+{% endif %}
+{% endfor %}

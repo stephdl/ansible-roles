@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD='{{ synapse_pg_db_pass }}' /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ synapse_pg_db_user }} \
+  --host={{ synapse_pg_db_server }} \
+  {{ synapse_pg_db_name }} | zstd -T0 -c > {{ synapse_root_dir }}/backup/{{ synapse_pg_db_name }}.sql.zst

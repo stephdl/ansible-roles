@@ -1,0 +1,21 @@
+---
+- name: Deploy httpd configuration
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/10-{{ app_id }}.conf
+  notify: reload httpd
+
+- name: Deploy PHP config
+  template: src=php.conf.j2 dest=/etc/opt/remi/php{{ php_version }}/php-fpm.d/{{ app_id }}.conf
+  when: php_fpm_pool is not defined or php_fpm_pool == ''
+  notify: restart php-fpm
+
+- name: Remove PHP config from other versions
+  file: path=/etc/opt/remi/php{{ item }}/php-fpm.d/{{ app_id }}.conf state=absent
+  with_items: "{{ httpd_php_versions | difference([ php_version ]) }}"
+  notify: restart php-fpm
+
+- name: Remove PHP config (using a custom pool)
+  file: path=/etc/opt/remi/php{{ item }}/php-fpm.d/{{ app_id }}.conf state=absent
+  with_items: "{{ httpd_php_versions }}"
+  when: php_fpm_pool != ''
+  notify: restart php-fpm
+

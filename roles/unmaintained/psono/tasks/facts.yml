@@ -1,0 +1,80 @@
+---
+
+- name: Set initial install modes
+  block:
+    - set_fact: psono_server_install_mode='none'
+    - set_fact: psono_server_current_version=''
+    - set_fact: psono_client_install_mode='none'
+    - set_fact: psono_client_current_version=''
+    - set_fact: psono_admin_install_mode='none'
+    - set_fact: psono_admin_current_version=''
+  tags: psono
+
+- name: Check if server is installed
+  stat: path={{ psono_root_dir }}/meta/ansible_server_version
+  register: psono_server_version_file
+  tags: psono
+
+- when: psono_server_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ psono_root_dir }}/meta/ansible_server_version
+      register: psono_server_current_version
+    - set_fact: psono_server_current_version={{ psono_server_current_version.content | b64decode | trim }}
+    - set_fact: psono_server_install_mode='upgrade'
+      when: psono_server_current_version != psono_server_version
+  tags: psono
+
+- when: not psono_server_version_file.stat.exists
+  block:
+    - set_fact: psono_server_install_mode='install'
+  tags: psono
+
+- name: Check if client is installed
+  stat: path={{ psono_root_dir }}/meta/ansible_client_version
+  register: psono_client_version_file
+  tags: psono
+
+- when: psono_client_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ psono_root_dir }}/meta/ansible_client_version
+      register: psono_client_current_version
+    - set_fact: psono_client_current_version={{ psono_client_current_version.content | b64decode | trim }} 
+    - set_fact: psono_client_install_mode='upgrade'
+      when: psono_client_current_version != psono_client_version and psono_manage_upgrade
+  tags: psono
+
+- when: not psono_client_version_file.stat.exists
+  block:
+    - set_fact: psono_client_install_mode='install'
+  tags: psono
+
+- name: Check if admin is installed
+  stat: path={{ psono_root_dir }}/meta/ansible_admin_version
+  register: psono_admin_version_file
+  tags: psono
+
+- when: psono_admin_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ psono_root_dir }}/meta/ansible_admin_version
+      register: psono_admin_current_version
+    - set_fact: psono_admin_current_version={{ psono_admin_current_version.content | b64decode | trim }}
+    - set_fact: psono_admin_install_mode='upgrade'
+      when: psono_admin_current_version != psono_admin_version and psono_manage_upgrade
+  tags: psono
+
+- when: not psono_admin_version_file.stat.exists
+  block:
+    - set_fact: psono_admin_install_mode='install'
+  tags: psono
+
+- when: psono_db_pass is not defined
+  tags: psono
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ psono_root_dir }}/meta/ansible_dbpass"
+    - set_fact: psono_db_pass={{ rand_pass }}
+

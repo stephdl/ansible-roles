@@ -1,0 +1,11 @@
+---
+
+transmission_user: transmission
+transmission_data_dir: /var/lib/transmission
+transmission_rpc_listen_ip: 0.0.0.0
+transmission_rpc_src_ip: []
+transmission_rpc_port: 9091
+transmission_port: 51413
+transmission_src_ip:
+  - 0.0.0.0/0
+

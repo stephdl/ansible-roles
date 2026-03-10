@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ graylog_root_dir }}"
+    - version: "{{ graylog_current_version }}"
+  tags: graylog

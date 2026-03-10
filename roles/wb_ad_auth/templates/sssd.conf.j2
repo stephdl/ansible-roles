@@ -1,0 +1,24 @@
+[sssd]
+services = nss, pam
+config_file_version = 2
+domains = {{ ad_realm }}
+
+[nss]
+shell_fallback = /bin/false
+
+[pam]
+
+[domain/{{ ad_realm }}]
+id_provider = ad
+ad_hostname = {{ ansible_hostname }}.{{ ad_realm | lower }}
+fallback_homedir = /home/%d/%u
+default_shell = /bin/false
+cache_credentials = true
+enumerate = true
+access_provider = ad
+ad_access_filter = {{ ad_access_filter }}
+{% if ad_ldap_group_search_base is defined %}
+ldap_group_search_base = {{ ad_ldap_group_search_base }}
+{% elif ad_ignore_groups | length > 0 %}
+ldap_group_search_base = {{ ad_ldap_base }}?sub?(!(|(cn={{ ad_ignore_groups | join(')(cn=') }})))
+{% endif %}

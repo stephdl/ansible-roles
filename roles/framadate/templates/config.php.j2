@@ -1,0 +1,39 @@
+<?php
+
+// {{ ansible_managed }}
+
+const NOMAPPLICATION = 'Framadate';
+const ADRESSEMAILADMIN = '{{ framadate_admin_email | default(system_admin_email) }}';
+const ADRESSEMAILREPONSEAUTO = '<no-reply@{{ ansible_domain }}>';
+const DB_USER = '{{ framadate_mysql_user | default('framadate') }}';
+const DB_PASSWORD = '{{ framadate_mysql_pass }}';
+const DB_CONNECTION_STRING = 'mysql:host={{ framadate_mysql_server }};dbname={{ framadate_mysql_db }};port={{ framadate_mysql_port }}';
+const MIGRATION_TABLE = 'framadate_migration';
+const TABLENAME_PREFIX = 'fd_';
+const DEFAULT_LANGUAGE = 'fr';
+$ALLOWED_LANGUAGES = [
+    'fr' => 'Français',
+    'en' => 'English',
+    'oc' => 'Occitan',
+    'es' => 'Español',
+    'de' => 'Deutsch',
+    'nl' => 'Dutch',
+    'it' => 'Italiano',
+    'br' => 'Brezhoneg',
+];
+const IMAGE_TITRE = '/images/{{ framadate_logo_url | basename }}';
+const URL_PROPRE = true;
+const USE_REMOTE_USER =  {{ framadate_proxy_auth | ternary('true','false') }};
+const LOG_FILE = '../logs/stdout.log';
+const PURGE_DELAY = 60;
+const MAX_SLOTS_PER_POLL = 366;
+const TIME_EDIT_LINK_EMAIL = 60;
+$config = [
+    'use_smtp'                   => true,
+    'show_what_is_that'          => false,
+    'show_the_software'          => false,
+    'show_cultivate_your_garden' => false,
+    'default_poll_duration'      => 180,
+    'user_can_add_img_or_link'   => true,
+    'provide_fork_awesome'       => true,
+];

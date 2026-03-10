@@ -1,0 +1,28 @@
+---
+
+- name: Remove openresty
+  yum:
+    name:
+      - openresty
+    state: absent
+  tags: web
+
+- name: Enable 1.16 module
+  shell: |
+    yum -y module reset nginx
+    yum -y module enable nginx:1.16
+  args:
+    warn: False
+  changed_when: False
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version is version('8', '>=')
+  tags: web
+
+- name: Install nginx
+  yum:
+    name:
+      - nginx
+      - nginx-all-modules
+  tags: web
+

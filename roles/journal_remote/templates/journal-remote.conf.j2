@@ -1,0 +1,14 @@
+[Remote]
+Seal={{ journal_remote_seal | ternary(True,False) }}
+SplitMode=host
+{% if (journal_remote_crt is defined and journal_remote_key is defined) or journal_remote_letsencrypt_cert is defined %}
+{% if journal_remote_crt is defined and journal_remote_key is defined %}
+ServerKeyFile={{ journal_remote_key }}
+ServerCertificateFile={{ journal_remote_cert }}
+TrustedCertificateFile={{ journal_remote_ca | default('/etc/pki/tls/cert.pem') }}
+{% else %}
+ServerKeyFile=/etc/systemd/journal-remote-tls/privkey.pem
+ServerCertificateFile=/etc/systemd/journal-remote-tls/fullchain.pem
+TrustedCertificateFile=/etc/systemd/journal-remote-tls/fullchain.pem
+{% endif %}
+{% endif %}

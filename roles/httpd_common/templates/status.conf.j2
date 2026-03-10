@@ -1,0 +1,7 @@
+{% if httpd_status_ip is defined and httpd_status_ip | length > 0 %}
+<Location /server-status>
+    SetHandler server-status
+    Require ip {{ httpd_status_ip | join(' ') }}
+</Location>
+ExtendedStatus On
+{% endif %}

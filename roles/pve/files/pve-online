@@ -1,0 +1,328 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use Getopt::Long;
+use Config::Simple;
+use LWP::UserAgent;
+use JSON;
+use PVE::QemuServer;
+use PVE::LXC::Config;
+use Array::Diff;
+use Net::Address::IP::Local;
+use Net::Route::Table;
+use NetAddr::IP;
+use Data::Validate::IP qw(is_ipv4);
+use Data::Dumper;
+
+$| = 1;
+
+my $config = '/etc/pve-online.conf';
+my ($update_routes, $update_gre, $migrate_ipfo) = undef;
+
+GetOptions(
+  "config=s"       => \$config,
+  "update-routes"  => \$update_routes,
+  "update-gre"     => \$update_gre,
+  "migrate-ipfo=i" => \$migrate_ipfo
+);
+
+# Config can be stored in /etc/pve
+# Lets wait a bit for it to be available
+if ($config =~ m|^/etc/pve|){
+  my $t = 0;
+  while ($t < 120){
+    if (!-e $config){
+      print "$config not yet available\n";
+      sleep 2;
+      $t += 2;
+    } else {
+      last;
+    }
+  }
+}
+if (!-e $config){
+  die "$config doesn't exist\n";
+}
+
+my $cfg = new Config::Simple;
+$cfg->read($config);
+my $conf = $cfg->get_block('general');
+my $lwp = new LWP::UserAgent;
+my $online_id = undef;
+
+if (!$conf){
+  die "No general section found in $config\n";
+}
+if (!$conf->{online_api}){
+  die "No online_api defined in $config\n";
+}
+
+# Set some defaults
+$conf->{wan_bridge}  ||= 'vmbr1';
+$conf->{migrate_flush_arp} ||= 'yes';
+
+if ($update_routes){
+  update_routes();
+}
+if ($update_gre){
+  if (defined $conf->{vlan_bridge}){
+    update_gre();
+  } else {
+    print "No VLAN bridge defined. Don't setup GRE tunnels\n";
+  }
+}
+if ($migrate_ipfo){
+  my $ipfo = [];
+  # We parse the description field which contains the list of ipfo
+  # attached to this VM
+  foreach my $line ( split("\n", get_guest_conf($migrate_ipfo)->{description} || "") ){
+    if ($line =~ m/^\s*ipfo\d*:\s+(\d+\.\d+\.\d+\.\d+)/){
+      my $candidate = $1;
+      if (is_ipv4($candidate)){
+        push @{$ipfo}, $candidate;
+        print "Found IP $candidate assigned to guest $migrate_ipfo\n";
+      } else {
+        print "Found $candidate assigned to guest $migrate_ipfo which doesn't look like a valid IP\n";
+      }
+    }
+  }
+  $online_id ||= get_online_id();
+  # Now we check if we need to migrate IPFO on the local server
+  my $ipfo_diff = Array::Diff->diff(get_ip_fo($online_id), $ipfo);
+  if (scalar @{$ipfo_diff->added} > 0){
+    print "Update needed. " . join(' ', @{$ipfo_diff->added}) . " should be redirected on server $online_id\n";
+    redirect_ipfo($ipfo_diff->added);
+    update_routes();
+    if ( $ENV{PVE_GUEST_TYPE} ne 'lxc' and $conf->{migrate_flush_arp} =~ m/^1|yes|true|on$/i ){
+      set_guest_nic_down_up($migrate_ipfo);
+    }
+  }
+}
+
+#####################################
+# Sub routines
+#####################################
+
+# Query Online's API
+sub query_online_api{
+  my $uri = shift;
+  $uri = '/api/v1' . $uri if ($uri !~ m|^/api/v1|);
+  my $response = $lwp->get("https://api.online.net$uri",
+    "Authorization" => "Authorization: Bearer $conf->{online_api}",
+  );
+  unless ($response->is_success){
+    die "an error occured while querying the API" .
+        "The error is: " . $response->status_line;
+  }
+  return from_json($response->content);
+}
+
+# Update routes for ARP Proxy
+sub update_routes {
+  $online_id ||= get_online_id();
+  # This is the list of IP which we should have
+  # on the routing table
+  my $routes_online = get_ip_fo($online_id);
+
+  # This is the actual list of IP for which we have routes
+  my $routes_local = get_local_routes();
+
+  # Now, we have to remove routes for those in $routes_local but not in $routes_online
+  # And add routes for those in $routes_online but not in $routes_local
+  my $diff = Array::Diff->diff($routes_online, $routes_local);
+  foreach my $route (@{$diff->added}){
+    next if (grep { $_ eq $route } @{$diff->deleted});
+    print "Removing route for $route\n";
+    system(
+      '/sbin/ip',
+      'route',
+      'del',
+      $route,
+      'dev',
+      $conf->{wan_bridge}
+    );
+  }
+  foreach my $route (@{$diff->deleted}){
+    next if (grep { $_ eq $route } @{$diff->added});
+    print "Adding route for $route\n";
+    system(
+      '/sbin/ip',
+      'route',
+      'add',
+      $route . '/32',
+      'dev',
+      $conf->{wan_bridge}
+    );
+  }
+}
+
+# Get the list of routes defined on $conf->{wan_bridge}
+sub get_local_routes {
+  my $ip = [];
+  my $routes = Net::Route::Table->from_system();
+  foreach my $route (@{$routes->all_routes()}){
+    if ($route->{interface} eq $conf->{wan_bridge} and $route->destination()->masklen() == 32){
+      push @{$ip}, $route->destination()->addr();
+    }
+  }
+  return $ip;
+}
+
+# Get the list of IP failover assigned to a server. Taks a server ID as only arg
+sub get_ip_fo {
+  my $srv_id = shift;
+  return get_srv_info($srv_id)->{network}->{ipfo};
+}
+
+# Return server info
+sub get_srv_info {
+  my $srv_id = shift;
+  return query_online_api('/server/info/' . $srv_id);
+}
+
+# Return this server's public IP
+sub get_public_ip {
+  return Net::Address::IP::Local->public_ipv4;
+}
+
+# Return Online's server id
+sub get_online_id {
+  if (-e '/tmp/online_id'){
+    open my $id_file, '</tmp/online_id';
+    $online_id = <$id_file>;
+    close $id_file;
+  } else {
+    my $ip = get_public_ip();
+    foreach my $srv (@{query_online_api('/server')}){
+      my $info = query_online_api($srv);
+      if ($info->{network}->{ip}[0] eq $ip){
+        $online_id = $info->{id};
+        last;
+      }
+    }
+    open my $id_file, ">/tmp/online_id";
+    print $id_file $online_id;
+    close $id_file;
+  }
+  print "My Online's ID is $online_id\n";
+  return $online_id;
+}
+
+sub update_gre {
+  # We have to setup GRE tunnels with all other members
+  # to connect $conf->{vlan_bridge} between every nodes
+  # Something like
+  # ovs-vsctl add-port vmbr1 gre0 -- set interface gre0 type=gre options:remote_ip=''10.29.254.2''
+  # We just have to automate this for every nodes of the cluster
+  print "Getting cluster status...\n";
+  my $members = get_cluster_members();
+  print "Found " . scalar @{$members} . " members\n";
+  my $gre = 0;
+
+  print "Counting GRE ports...\n";
+  my @ports = qx(ovs-vsctl list-ports $conf->{vlan_bridge});
+  my @gre_ports = grep { $_ =~ m/^gre/ } @ports;
+  print "Found " . scalar @gre_ports . " GRE ports\n";
+
+  if (scalar @gre_ports ne scalar @{$members} - 1){
+    print "We need to update GRE tunnels\n";
+    # Remove all greX ports from the VLAN bridge
+    foreach my $port ( @ports ){
+      chomp($port);
+      next unless ($port =~ m/^gre\d+$/);
+      print "Removing port $port from $conf->{vlan_bridge}\n";
+      system(
+        'ovs-vsctl',
+        'del-port',
+        $conf->{vlan_bridge},
+        $port
+      );
+    }
+    # And setup one GRE tunnel per node
+    foreach my $member (@{$members}){
+      # We must skip our own node
+      if (Net::Address::IP::Local->connected_to($member) ne $member){
+        print "Adding GRE interface gre$gre to tunnel with $member\n";
+        system(
+          'ovs-vsctl',
+          'add-port',
+          $conf->{vlan_bridge},
+          'gre' . $gre,
+          '--',
+          'set',
+          'interface',
+          'gre' . $gre,
+          'type=gre',
+          'options:remote_ip=' . $member
+        );
+        $gre++;
+      }
+    }
+  }
+}
+
+# Get the list of members of this proxmox cluster
+sub get_cluster_members {
+  my $ip = [];
+  foreach my $line (qx(corosync-cmapctl)){
+    push @{$ip}, $1 if ($line =~ m/ip\((\d+\.\d+\.\d+\.\d+)\)/);
+  }
+  return $ip;
+}
+
+sub redirect_ipfo {
+  my $ip = shift;
+  print "Redirecting failover IP " . join(', ', @{$ip}) . "\n";
+  my $response = $lwp->post("https://api.online.net/api/v1/server/failover/edit",
+    Authorization => "Authorization: Bearer $conf->{online_api}",
+    Content => {
+      "source"        => join(',', @{$ip}),
+      "destination"   => get_public_ip()
+    }
+  );
+  unless ($response->is_success){
+    die "an error occured while querying the API" .
+        "The error is: " . $response->status_line;
+  }
+}
+
+# Get a VM configuration
+sub get_guest_conf {
+  if ($ENV{PVE_GUEST_TYPE} eq 'lxc'){
+    return PVE::LXC::Config->load_config(shift);
+  } else {
+    return PVE::QemuConfig->load_config(shift);
+  }
+}
+
+# Unplug and plug back nics connected on the WAN bridge
+# Needed when moving a failover IP to force flushing the ARP cache
+# in the guest as the gateway doesn't change, but its MAC does
+sub set_guest_nic_down_up {
+  my $vmid = shift;
+  my $vm_conf = get_guest_conf($vmid);
+  my $nics = [];
+  my @mod_nic = ();
+  foreach my $key (keys %{$vm_conf}){
+    # Only process netX elements, and which are connected on the WAN bridge
+    next unless ($key =~ m/^net\d+/ && $vm_conf->{$key} =~ m/bridge=$conf->{wan_bridge}/);
+    my $props = $vm_conf->{$key};
+    next if ($props =~ m/link_down=0/);
+    push @mod_nic, $key;
+    if (defined &PVE::QemuServer::Monitor::hmp_cmd){
+      PVE::QemuServer::Monitor::hmp_cmd($vmid, "set_link $key off");
+    } else {
+      # PVE 5.x doesn't have PVE::QemuServer::Monitor::hmp_cmd
+      PVE::QemuServer::vm_human_monitor_command($vmid, "set_link $key off");
+    }
+  }
+  sleep 1;
+  foreach my $nic (@mod_nic){
+    if (defined &PVE::QemuServer::Monitor::hmp_cmd){
+      PVE::QemuServer::Monitor::hmp_cmd($vmid, "set_link $nic on");
+    } else {
+      PVE::QemuServer::vm_human_monitor_command($vmid, "set_link $nic on");
+    }
+  }
+}

@@ -1,0 +1,15 @@
+---
+
+- when: system_admin_email is defined
+  block:
+    - name: Install postfix
+      package: name=postfix
+
+    - name: Configure root email forward
+      lineinfile:
+        dest: /etc/aliases
+        regexp: "^root:.*"
+        line: "root: {{ system_admin_email }}"
+      notify: newaliases
+
+...

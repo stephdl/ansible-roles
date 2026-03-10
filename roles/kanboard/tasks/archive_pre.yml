@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ kanboard_root_dir }}"
+    - version: "{{ kanboard_current_version }}"
+    - db_name: "{{ kanboard_mysql_db }}"
+  tags: kanboard
+

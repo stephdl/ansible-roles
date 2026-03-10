@@ -1,0 +1,204 @@
+# {{ ansible_managed }}
+
+{% for vhost in httpd_ansible_vhosts | default([]) %}
+
+#####################################
+## Plain vhost for {{ vhost.name }}
+#####################################
+
+<VirtualHost *:{{ vhost.port | default(httpd_port) | default('80') }}>
+  ServerName {{ vhost.name }}
+{% if vhost.full_config is defined %}
+{{ vhost.full_config | indent(2, true) }}
+{% else %}
+{% if vhost.aliases is defined %}
+  ServerAlias {{ vhost.aliases | default([]) | join(' ') }}
+{% endif %}
+{% if vhost.webmaster_email is defined %}
+  ServerAdmin {{ vhost.webmaster_email }}
+{% endif %}
+{% if vhost.custom_pre is defined %}
+{{ vhost.custom_pre | indent(2, true) }}
+{% endif %}
+{% if vhost.set_remote_user_from_header is defined %}
+  # Read {{ vhost.set_remote_user_from_header }} header from proxy and set REMOTE_USER
+  RewriteEngine On
+  RewriteCond %{HTTP:{{ vhost.set_remote_user_from_header }}} ^(\w+)$
+  RewriteRule .* - [E=REMOTE_USER:%1]
+{% endif %}
+  DocumentRoot {{ vhost.document_root | default('/var/www/html/default') }}
+{% if vhost.maintenance | default(False) %}
+  Include ansible_conf.d/common_maintenance.inc
+{% else %}
+  Alias /_deferror/ "/usr/share/httpd/error/"
+  Include ansible_conf.d/common_env.inc
+{% if vhost.common_perf | default((httpd_log_format == 'combined_virtual_backend') | ternary(False,True)) %}
+  Include ansible_conf.d/common_perf.inc
+{% endif %}
+{% if vhost.common_filter | default((httpd_log_format == 'combined_virtual_backend') | ternary(False,True)) %}
+  Include ansible_conf.d/common_filter.inc
+{% endif %}
+{% if vhost.common_cache | default(False) %}
+  Include ansible_conf.d/common_cache.inc
+{% endif %}
+{% if vhost.ssl is defined and vhost.ssl.enabled | default((httpd_log_format == 'combined_virtual_backend') | ternary(False,True)) and vhost.ssl.forced | default((httpd_log_format == 'combined_virtual_backend') | ternary(False,True)) %}
+  Include ansible_conf.d/common_force_ssl.inc
+{% endif %}
+{% if ((vhost.common_letsencrypt is defined and vhost.common_letsencrypt) or (vhost.ssl is defined and vhost.ssl.letsencrypt_cert is defined )) | default(False) %}
+  Include ansible_conf.d/common_letsencrypt.inc
+{% endif %}
+{% if vhost.common_mod_security | default(False) == True or vhost.common_mod_security | default(False) == 'audit' %}
+  Include ansible_conf.d/common_mod_security2.inc
+{% if vhost.common_mod_security | default(False) == 'audit' %}
+  SecRuleEngine DetectionOnly
+{% endif %}
+{% for id in vhost.mod_security_disabled_rules | default([]) %}
+  SecRuleRemoveById {{ id }}
+{% endfor %}
+{% endif %}
+{% if vhost.include_conf is defined %}
+{% for include in vhost.include_conf | default([]) %}
+  Include {{ include }}
+{% endfor %}
+{% endif %}
+{% if vhost.proxypass is defined %}
+{% if vhost.proxypass is match('^https://') %}
+  SSLProxyEngine On
+{% endif %}
+  RequestHeader set X-Forwarded-Proto "http"
+  ProxyPass /.well-known/acme-challenge !
+  ProxyPass /_deferror/ !
+  ProxyPreserveHost {{  vhost.proxypreservehost | default(True) | ternary('On','Off') }}
+  # WebSocket proxy handling
+  RewriteCond %{HTTP:UPGRADE} ^WebSocket$ [NC]
+  RewriteCond %{HTTP:CONNECTION} Upgrade$ [NC]
+  RewriteRule .* {{ vhost.proxypass | regex_replace('^http','ws') }}%{REQUEST_URI} [P]
+  # Normal proxy
+  ProxyPass / {{ vhost.proxypass }}
+  ProxyPassReverse / {{ vhost.proxypass }}
+{% endif %}
+{% if vhost.src_ip is defined %}
+  <Location />
+{% if vhost.src_ip | length < 1 %}
+    Require all denied
+{% else %}
+    Require ip {{ vhost.src_ip | join(' ') }}
+{% endif %}
+  </Location>
+{% endif %}
+{% if vhost.custom_post is defined %}
+{{ vhost.custom_post | indent(2, true) }}
+{% endif %}
+{% endif %}
+{% endif %}
+</VirtualHost>
+{% if vhost.ssl is defined and vhost.ssl.enabled | default((httpd_log_format == 'combined_virtual_backend') | ternary(False,True)) %}
+
+#####################################
+## SSL vhost for {{ vhost.name }}
+#####################################
+
+<IfModule mod_ssl.c>
+  <VirtualHost *:{{ vhost.ssl.port | default(httpd_ssl_port) | default('443') }}>
+    ServerName {{ vhost.name }}
+{% if vhost.ssl.full_config is defined %}
+{{ vhost.ssl.full_config | indent(4, true) }}
+{% else %}
+{% if vhost.aliases is defined %}
+    ServerAlias {{ vhost.aliases | default([]) | join(' ') }}
+{% endif %}
+{% if vhost.webmaster_email is defined %}
+    ServerAdmin {{ vhost.webmaster_email }}
+{% endif %}
+{% if vhost.custom_pre is defined %}
+{{ vhost.custom_pre | indent(4, true) }}
+{% endif %}
+{% if vhost.set_remote_user_from_header is defined %}
+    # Read {{ vhost.set_remote_user_from_header }} header from proxy and set REMOTE_USER
+    RewriteEngine On
+    RewriteCond %{HTTP:{{ vhost.set_remote_user_from_header }}} ^(\w+)$
+    RewriteRule .* - [E=REMOTE_USER:%1]
+{% endif %}
+    DocumentRoot {{ vhost.document_root | default('/var/www/html/default') }}
+    SSLEngine On
+{% if vhost.maintenance | default(False) %}
+    Include ansible_conf.d/common_maintenance.inc
+{% else %}
+    Alias /_deferror/ "/usr/share/httpd/error/"
+{% if vhost.ssl.cert is defined and vhost.ssl.key is defined %}
+    SSLCertificateFile {{ vhost.ssl.cert }}
+    SSLCertificateKeyFile {{ vhost.ssl.key }}
+{% if vhost.ssl.cert_chain is defined %}
+    SSLCertificateChainFile {{ vhost.ssl.cert_chain }}
+{% endif %}
+{% elif vhost.ssl.letsencrypt_cert is defined %}
+    SSLCertificateFile      /var/lib/dehydrated/certificates/certs/{{ vhost.ssl.letsencrypt_cert }}/cert.pem
+    SSLCertificateKeyFile   /var/lib/dehydrated/certificates/certs/{{ vhost.ssl.letsencrypt_cert }}/privkey.pem
+    SSLCertificateChainFile /var/lib/dehydrated/certificates/certs/{{ vhost.ssl.letsencrypt_cert }}/chain.pem
+{% endif %}
+    Include ansible_conf.d/common_env.inc
+{% if vhost.common_perf | default(True) %}
+    Include ansible_conf.d/common_perf.inc
+{% endif %}
+{% if vhost.common_filter | default(True) %}
+    Include ansible_conf.d/common_filter.inc
+{% endif %}
+{% if vhost.common_cache | default(False) %}
+    Include ansible_conf.d/common_cache.inc
+{% endif %}
+{% if vhost.include_conf is defined %}
+{% for include in vhost.include_conf | default([]) %}
+    Include {{ include }}
+{% endfor %}
+{% endif %}
+{% if ((vhost.common_letsencrypt is defined and vhost.common_letsencrypt) or (vhost.ssl is defined and vhost.ssl.letsencrypt_cert is defined )) | default(False) %}
+    Include ansible_conf.d/common_letsencrypt.inc
+{% endif %}
+{% if vhost.common_mod_security | default(False) == True or vhost.common_mod_security | default(False) == 'audit' %}
+  Include ansible_conf.d/common_mod_security2.inc
+{% if vhost.common_mod_security | default(False) == 'audit' %}
+  SecRuleEngine DetectionOnly
+{% endif %}
+{% for id in vhost.mod_security_disabled_rules | default([]) %}
+  SecRuleRemoveById {{ id }}
+{% endfor %}
+{% endif %}
+{% if vhost.proxypass is defined %}
+{% if vhost.proxypass is match('^https://') %}
+    SSLProxyEngine On
+{% endif %}
+    RequestHeader set X-Forwarded-Proto "https"
+    ProxyPass /.well-known/acme-challenge !
+    ProxyPass /_deferror/ !
+    ProxyPreserveHost {{  vhost.proxypreservehost | default(True) | ternary('On','Off') }}
+    # WebSocket proxy handling
+    RewriteCond %{HTTP:UPGRADE} ^WebSocket$ [NC]
+    RewriteCond %{HTTP:CONNECTION} Upgrade$ [NC]
+    RewriteRule .* {{ vhost.proxypass | regex_replace('^http','ws') }}%{REQUEST_URI} [P]
+    # Normal proxy
+    ProxyPass / {{ vhost.proxypass }}
+    ProxyPassReverse / {{ vhost.proxypass }}
+{% endif %}
+{% if vhost.src_ip is defined %}
+  <Location />
+{% if vhost.src_ip | length < 1 %}
+    Require all denied
+{% else %}
+    Require ip {{ vhost.src_ip | join(' ') }}
+{% endif %}
+  </Location>
+{% endif %}
+{% if vhost.custom_post is defined %}
+{{ vhost.custom_post | indent(4, true) }}
+{% endif %}
+{% endif %}
+{% endif %}
+  </VirtualHost>
+</IfModule>
+{% endif %}
+
+#####################################
+## End of config for {{ vhost.name }}
+#####################################
+
+{% endfor %}

@@ -1,0 +1,58 @@
+---
+
+- name: Create nginx conf dir
+  file: path=/etc/nginx/{{ item }} state=directory
+  loop:
+    - ansible_location.d
+    - ansible_conf.d
+    - ansible_modules.d
+  tags: web
+
+- name: Check if lua module is installed
+  stat: path=/usr/lib64/nginx/modules/ndk_http_module.so
+  register: llng_mod_lua
+  tags: web
+
+- name: Deploy module conf
+  copy: content={{ item.content }} dest=/etc/nginx/ansible_modules.d/{{ item.dest }}
+  loop:
+    - content: 'load_module "/usr/lib64/nginx/modules/ndk_http_module.so";'
+      dest: 09-ndk.conf
+    - content: 'load_module "/usr/lib64/nginx/modules/ngx_http_lua_module.so";'
+      dest: 11-lua.conf
+  when: llng_mod_lua.stat.exists
+  notify: reload nginx
+  tags: web
+
+- name: Remove module conf
+  file: path=/etc/nginx/ansible_modules.d/{{ item }} state=absent
+  loop:
+    - 09-ndk.conf
+    - 11-lua.conf
+  when: not llng_mod_lua.stat.exists
+  notify: reload nginx
+  tags: web
+
+- name: Deploy handler's nginx configuration
+  template: src={{ item.src }} dest={{ item.dest }}
+  loop:
+    - src: nginx_handler.conf.j2
+      dest: /etc/nginx/ansible_location.d/10-llng_handler.conf
+    - src: llng_headers.inc.j2
+      dest: /etc/nginx/ansible_conf.d/llng_headers.inc
+  when: llng_handler == True
+  notify: reload nginx
+  tags: web
+
+- name: Deploy portal's nginx configuration
+  template: src=nginx_portal.conf.j2 dest=/etc/nginx/ansible_conf.d/22-llng_portal.conf
+  when: llng_portal == True
+  notify: reload nginx
+  tags: web
+
+- name: Deploy manager's nginx configuration
+  template: src=nginx_manager.conf.j2 dest=/etc/nginx/ansible_conf.d/23-llng_manager.conf
+  when: llng_manager == True
+  notify: reload nginx
+  tags: web
+

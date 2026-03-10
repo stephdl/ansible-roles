@@ -1,0 +1,17 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ psono_root_dir }}/archives/{{ item.component }}_{{ item.version }}.txz ./
+  environment:
+    XZ_OPT: -T0
+  args:
+    chdir: "{{ psono_server_root_dir }}/archives/{{ item.component }}_{{ item.version }}"
+    warn: False
+  loop:
+    - component: server
+      version: "{{ psono_server_current_version }}"
+    - component: client
+      version: "{{ psono_client_current_version }}"
+    - component: admin
+      version: "{{ psono_admin_current_version }}"
+  tags: psono

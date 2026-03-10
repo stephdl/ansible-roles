@@ -1,0 +1,10 @@
+---
+
+dependencies:
+  - role: repo_scl         # For python 3.8
+  - role: repo_nux_dextop  # For pdftk
+  - role: nginx
+  - role: postgresql_server
+    when: papermerge_db_server == '127.0.0.1' or papermerge_db_server == 'localhost'
+  - role: redis_server
+

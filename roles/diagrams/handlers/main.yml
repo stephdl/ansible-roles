@@ -1,0 +1,4 @@
+---
+
+- name: restart diagrams
+  service: name=tomcat@diagrams state=restarted

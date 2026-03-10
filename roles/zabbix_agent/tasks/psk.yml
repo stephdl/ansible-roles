@@ -1,0 +1,12 @@
+---
+
+- name: Generate random PSK key for TLS encryption
+  shell: openssl rand -hex 32 > /etc/zabbix/zabbix_agentd.psk
+  args:
+    creates: /etc/zabbix/zabbix_agentd.psk
+  tags: zabbix
+
+- name: Restrict permission on PSK file
+  file: path=/etc/zabbix/zabbix_agentd.psk owner=root group=zabbix mode=0640
+  tags: zabbix
+

@@ -1,0 +1,7 @@
+{{ glpi_root_dir }}/data/_log/*.log {
+  daily
+  rotate 90
+  compress
+  missingok
+  su {{ glpi_php_user }} {{ glpi_php_user }}
+}

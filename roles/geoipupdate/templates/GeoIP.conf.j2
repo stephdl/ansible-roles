@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+AccountID {{ geoip_account_id | default('0000000') }}
+LicenseKey {{ geoip_license_key | default('00000000') }}
+EditionIDs {{ geoip_edition_ids | join(' ') }}

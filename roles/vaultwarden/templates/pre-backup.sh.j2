@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/vaultwarden/
+cp {{ vaultwarden_root_dir }}/data/rsa* {{ vaultwarden_root_dir }}/backup/
+{% if vaultwarden_db_engine == 'mysql' %}
+/usr/bin/mysqldump \
+{% if vaultwarden_db_server not in ['localhost', '127.0.0.1'] %}
+        --user={{ vaultwarden_db_user }} \
+        --password={{ vaultwarden_db_pass | quote }} \
+        --host={{ vaultwarden_db_server }} \
+{% endif %}
+        --quick --single-transaction \
+        --add-drop-table {{ vaultwarden_db_name }} | zstd -c > {{ vaultwarden_root_dir }}/backup/{{ vaultwarden_db_name }}.sql.zst
+{% else %}
+sqlite3 {{ vaultwarden_root_dir }}/data/db.sqlite3 ".backup '{{ vaultwarden_root_dir }}/backup/db.sqlite3'"
+{% endif %}

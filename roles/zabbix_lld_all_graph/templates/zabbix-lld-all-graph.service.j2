@@ -1,0 +1,9 @@
+[Unit]
+Description=Update graphs with multiple lld items
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/sysconfig/zabbix-lld-all-graph
+ExecStart=/usr/local/bin/zabbix_lld_all_graph
+User=zabbix
+Group=zabbix

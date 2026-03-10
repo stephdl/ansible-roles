@@ -1,0 +1,9 @@
+---
+
+- name: Deploy pam config
+  template: src=deb_pam_common_{{ item }}.j2 dest=/etc/pam.d/common-{{ item }}
+  with_items:
+    - account
+    - auth
+    - password
+    - session

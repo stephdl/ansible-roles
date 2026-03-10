@@ -1,0 +1,11 @@
+---
+
+- include: facts.yml
+- include: directory.yml
+- include: install.yml
+- include: conf.yml
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: filebeat.yml

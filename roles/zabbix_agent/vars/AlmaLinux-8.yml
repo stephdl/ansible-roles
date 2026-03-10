@@ -1,0 +1,8 @@
+---
+
+zabbix_agent_packages:
+  - zabbix-agent
+  - zabbix-agent-addons
+  - policycoreutils-python-utils
+  - openssl
+

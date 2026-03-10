@@ -1,0 +1,18 @@
+{% for share in nas_shares %}
+{% if share.protocols.rsync.enabled %}
+[{{ share.name }}]
+path = {{ share.path | default(nas_root_dir + '/data/' + share.name) }}
+comment = {{ share.description }}
+uid = rsync
+gid = rsync
+read only = {{ share.protocols.rsync.read_only | ternary('yes','no') }}
+{% if share.protocols.rsync.users is defined and share.protocols.rsync.users.keys() | list | length > 0 %}
+auth users = {{ share.protocols.rsync.users.keys() | list | join(' ') }}
+secrets file = {{ nas_root_dir }}/meta/{{ share.name }}/rsync.secrets
+{% endif %}
+
+{% else %}
+# Rsync access is disabled for {{ share.name }}
+{% endif %}
+
+{% endfor %}

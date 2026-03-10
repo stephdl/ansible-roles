@@ -1,0 +1,9 @@
+---
+- name: Configure WAPT repository
+  yum_repository:
+    name: wapt
+    description: WAPT
+    baseurl: https://wapt.tranquil.it/centos$releasever/wapt-{{ wapt_version }}/
+    gpgcheck: False
+  tags: repo,wapt
+

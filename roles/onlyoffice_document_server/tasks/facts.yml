@@ -1,0 +1,33 @@
+---
+
+- set_fact:
+    oo_services:
+      - documentserver-converter
+      - documentserver-docservice
+      - documentserver-metrics
+  tags: oo
+
+- when: oo_db_pass is not defined
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: /etc/onlyoffice/meta/ansible_db_pass
+    - set_fact: oo_db_pass={{ rand_pass }}
+  tags: oo
+
+- name: Detect installed version
+  shell: rpm -q --qf "%{version}-%{release}" onlyoffice-documentserver || echo 0
+  args:
+    warn: False
+  register: oo_current_version
+  changed_when: False
+  tags: oo
+
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: /etc/onlyoffice/
+        - version: "{{ oo_current_version.stdout }}"
+    - set_fact: oo_install_mode={{ install_mode }}
+  tags: oo
+

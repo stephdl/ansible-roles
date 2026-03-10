@@ -1,0 +1,38 @@
+---
+
+# Set turn realm. Default to the domain name if unset
+# turn_realm: turn.example.com
+
+# The static, shared auth secret. If not set, will use long term auth.
+# See turn_lt_users
+# turn_auth_secret: 
+
+# Long term users
+turn_lt_users: []
+# - name: asterisk
+#   pass: S3cr3t.
+
+
+turn_listen_ip:
+  - 0.0.0.0
+
+# If defined, restrict who can access the service
+turn_src_ip:
+ - 0.0.0.0/0
+
+turn_port: 3478
+turn_tls_port: 5349
+
+# Allow non TLS relay
+turn_allow_non_tls: True
+
+# Turn on TLS listener. If true, certificate must be present
+turn_tls: False
+# turn_tls_cert:
+# turn_tls_key:
+# Or alternatively, set the name of a Let's Encrypt cert
+# turn_letsencrypt_cert: turn.example.org
+
+# If behind a NAT, you must set the public IP
+# turn_external_ip: 12.13.14.15
+

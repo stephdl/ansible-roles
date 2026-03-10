@@ -1,0 +1,52 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - java-1.8.0-openjdk
+      - git
+  tags: jitsi
+
+  # If the repo changed since the last run, we rebuild and restart the bridge
+- name: Clone videobridge repo
+  git:
+    repo: "{{ jitsi_videobridge_git_url }}"
+    dest: "{{ jitsi_root_dir }}/src/videobridge"
+    force: True
+  become_user: "{{ jitsi_user }}"
+  register: jitsi_videobridge_git
+  tags: jitsi
+
+- name: Install or update videobridge
+  block:
+    - name: Build videobridge
+      command: /opt/maven/apache-maven/bin/mvn package -DskipTests -Dassembly.skipAssembly=false
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/videobridge"
+      become_user: "{{ jitsi_user }}"
+
+    - name: Extract videobridge archive
+      unarchive:
+        src: "{{ jitsi_root_dir }}/src/videobridge/jvb/target/jitsi-videobridge-2.1-SNAPSHOT-archive.zip"
+        dest: "{{ jitsi_root_dir }}/tmp/"
+        remote_src: True
+
+    - name: Move videobridge to its final directory
+      synchronize:
+        src: "{{ jitsi_root_dir }}/tmp/jitsi-videobridge-2.1-SNAPSHOT/"
+        dest: "{{ jitsi_root_dir }}/videobridge/"
+        recursive: True
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      notify: restart jitsi-videobridge
+
+  when: (jitsi_videobridge_git.changed and jitsi_videobridge_manage_upgrade) or not jitsi_videobridge_script.stat.exists
+  tags: jitsi
+
+- name: Deploy systemd unit
+  template: src=jitsi-videobridge.service.j2 dest=/etc/systemd/system/jitsi-videobridge.service
+  register: jitsi_videobridge_unit
+  notify: restart jitsi-videobridge
+  tags: jitsi
+

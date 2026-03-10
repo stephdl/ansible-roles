@@ -1,0 +1,18 @@
+
+<Directory "/usr/share/zabbix">
+    Options FollowSymLinks
+    AllowOverride All
+{% if zabbix_server_web_src_ip is defined %}
+  Require ip {{ zabbix_server_web_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+{% if zabbix_server_auth_http %}
+    SetEnvIfNoCase Auth-User "(.*)" PHP_AUTH_USER=$1
+    SetEnvIfNoCase Auth-User "(.*)" PHP_AUTH_PW=$1
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ zabbix_server_php_fpm_pool | default('zabbix_server') }}.sock|fcgi://localhost"
+  </FilesMatch>
+</Directory>
+

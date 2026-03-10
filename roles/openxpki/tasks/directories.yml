@@ -1,0 +1,52 @@
+---
+
+- name: Create directories
+  file: path={{ pki_root_dir }}/{{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - path: /
+      group: apache
+      mode: 750
+    - path: etc/config.d/realm
+      owner: "{{ pki_user }}"
+      group: apache
+      mode: 750
+    - path: etc/ssl/root
+      owner: "{{ pki_user }}"
+      group: "{{ pki_user }}"
+      mode: 700
+    - path: log
+      owner: "{{ pki_user }}"
+      mode: 700
+    - path: data
+      owner: "{{ pki_user }}"
+      group: apache
+      mode: 750
+    - path: run
+      owner: "{{ pki_user }}"
+      group: apache
+      mode: 750
+    - path: tmp
+      owner: "{{ pki_user }}"
+      group: apache
+      mode: 770
+    - path: meta
+      mode: 700
+    - path: locale
+    - path: web
+    - path: backup
+      mode: 700
+    - path: src
+    - path: archives
+      mode: 700
+  tags: pki
+
+- name: Create data directories for realms
+  file: path={{ pki_root_dir }}/data/{{ item.name }} state=directory owner={{ pki_user }} group=apache mode=750
+  with_items: "{{ pki_realms }}"
+  tags: pki
+
+- name: Create CA's directory
+  file: path={{ pki_root_dir }}/etc/ssl/{{ item.name }} state=directory
+  with_items: "{{ pki_realms }}"
+  tags: pki
+

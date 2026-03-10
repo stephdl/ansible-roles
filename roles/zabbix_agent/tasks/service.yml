@@ -1,0 +1,4 @@
+---
+- name: Start Zabbix Agent
+  service: name=zabbix-agent state=started enabled=True
+  tags: zabbix

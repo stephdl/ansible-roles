@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -eo pipefail
+
+DEST=/home/lbkp/bm/pgsql
+mkdir -p $DEST
+chown postgres:postgres $DEST
+chmod 700 $DEST
+
+for DB in $(su - postgres -c "/bin/psql -d postgres -qtc 'SELECT datname from pg_database' | grep -vP '^\s+?template[01]$'")
+do
+  su - postgres -c "/bin/pg_dump -Fp -Cc $DB" | /bin/nice -n 10 zstd -c > $DEST/$DB.sql.zst
+done
+su - postgres -c "/bin/pg_dumpall --globals-only" | /bin/nice -n 10 zstd -c > $DEST/pg_globals.sql.zst
+su - postgres -c "/bin/pg_dumpall --schema-only" | /bin/nice -n 10 zstd -c > $DEST/pg_schema.sql.zst
+
+cp -a /etc/bm/local /home/lbkp/bm/conf

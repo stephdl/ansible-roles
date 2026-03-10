@@ -1,0 +1,7 @@
+{{ dolibarr_root_dir }}/data/*.log {
+  daily
+  rotate 90
+  compress
+  missingok
+  create 640 {{ dolibarr_php_user }} {{ dolibarr_php_user }}
+}

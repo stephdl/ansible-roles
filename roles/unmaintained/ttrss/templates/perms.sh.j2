@@ -1,0 +1,13 @@
+#!/bin/sh
+
+restorecon -R {{ ttrss_root_dir }}
+chown -R root:root {{ ttrss_root_dir }}/meta
+chmod 700 {{ ttrss_root_dir }}/meta
+chown -R {{ ttrss_php_user }}:apache {{ ttrss_root_dir }}/{cache,data}
+chmod 750 {{ ttrss_root_dir }}/{cache,data}
+chmod 700 {{ ttrss_root_dir }}
+chown -R {{ ttrss_php_user }} {{ ttrss_root_dir }}/{sessions,tmp}
+chmod 700 {{ ttrss_root_dir }}/{sessions,tmp}
+setfacl -k -b {{ ttrss_root_dir }}
+setfacl -m u:{{ ttrss_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ ttrss_root_dir }}
+restorecon -R {{ ttrss_root_dir }}

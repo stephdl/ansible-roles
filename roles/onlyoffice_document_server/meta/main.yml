@@ -1,0 +1,9 @@
+---
+
+dependencies:
+  - role: repo_onlyoffice
+  - role: nginx
+  - role: redis_server
+  - role: rabbitmq_server
+  - role: mysql_server
+    when: oo_db_server in ['localhost','127.0.0.1']

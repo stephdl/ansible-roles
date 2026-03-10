@@ -1,0 +1,13 @@
+<?php
+
+// {{ ansible_managed }}
+
+$amp_conf['AMPDBUSER'] = '{{ fpbx_db_user }}';
+$amp_conf['AMPDBPASS'] = '{{ fpbx_db_pass }}';
+$amp_conf['AMPDBHOST'] = 'localhost';
+$amp_conf['AMPDBNAME'] = '{{ fpbx_db_name }}';
+$amp_conf['AMPDBENGINE'] = 'mysql';
+$amp_conf['datasource'] = '';
+
+require_once('/opt/freepbx/web/admin/bootstrap.php');
+?>

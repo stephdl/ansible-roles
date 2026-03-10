@@ -1,0 +1,126 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/crowdsec/{{ item }}
+  loop:
+    - config.yaml
+    - acquis.yaml
+    - simulation.yaml
+    - profiles.yaml
+    - parsers/s02-enrich/trusted_ip.yaml
+    - dev.yaml
+  notify: reload crowdsec
+  tags: cs
+
+# Create the database
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ cs_db_name }}"
+    - db_user: "{{ cs_db_user }}"
+    - db_server: "{{ cs_db_server }}"
+    - db_pass: "{{ cs_db_pass }}"
+  when:
+    - cs_db_engine == 'mysql'
+    - cs_lapi_enabled
+  tags: cs
+
+- when: cs_lapi_pass is not defined
+  block:
+    - name: Declare on the local API
+      command: cscli machines add {{ cs_lapi_user }} --auto --force --file /dev/stdout --output raw
+      register: cs_lapi_credentials
+      delegate_to: "{{ cs_lapi_server }}"
+    - set_fact: cs_lapi_credentials_yaml={{ cs_lapi_credentials.stdout | from_yaml }}
+    - copy: content={{ cs_lapi_credentials_yaml.password }} dest=/etc/crowdsec/meta/lapi_pass mode=600
+    - set_fact: cs_lapi_pass={{ cs_lapi_credentials_yaml.password }}
+  tags: cs
+
+- when:
+    - cs_lapi_enabled
+    - cs_capi_enabled
+    - cs_capi_user is not defined or cs_capi_pass is not defined
+  block:
+    - name: Register on the central API
+      command: cscli capi register -o raw -f /dev/stdout
+      register: cs_capi_credentials
+    - set_fact: cs_capi_credentials_yaml={{ cs_capi_credentials.stdout | from_yaml }}
+    - copy: content={{ cs_capi_credentials_yaml.login }} dest=/etc/crowdsec/meta/capi_user mode=600
+    - copy: content={{ cs_capi_credentials_yaml.password }} dest=/etc/crowdsec/meta/capi_pass mode=600
+    - set_fact: cs_capi_user={{ cs_capi_credentials_yaml.login }}
+    - set_fact: cs_capi_pass={{ cs_capi_credentials_yaml.password }}
+  tags: cs
+
+- name: Deploy credentials config
+  template: src={{ item }}_api_credentials.yaml.j2 dest=/etc/crowdsec/{{ item }}_api_credentials.yaml mode=600
+  loop:
+    - online
+    - local
+  notify: restart crowdsec
+  tags: cs
+
+- name: List installed parsers
+  shell: cscli parsers list -o json
+  register: cs_installed_parsers
+  changed_when: False
+  tags: cs
+
+- name: Install parsers
+  command: cscli parsers install {{ item }}
+  when: item not in cs_installed_parsers.stdout | from_json | map(attribute='name') | list
+  loop: "{{ cs_parsers }}"
+  notify: reload crowdsec
+  tags: cs
+
+- name: Upgrade parsers
+  command: cscli parsers upgrade {{ item }}
+  loop: "{{ cs_parsers }}"
+  when: cs_install_mode == 'upgrade'
+  notify: reload crowdsec
+  tags: cs
+
+- name: List installed scenarios
+  command: cscli scenarios list -o json
+  register: cs_installed_scenarios
+  changed_when: False
+  tags: cs
+
+- name: Install scenarios
+  command: cscli scenarios install {{ item }}
+  when: item not in cs_installed_scenarios.stdout | from_json | map(attribute='name') | list
+  loop: "{{ cs_scenarios }}"
+  notify: reload crowdsec
+  tags: cs
+
+- name: Upgrade scenarios
+  command: cscli scenarios upgrade {{ item }}
+  loop: "{{ cs_scenarios }}"
+  when: cs_install_mode == 'upgrade'
+  notify: reload crowdsec
+  tags: cs
+
+- name: List installed postoverflows
+  command: cscli postoverflows list -o json
+  register: cs_installed_postoverflows
+  changed_when: False
+  tags: cs
+
+- name: Install postoverflows
+  command: cscli postoverflows install {{ item }}
+  when: item not in cs_installed_postoverflows.stdout | from_json | map(attribute='name') | list
+  loop: "{{ cs_postoverflows }}"
+  notify: reload crowdsec
+  tags: cs
+
+- name: Upgrade postoverflows
+  command: cscli postoverflows upgrade {{ item }}
+  loop: "{{ cs_postoverflows }}"
+  when: cs_install_mode == 'upgrade'
+  notify: reload crowdsec
+  tags: cs
+
+- name: Set permissions on conf and data directories
+  file: path={{ item }} owner={{ cs_user }} group={{ cs_user }} recurse=True
+  loop:
+    - /etc/crowdsec
+    - "{{ cs_root_dir }}/data"
+  tags: cs

@@ -1,0 +1,79 @@
+---
+
+# List of file shares
+nas_shares: []
+# nas_shares:
+#   - name: tools
+#     description: IT maintenance tools
+#     path: /opt/shares/tools
+#     acl:
+#       read_groups:
+#         - 'Domain Users'
+#         - 'Domain Guests'
+#       write_groups:
+#         - 'Domain Admins'
+#         - 'Staff'
+#       read_users: []
+#       write_users: []
+#     protocols:
+#       smb:
+#         enabled: True
+#         browseable: True
+#         guest_ok: False
+#         nt_acl: True
+#       rsync:
+#         enabled: True
+#         read_only: True
+#         users:
+#           dani: s3cr3t.
+#           rv: p455phrAz
+
+nas_root_dir: /opt/nas
+nas_share_homes_defaults:
+  description: Répertoire personnel
+  recycle_bin:
+    enabled: True
+    dir: Corbeille
+  protocols:
+    smb:
+      enabled: True
+      full_audit: True
+nas_share_homes_extra: {}
+nas_share_homes: "{{ nas_share_homes_defaults | combine(nas_share_homes_extra) }}"
+
+nas_default_share:
+  description: NAS share
+  name: share
+  manual_permissions: False
+  acl:
+    read_groups: []
+    write_groups: ['domain admins']
+    read_users: []
+    write_users: []
+  recycle_bin:
+    enabled: True
+    dir: Corbeille
+  protocols:
+    smb:
+      enabled: False
+      browseable: True
+      guest_ok: False
+      full_audit: True
+      nt_acl: False
+    rsync:
+      enabled: False
+      read_only: True
+    nfs:
+      enabled: False
+      root_squash: True
+    http:
+      enabled: False
+      indexes: False
+      public: False
+      force_ssl: True
+      webdav: False
+
+nas_ad_http_auth:
+  ldap_url: ldap://
+  bind_dn: XXX
+  bind_pass: XXX

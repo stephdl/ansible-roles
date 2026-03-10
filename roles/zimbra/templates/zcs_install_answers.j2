@@ -1,0 +1,6 @@
+{# Accept License #}y
+{# Use Online repo #}y
+{% for component in [ 'ldap', 'logger', 'mta', 'dnscache', 'snmp', 'store', 'apache', 'spell', 'memcached', 'proxy', 'drive', 'imapd', 'chat' ] %}
+{{ (component in zcs_components) | ternary('y','n') }}
+{% endfor %}
+{# Confirm continue #}y

@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the daemon
+  service: name=pgadmin4_{{ pga_id }} state=started enabled=True
+  register: pgadmin4_started
+  tags: pgadmin4

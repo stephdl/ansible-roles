@@ -1,0 +1,8 @@
+---
+- name: Handle Zabbix Agent port
+  iptables_raw:
+    name: zabbix_agent_port
+    state: "{{ (zabbix_agent_src_ip | length > 0) | ternary('present', 'absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ zabbix_agent_port }} -s {{ zabbix_agent_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zabbix

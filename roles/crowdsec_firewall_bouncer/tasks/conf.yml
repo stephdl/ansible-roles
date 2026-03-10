@@ -1,0 +1,6 @@
+---
+
+- name: Deploy configuration
+  template: src=cs-firewall-bouncer.yaml.j2 dest=/etc/crowdsec/cs-firewall-bouncer/cs-firewall-bouncer.yaml mode=600
+  notify: restart cs-firewall-bouncer
+  tags: cs

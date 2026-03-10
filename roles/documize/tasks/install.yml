@@ -1,0 +1,72 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - tar
+      - zstd
+      - postgresql14
+  tags: documize
+
+- name: Download documize
+  get_url:
+    url: "{{ documize_bin_url }}"
+    dest: "{{ documize_root_dir }}/bin/documize"
+    checksum: sha1:{{ documize_bin_sha1 }}
+    mode: 755
+  when: documize_install_mode != 'none'
+  notify: restart documize
+  tags: documize
+
+- name: Install systemd unit
+  template: src=documize.service.j2 dest=/etc/systemd/system/documize.service
+  notify: restart documize
+  register: documize_unit
+  tags: documize
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: documize_unit.changed
+  tags: documize
+
+- when: documize_db_engine == 'postgres'
+  block:
+    - name: Create the PostgreSQL role
+      postgresql_user:
+        db: postgres
+        name: "{{ miniflux_db_user }}"
+        password: "{{ miniflux_db_pass }}"
+        login_host: "{{ miniflux_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+    
+    - name: Create the PostgreSQL database
+      postgresql_db:
+        name: "{{ miniflux_db_name }}"
+        encoding: UTF-8
+        lc_collate: C
+        lc_ctype: C
+        template: template0
+        owner: "{{ miniflux_db_user }}"
+        login_host: "{{ miniflux_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+
+  tags: miniflux
+
+  # Create MySQL database
+- when: documize_db_engine == 'mysql'
+  import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ documize_db_name }}"
+    - db_user: "{{ documize_db_user }}"
+    - db_server: "{{ documize_db_server }}"
+    - db_pass: "{{ documize_db_pass }}"
+  tags: documize
+
+- name: Deploy backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/documize mode=700
+  loop:
+    - pre
+    - post
+  tags: documize

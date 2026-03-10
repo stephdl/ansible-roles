@@ -1,0 +1,9 @@
+---
+
+- name: Configure CodeIT repository
+  yum_repository:
+    name: codeit
+    description: CodeIT repo
+    baseurl: https://repo.codeit.guru/packages/centos/$releasever/$basearch
+    gpgcheck: True
+    gpgkey: https://repo.codeit.guru/RPM-GPG-KEY-codeit

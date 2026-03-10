@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+{% if rabbitmq_conf == 'rabbitmq.conf' %}
+rm -f /home/lbkp/rabbitmq/definitions.json
+{% else %}
+# RabbitMQ version too old to support export_definitions
+{% endif %}
+

@@ -1,0 +1,73 @@
+---
+
+graylog_version: 4.1.6
+graylog_archive_url: https://downloads.graylog.org/releases/graylog/graylog-{{ graylog_version }}.tgz
+graylog_archive_sha1: 7701118689798cb68cda2181e2a1c56a67792495
+graylog_root_dir: /opt/graylog
+graylog_manage_upgrade: True
+
+graylog_is_master: True
+
+graylog_plugins:
+  graylog-output-syslog:
+    version: 3.3.0
+    sha1: e18bc112cd3b5d5b07b69ed5e5c2e146dfd67677
+    url: https://github.com/wizecore/graylog2-output-syslog/releases/download/3.3.0/graylog-output-syslog-3.3.0.jar
+
+# Plugins bundled, which should not be removed
+graylog_plugins_core:
+  - aws
+  - collector
+  - threatintel
+graylog_plugins_to_install: []
+
+# A random one will be created is not defined
+# graylog_pass_secret:
+# graylog_admin_pass: 
+
+# 9000 is for the web interface and api, 12201 is the default for gelf HTTP inputs
+graylog_api_port: 9000
+graylog_listeners_http_ports: [12201]
+graylog_http_ports: "{{ [graylog_api_port] + graylog_listeners_http_ports }}"
+graylog_http_src_ip: []
+
+# Must match your inputs (eg, syslog/raw)
+# used to open ports in the firewall
+graylog_listeners_udp_ports: [514]
+graylog_listeners_tcp_ports: [514]
+graylog_listeners_src_ip: [0.0.0.0/0]
+
+# graylog_external_uri: https://logs.domain.tld/
+
+graylog_es_hosts:
+  - http://localhost:9200
+graylog_es_cluster_name: elasticsearch
+
+graylog_mongo_user: graylog
+# A random one will be created if not set. To make anonymous connections, set it to False
+# If you use more than 1 mongo URL, then no password will be created, mongo user must be created manually
+# and configured in the url
+#graylog_mongo_pass: S3cRet.
+# Note: if graylog_mongo_pass is defined, it'll be used with graylog_mongo_user to connect, even if not indicated in graylog_mongo_url
+# Else, anonymous connection is made. By default, if you do not set graylog_mongo_pass, a random one will be created
+# If you insist on using anonymous connections, you should set graylog_mongo_pass to False
+graylog_mongo_url:
+  - mongodb://localhost/graylog
+
+# Max size of Graylog journal, in GB
+graylog_journal_max_size: 5
+
+# If you want to obtain a cert with dehydrated
+# it'll be deployed as {{ graylog_root_dir }}/ssl/cert.pem and {{ graylog_root_dir }}/ssl/key.pem
+# graylog_letsencrypt_cert: graylog.domain.tls
+
+# If set, will populate enabled_tls_protocols
+# on el7, TLSv1.3 seems to break filebeat connections, so, just enable TLSv1.2
+graylog_tls_versions:
+  - TLSv1.2
+
+# Mem to allocate to the JVM (Xmx / Xms)
+graylog_jvm_mem: 2g
+
+# Version of the Elasticsearch server
+# graylog_es_version: 6

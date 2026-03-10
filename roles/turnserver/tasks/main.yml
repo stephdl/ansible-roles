@@ -1,0 +1,79 @@
+---
+
+- name: Install Coturn
+  yum: name=turnserver state=present
+  tags: turn
+
+- name: Deploy main configuration
+  template: src=turnserver.conf.j2 dest=/etc/turnserver/turnserver.conf group=turnserver mode=640
+  notify: restart turnserver
+  tags: turn
+
+- name: Override systemd unit
+  copy: src=turnserver.service dest=/etc/systemd/system/turnserver.service
+  register: turn_unit
+  notify: restart turnserver
+  tags: turn
+
+- name: Reload systemùd
+  systemd: daemon_reload=True
+  when: turn_unit.changed
+  tags: turn
+
+- name: Create dehydrated hooks dir
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/ state=directory
+  tags: turn
+
+- name: Deploy dehydrated hook
+  copy: src=dehydrated_deploy_hook dest=/etc/dehydrated/hooks_deploy_cert.d/20turnserver.sh mode=755
+  tags: turn
+
+- name: Create tmpfile fragment
+  copy: content="d /var/run/turnserver 775 root turnserver" dest=/etc/tmpfiles.d/turnserver.conf
+  notify: systemd-tmpfiles
+  tags: turn
+
+- name: Handle turnserver ports
+  iptables_raw:
+    name: turnserver_ports
+    state: "{{ (turnserver_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ [turnserver_port,turnserver_alt_port] | join(',') }} -s {{ turnserver_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -p udp -m multiport --dports {{ [turnserver_port,turnserver_alt_port] | join(',') }} -s {{ turnserver_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports {{ [turnserver_tls_port,turnserver_alt_tls_port] | join(',') }} -s {{ turnserver_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -p udp -m multiport --dports {{ [turnserver_tls_port,turnserver_alt_tls_port] | join(',') }} -s {{ turnserver_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -p tcp --dport 49152:65535 -s {{ turnserver_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -p udp --dport 49152:65535 -s {{ turnserver_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: turn,firewall
+
+- name: Start and enable the service
+  service: name=turnserver state=started enabled=True
+  tags: turn
+
+- name: Add long term users
+  command: turnadmin --add --user={{ item.name }} --password={{ item.pass | quote }} --realm={{ turnserver_realm | default(ansible_domain) }}
+  loop: "{{ turnserver_lt_users }}"
+  tags: turn
+
+- name: Remove users with unknown realm
+  shell: |
+    for U in $(turnadmin --list | grep -v '\[{{ turnserver_realm | default(ansible_domain) }}\]'); do
+      user=$(echo $U | cut -d'[' -f1)
+      realm=$(echo $U | perl -pe 's/.*\[(.*)\]/$1/')
+      turnadmin --delete --user=$user --realm=$realm
+    done
+  changed_when: False
+  tags: turn
+
+- name: List long term users
+  shell: turnadmin --list | grep -vP '^0:\s+(log file opened|SQLite connection)' | cut -d'[' -f1
+  register: turn_lt_existing_users
+  changed_when: False
+  tags: turn
+
+- name: Remove unmanaged long term users
+  command: turnadmin --delete --user={{ item }} --realm={{ turnserver_realm | default(ansible_domain) }}
+  when: item not in turnserver_lt_users | map(attribute='name') | list
+  loop: "{{ turn_lt_existing_users.stdout_lines }}"
+  tags: turn
+

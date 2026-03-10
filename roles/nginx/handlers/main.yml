@@ -1,0 +1,15 @@
+---
+
+- name: reload nginx
+  command: nginx -t
+  notify: really reload nginx
+
+- name: really reload nginx
+  service: name=nginx state=reloaded
+
+- name: restart nginx
+  command: nginx -t
+  notify: really restart nginx
+
+- name: really restart nginx
+  service: name=nginx state=restarted

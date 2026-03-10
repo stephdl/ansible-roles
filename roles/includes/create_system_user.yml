@@ -1,0 +1,8 @@
+---
+- name: Create system user account
+  user:
+    name: "{{ user }}"
+    comment: "{{ comment | default(user) }}"
+    system: True
+    shell: "{{ shell | default('/sbin/nologin') }}"
+    home: "{{ home | default(omit) }}"

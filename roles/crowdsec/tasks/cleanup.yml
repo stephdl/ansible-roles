@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /tmp/crowdsec-release.tgz
+    - /tmp/crowdsec-v{{ cs_version }}
+  tags: cs

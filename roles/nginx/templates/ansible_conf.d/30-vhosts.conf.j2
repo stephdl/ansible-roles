@@ -1,0 +1,244 @@
+# {{ ansible_managed }}
+{% for vhost in nginx_vhosts %}
+
+#####################################
+## Begin vhost for {{ vhost.name }}
+#####################################
+
+{{ vhost.custom_pre }}
+
+server {
+{% if vhost.port is iterable %}
+{% for port in vhost.port %}
+  listen {{ port }}{% if vhost.name == '_' %} default_server{% endif %};
+{% endfor %}
+{% else %}
+  listen {{ vhost.port }}{% if vhost.name == '_' %} default_server{% endif %};
+{% endif %}
+{% if vhost.ssl.enabled %}
+{% if vhost.ssl.port is iterable %}
+{% for port in vhost.ssl.port %}
+  listen {{ port }} ssl http2{% if vhost.name == '_' %} default_server{% endif %};
+{% endfor %}
+{% else %}
+  listen {{ vhost.ssl.port }} ssl http2{% if vhost.name == '_' %} default_server{% endif %};
+{% endif %}
+
+{% if vhost.ssl.cert is defined and vhost.ssl.key is defined %}
+  ssl_certificate     {{ vhost.ssl.cert }};
+  ssl_certificate_key {{ vhost.ssl.key }};
+{% elif vhost.ssl.letsencrypt_cert is defined %}
+  ssl_certificate     /var/lib/dehydrated/certificates/certs/{{ vhost.ssl.letsencrypt_cert }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ vhost.ssl.letsencrypt_cert }}/privkey.pem;
+{% elif nginx_auto_letsencrypt_cert %}
+  ssl_certificate     /var/lib/dehydrated/certificates/certs/{{ vhost.name }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ vhost.name }}/privkey.pem;
+{% endif %}
+
+{% if vhost.ssl.compat %}
+  ssl_ciphers {{ nginx_ssl_ciphers_compat }};
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+{% else %}
+  ssl_ciphers {{ nginx_ssl_ciphers_modern }};
+  ssl_protocols TLSv1.2 TLSv1.3;
+{% endif %}
+{% endif %}
+  ssl_prefer_server_ciphers on;
+
+  server_name {{ vhost.name }} {{ vhost.aliases | join(' ') }};
+
+  access_log /var/log/nginx/access.log {{ nginx_log_format + (vhost.auth is string and vhost.auth is search('^llng')) | ternary('_llng','') }};
+
+{% if vhost.full_config is defined %}
+{{ vhost.full_config | indent(2, true) }}
+{% else %}
+
+  root {{ vhost.document_root }};
+
+{{ vhost.custom_begin | indent(2, true) }}
+
+  client_max_body_size {{ vhost.max_body_size }};
+
+{% if vhost.maintenance %}
+  include /etc/nginx/ansible_conf.d/maintenance.inc;
+{% endif %}
+
+{% if vhost.acme_http %}
+  include /etc/nginx/ansible_conf.d/acme.inc;
+{% endif %}
+
+  # Include a custom fragment. Can be used to insert ACME challenges support during
+  # dehydrated hooks for example
+  include /etc/nginx/ansible_conf.d/custom.inc;
+
+{% if vhost.ssl.forced and vhost.ssl.enabled %}
+  include /etc/nginx/ansible_conf.d/force_ssl.inc;
+{% endif %}
+
+{% if vhost.auth == 'llng' or vhost.auth == 'llng_basic' %}
+  ## lmauth endpoint for llng authentication
+  location = /lmauth {
+    internal;
+    include /etc/nginx/fastcgi_params;
+    fastcgi_pass unix:/var/run/llng-fastcgi-server/llng-fastcgi.sock;
+    # Drop post datas
+    fastcgi_pass_request_body off;
+    fastcgi_param CONTENT_LENGTH "";
+    # Keep original hostname
+    fastcgi_param HOST $http_host;
+    # Keep original request (LLNG server will received /llauth)
+    fastcgi_param X_ORIGINAL_URI  $request_uri;
+    # Use bigger buffers (see GLPI #49915)
+    fastcgi_buffers 16 32k;
+    fastcgi_buffer_size 64k;
+{% if vhost.auth == 'llng_basic' %}
+    # Use basic auth on this vhost
+    fastcgi_param VHOSTTYPE AuthBasic;
+{% endif %}
+  }
+{% endif %}
+
+  if ($request_method !~ ^({{ vhost.allowed_methods | join('|') }})$ ) {
+    return 405;
+  }
+
+  location {{ vhost.location }} {
+
+{{ vhost.custom_location_begin | indent(4, True) }}
+
+{% if vhost.redirect_aliases and vhost.aliases | length > 0 %}
+    set $redirect_alias 0;
+    if ($host != '{{ vhost.name }}'){
+      set $redirect_alias 1;
+    }
+    # Only GET and HEAD should be redirected
+    if ($request_method !~ ^(GET|HEAD)$){
+      set $redirect_alias 0;
+    }
+    if ($redirect_alias = 1){
+      rewrite ^/(.*)$ http{{ vhost.ssl.enabled | ternary('s','') }}://{{ vhost.name }}{% if vhost.ssl.enabled and vhost.ssl.port | int != 443 %}:{{ vhost.ssl.port }}{% elif not vhost.ssl.enabled and vhost.port | int != 80 %}:{{ vhost.port }}{% endif %}/$1 permanent;
+    }
+{% endif %}
+
+{% if vhost.limits %}
+    limit_req zone=limit_req_std burst=200 nodelay;
+    limit_conn limit_conn_std 80;
+{% endif %}
+
+{% if vhost.perf %}
+    include /etc/nginx/ansible_conf.d/perf.inc;
+{% endif %}
+
+{% for header in vhost.headers.keys() %}
+{% if vhost.headers[header] != False %}
+    add_header {{ header }} "{{ vhost.headers[header] }}";
+{% endif %}
+{% endfor %}
+
+{% if vhost.csp %}
+    add_header Content-Security-Policy "{{ vhost.csp + (vhost.csp is search('connect-src') and vhost.proxy.websocket) | ternary('', '; connect-src \'self\' wss://' + vhost.name) }}";
+{% endif %}
+
+{% if vhost.auth == 'llng' or vhost.auth == 'llng_basic' %}
+    auth_request /lmauth;
+    auth_request_set $lmremote_user $upstream_http_lm_remote_user;
+    auth_request_set $lmlocation $upstream_http_location;
+    auth_request_set $lmlocation $upstream_http_location;
+    auth_request_set $cookie_value $upstream_http_set_cookie;
+{% if vhost.auth != 'llng_basic' %}
+    error_page 401 $lmlocation;
+{% endif %}
+{% if nginx_llng_headers.stat.exists %}
+    include /etc/nginx/ansible_conf.d/llng_headers.inc;
+{% endif %}
+    fastcgi_param REMOTE_USER $lmremote_user;
+{% elif vhost.auth == 'basic' and vhost.htpasswd_file is defined %}
+    auth_basic "Authentication required for {{ vhost.name }}";
+    auth_basic_user_file {{ vhost.htpasswd_file }};
+{% endif %}
+
+{% if vhost.proxy.backend is string %}
+
+{% if vhost.proxy.cache %}
+    include /etc/nginx/ansible_conf.d/cache.inc;
+{% endif %}
+
+    # Send info about the original request to the backend
+{% for header in vhost.proxy.headers.keys() %}
+{% if vhost.proxy.headers[header] != False %}
+    proxy_set_header {{ header }} "{{ vhost.proxy.headers[header] }}";
+{% endif %}
+{% endfor %}
+
+{% if vhost.proxy.websocket %}
+    # Handle websocket proxying
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_http_version 1.1;
+{% endif %}
+
+    # Hide some headers sent by the backend
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Content-Security-Policy;
+{% if vhost.perf %}
+    # Cache control and expiration is managed by the proxy
+    proxy_hide_header Cache-Control;
+    proxy_hide_header Pragma;
+    proxy_hide_header Expires;
+{% endif %}
+{% for header in vhost.headers.keys() %}
+    proxy_hide_header {{ header }};
+{% endfor %}
+
+    # Set the timeout to read responses from the backend
+    proxy_read_timeout {{ vhost.proxy.timeout }};
+
+    # Enable Keep Alive to the backend
+    proxy_socket_keepalive on;
+
+    # Disable buffering large files
+    proxy_max_temp_file_size 5m;
+
+    # Proxy requests to the backend
+    proxy_pass {{ vhost.proxy.backend }};
+{% endif %}
+
+{% if vhost.deny_ip | length > 0 %}
+    # per vhost IP blacklist
+{% for ip in vhost.deny_ip %}
+    deny {{ ip }};
+{% endfor %}
+
+{% endif %}
+{% if vhost.src_ip | length > 0 %}
+    # per vhost IP restriction
+{% for ip in vhost.src_ip | flatten %}
+    allow {{ ip }};
+{% endfor %}
+    deny all;
+
+{% endif %}
+{{ vhost.custom_location_end | indent(4, True) }}
+
+  }
+
+  location = /RequestDenied {
+    return 403;
+  }
+
+{% if vhost.location != '/' %}
+  location / {
+    return 403;
+  }
+{% endif %}
+
+{{ vhost.custom_end | indent(2, true) }}
+
+{% endif %}
+}
+
+#####################################
+## End vhost for {{ vhost.name }}
+#####################################
+
+{% endfor %}

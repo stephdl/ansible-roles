@@ -1,0 +1,11 @@
+---
+
+- name: Configure EPEL repository
+  yum_repository:
+    name: epel
+    description: "Extra Package for Enterprise Linux"
+    baseurl: http://mirrors.ircam.fr/pub/fedora/epel/$releasever/$basearch http://mir01.syntis.net/epel/$releasever/$basearch
+    gpgcheck: True
+    gpgkey: https://mir01.syntis.net/epel/RPM-GPG-KEY-EPEL-7
+    exclude: dehydrated
+  tags: repo

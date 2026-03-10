@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+
+{% for cmd in system_rc_local_shutdown_cmd %}
+{{ cmd }}
+{% endfor %}
+
+exit 0

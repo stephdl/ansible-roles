@@ -1,0 +1,13 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/onlyoffice/documentserver/{{ item }} owner=ds group=ds mode=440
+  loop:
+    - oods.json
+  notify: restart documentserver
+  tags: oo
+
+- name: Deploy nginx configuration
+  template: src=nginx_vhost.conf.j2 dest=/etc/nginx/ansible_conf.d/32-oods.conf
+  notify: reload nginx
+  tags: oo

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mongodump \
+{% if appsmith_mongo_pass is defined and appsmith_mongo_pass != False %}
+{% set appsmith_mongo_url_obj = appsmith_mongo_url | urlsplit %}
+  --uri {{ appsmith_mongo_url_obj['scheme'] }}://{{ appsmith_mongo_user }}:{{ appsmith_mongo_pass | urlencode | regex_replace('/','%2F') }}@{{ appsmith_mongo_url_obj['hostname'] }}{% if appsmith_mongo_url_obj['port'] %}:{{ appsmith_mongo_url_obj['port'] }}{% endif %}{{ appsmith_mongo_url_obj['path'] }}?{{ appsmith_mongo_url_obj['query'] }} \
+{% else %}
+  --uri {{ appsmith_mongo_url }} \
+{% endif %}
+  --out {{ appsmith_root_dir }}/backup

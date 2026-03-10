@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eo pipefail
+
+# Dump Databases
+for DB in {{ seafile_db_ccnet }} {{ seafile_db_seafile }} {{ seafile_db_seahub }}; do
+  /usr/bin/mysqldump \
+    --quick --single-transaction \
+{% if seafile_db_server not in ['127.0.0.1', 'localhost'] %}
+    --user={{ seafile_db_user }} \
+    --password={{ seafile_db_pass | quote }} \
+    --host={{ seafile_db_server }} \
+{% endif %}
+    --add-drop-table $DB | zstd -T0 -c > {{ seafile_root_dir }}/backup/$DB.sql.zst
+done
+
+# Mount fuse FS
+{{ seafile_root_dir }}/seafile-server/seaf-fuse.sh start {{ seafile_root_dir }}/fuse/

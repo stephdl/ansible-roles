@@ -1,0 +1,19 @@
+{% for zfs in zfs_snap %}
+[{{ zfs.name }}]
+  use_template = default
+  recursive = {{ zfs.recursive | default('yes') }}
+{% for key in zfs.keys() | list | difference(['name','recursive']) %}
+  {{ key }} = {{ zfs[key] }}
+{% endfor %}
+
+{% endfor %}
+
+[template_default]
+  frequently = {{ zfs_snap_frequently }}
+  hourly     = {{ zfs_snap_hourly }}
+  daily      = {{ zfs_snap_daily }}
+  weekly     = {{ zfs_snap_weekly }}
+  monthly    = {{ zfs_snap_monthly }}
+  yearly     = {{ zfs_snap_yearly }}
+  autosnap   = {{ zfs_repl_recv | ternary('no', 'yes') }}
+  autoprune  = yes

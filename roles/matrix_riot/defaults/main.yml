@@ -1,0 +1,31 @@
+---
+
+# Only change several instances are deployed on the same server
+# in which case you must also set a different riot_root_dir
+riot_id: riot
+
+# Version to deploy, and expected sha1
+riot_version: 1.7.14
+# sha1sum of the tar.gz
+riot_archive_sha1: 1f2d304bfa27ae3a67f21e5d1b527a71811623ff
+
+# Where to install riot
+riot_root_dir: /opt/matrix/riot
+
+# Default servers
+# riot_default_home_server: https://matrix.org
+riot_default_identity_server: https://vector.im
+
+# Should ansible manage upgrades or only initial install
+riot_manage_upgrade: True
+
+# Should a alilas be created, eg riot to access it on /riot
+# riot_web_alias: riot
+
+# Optional list of allowed IP address. If undefined, everyone can access it
+# riot_allowed_ip: 
+#   - 12.13.14.15
+#   - 16.17.18.19
+
+# Jitsi server to use
+# riot_jitsi_server: jitsi.example.net

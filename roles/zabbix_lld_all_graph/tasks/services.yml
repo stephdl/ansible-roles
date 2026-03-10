@@ -1,0 +1,8 @@
+---
+
+- name: Handle zabbix-lld-all-graph timer
+  systemd:
+    name: zabbix-lld-all-graph.timer
+    state: "{{ (zabbix_lld_all_graph_api_user is defined and zabbix_lld_all_graph_api_pass is defined and zabbix_lld_all_graph_api_url is defined) | ternary('started','stopped') }}"
+    enabled: "{{ (zabbix_lld_all_graph_api_user is defined and zabbix_lld_all_graph_api_pass is defined and zabbix_lld_all_graph_api_url is defined) | ternary(True,False) }}"
+  tags: zabbix

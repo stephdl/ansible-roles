@@ -1,0 +1,14 @@
+---
+
+- name: Create directory structure
+  file: path={{ item.dir }} state=directory mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ pma_root_dir }}"
+    - dir: "{{ pma_root_dir }}/web"
+    - dir: "{{ pma_root_dir }}/tmp"
+    - dir: "{{ pma_root_dir }}/sessions"
+    - dir: "{{ pma_root_dir }}/cache"
+    - dir: "{{ pma_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ pma_root_dir }}/data"
+  tags: pma

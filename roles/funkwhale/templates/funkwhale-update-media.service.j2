@@ -1,0 +1,23 @@
+[Unit]
+Description=Update funkwhale media library
+
+[Service]
+Type=oneshot
+{% for lib in funkwhale_libraries %}
+ExecStart={{ funkwhale_root_dir }}/venv/bin/python \
+            {{ funkwhale_root_dir }}/api/manage.py \
+            import_files {{ lib.id }} \
+            --no-input{% if lib.inplace %} --in-place{% endif %} \
+            "{{ lib.path }}" \
+            --recursive
+{% endfor %}
+ExecStart={{ funkwhale_root_dir }}/venv/bin/python \
+            {{ funkwhale_root_dir }}/api/manage.py \
+            check_inplace_files \
+            --no-dry-run
+ExecStart={{ funkwhale_root_dir }}/venv/bin/python \
+            {{ funkwhale_root_dir }}/api/manage.py \
+            prune_library \
+            --tracks --albums --artists --no-dry-run
+User={{ funkwhale_user }}
+Group={{ funkwhale_user }}

@@ -1,0 +1,78 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: wordpress_{{ wp_id }}
+    - php_version: "{{ wp_php_version }}"
+    - php_fpm_pool: "{{ wp_php_fpm_pool | default('') }}"
+  tags: wp
+
+- when: wp_install_mode == 'install'
+  tags: wp
+  become_user: "{{ wp_php_user }}"
+  block:
+    - name: Download wordpress
+      command: php{{ wp_php_version }} /usr/bin/wp core download --locale={{ wp_locale }}
+      failed_when: False # Ignore failure, it might have been downloaded previously
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+
+    - name: Install wordpress
+      command: >
+        php{{ wp_php_version }} /usr/bin/wp core install
+          --url={{ wp_public_url }}
+          --title=Wordpress
+          --admin_user={{ wp_admin_user }}
+          --admin_email={{ wp_admin_email }}
+          --admin_password='{{ wp_admin_pass }}'
+          --skip-email
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+
+- when: wp_install_mode == 'upgrade'
+  tags: wp
+  become_user: "{{ wp_php_user }}"
+  block:
+    - name: Upgrade wordpress
+      command: php{{ wp_php_version }} /usr/bin/wp core update
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+
+    - name: Upgrade database
+      command: php{{ wp_php_version }} /usr/bin/wp core update-db
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+
+    - name: Upgrade locales, plugins and themes
+      shell: |
+        php{{ wp_php_version }} /usr/bin/wp core language update
+        php{{ wp_php_version }} /usr/bin/wp plugin update --all
+        php{{ wp_php_version }} /usr/bin/wp theme update --all
+        php{{ wp_php_version }} /usr/bin/wp language plugin update --all
+        php{{ wp_php_version }} /usr/bin/wp language theme update --all
+      args:
+        chdir: "{{ wp_root_dir }}/web"
+
+- name: Set correct SELinux context
+  sefcontext:
+    target: "{{ wp_root_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+  when: ansible_selinux.status == 'enabled'
+  tags: wp
+
+- name: Deploy permission script
+  template: src=perms.sh.j2 dest={{ wp_root_dir }}/perms.sh mode=755
+  register: wp_perms_script
+  tags: wp
+
+- name: Set permissions
+  command: "{{ wp_root_dir }}/perms.sh"
+  when: wp_install_mode != 'none' or wp_perms_script.changed
+  tags: wp
+
+- name: Deploy pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/wordpress_{{ wp_id }} mode=750
+  loop:
+    - pre
+    - post
+  tags: wp

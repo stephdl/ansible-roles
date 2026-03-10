@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+find {{ jitsi_root_dir }}/data/recordings -maxdepth 1 -type d -mtime +30 -exec rm -rf "{}" \;

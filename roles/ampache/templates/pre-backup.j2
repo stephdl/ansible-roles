@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump --user={{ ampache_mysql_user | quote }} \
+                   --password={{ ampache_mysql_pass | quote }} \
+                   --host={{ ampache_mysql_server | quote }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ ampache_mysql_db | quote }} | zstd -c > {{ ampache_root_dir }}/backup/{{ ampache_mysql_db }}.sql.zst

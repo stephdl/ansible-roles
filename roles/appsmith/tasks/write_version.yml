@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ appsmith_version }} dest={{ appsmith_root_dir }}/meta/ansible_version
+  tags: appsmith

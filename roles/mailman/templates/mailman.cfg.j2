@@ -1,0 +1,56 @@
+[paths.ansible]
+bin_dir: {{ mailman_root_dir }}/venv/bin
+var_dir: {{ mailman_root_dir }}/data
+queue_dir: {{ mailman_root_dir }}/data/spool
+log_dir: {{ mailman_root_dir }}/log
+lock_dir: {{ mailman_root_dir }}/data/locks
+etc_dir: {{ mailman_root_dir }}/etc
+pid_file: {{ mailman_root_dir }}/tmp/master.pid
+
+[logging.root]
+path = /dev/stdout
+
+[mailman]
+layout: ansible
+site_owner: {{ mailman_site_owner }}
+default_language: {{ mailman_default_lang }}
+
+[database]
+{% if mailman_db_engine == 'postgres' %}
+class: mailman.database.postgresql.PostgreSQLDatabase
+url: postgres://{{ mailman_db_user }}:{{ mailman_db_pass | urlencode | regex_replace('/','%2F') }}@{{ mailman_db_server }}:{{ mailman_db_port }}/{{ mailman_db_name.core }}
+{% elif mailman_db_engine == 'mysql' %}
+class: mailman.database.mysql.MySQLDatabase
+url: mysql+pymysql://{{ mailman_db_user }}:{{ mailman_db_pass | urlencode | regex_replace('/','%2F') }}@{{ mailman_db_server }}:{{ mailman_db_port }}/{{ mailman_db_name.core }}?charset=utf8&use_unicode=1
+{% endif %}
+
+[archiver.hyperkitty]
+class: mailman_hyperkitty.Archiver
+enable: yes
+configuration: {{ mailman_root_dir }}/etc/hyperkitty.cfg
+
+[shell]
+history_file: $var_dir/history.py
+
+[mta]
+verp_confirmations: yes
+verp_personalized_deliveries: yes
+verp_delivery_interval: 1
+incoming: mailman.mta.postfix.LMTP
+outgoing: mailman.mta.deliver.deliver
+lmtp_host: 127.0.0.1
+lmtp_port: {{ mailman_lmtp_port }}
+smtp_host: {{ mailman_smtp_server }}
+smtp_port: {{ mailman_smtp_port }}
+{% if mailman_smtp_user is defined and mailman_smtp_pass is defined %}
+smtp_user: {{ mailman_smtp_user }}
+smtp_pass: {{ mailman_smtp_pass }}
+{% endif %}
+smtp_secure_mode: {{ mailman_smtp_tls | ternary('starttls','smtp') }}
+
+[webservice]
+hostname: localhost
+port: {{ mailman_rest_port }}
+use_https: no
+admin_user: mailmanapi
+admin_pass: {{ mailman_rest_pass }}

@@ -1,0 +1,5 @@
+---
+
+- name: restart jitsi-jibri
+  service: name=jitsi-jibri state=restarted
+

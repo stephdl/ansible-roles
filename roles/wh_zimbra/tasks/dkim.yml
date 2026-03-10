@@ -1,0 +1,9 @@
+---
+
+- name: Ensure every domain has a dkim key
+  shell: /opt/zimbra/libexec/zmdkimkeyutil -q -d {{ item }} || /opt/zimbra/libexec/zmdkimkeyutil -a -d {{ item }}
+  become_user: zimbra
+  loop: "{{ wh_mail_domains + wh_mail_aliases }}"
+  changed_when: False
+  tags: mail
+

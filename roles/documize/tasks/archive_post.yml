@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ documize_root_dir }}/archives/{{ documize_current_version }}.tar.zst --use-compress-program=zstd ./
+  args:
+    chdir: "{{ documize_root_dir }}/archives/{{ documize_current_version }}"
+    warn: False
+  environment:
+    ZSTD_CLEVEL: 10
+  tags: documize

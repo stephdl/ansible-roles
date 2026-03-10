@@ -1,0 +1,38 @@
+---
+
+# You can deploy several instances of pgadmin4 on the same host
+# pga_id must be uniq for each instance
+pga_id: 1
+# The port on which this instance will listen
+pga_port: 5050
+# List of IP / CIDR for which the port will be opened
+pga_src_ip: []
+# Root dir where the app will be installed
+pga_root_dir: /opt/pgadmin4_{{ pga_id }}
+# Version to deploy
+pga_version: '6.2'
+# URL of the wheel
+pga_pip_url: https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v{{ pga_version }}/pip/pgadmin4-{{ pga_version }}-py3-none-any.whl
+
+# When pg_auth is an empty list, pgAdmin will be in single user mode
+# You can set it to a list, eg
+# pga_auth:
+#   - oauth2
+#   - webserver
+#   - internal
+pga_auth: []
+
+# OIDC Auth (oauth2)
+pga_oidc_client_id: pgadmin4
+pga_oidc_display_name: SSO
+#pga_oidc_client_secret: XXXX
+pga_oidc_base_url: https://sso.{{ ansible_domain }}/oauth2
+pga_oidc_token_url: "{{ pga_oidc_base_url }}/token"
+pga_oidc_auth_url: "{{ pga_oidc_base_url }}/authorize"
+pga_oidc_userinfo_url: "{{ pga_oidc_base_url }}/userinfo"
+pga_oidc_scope: openid email profile
+
+# Webserver auth
+# Can be set to the header which carry the authenticated user name
+# Eg HTTP_X_FOWARDED_USER, REMOTE_USER etc.
+pga_webserver_header: HTTP_AUTH_USER

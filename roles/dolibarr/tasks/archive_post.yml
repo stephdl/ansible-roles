@@ -1,0 +1,13 @@
+---
+
+- name: Lock installation process
+  copy: content='' dest={{ dolibarr_root_dir }}/data/install.lock
+  tags: dolibarr
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ dolibarr_root_dir }}"
+    - version: "{{ dolibarr_current_version }}"
+  when: dolibarr_install_mode == 'upgrade'
+  tags: dolibarr
+

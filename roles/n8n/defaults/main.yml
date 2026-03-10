@@ -1,0 +1,66 @@
+---
+
+# Version to deploy
+n8n_version: 0.187.1
+# Root directory where n8n will be installed
+n8n_root_dir: /opt/n8n
+# User account under which n8n will run
+n8n_user: n8n
+# Should ansible manage upgrades ? If False, only the initial install will be handled
+n8n_manage_upgrade: True
+
+# Port on which n8n will bind to expose its web interface
+n8n_port: 8021
+# List of IP / CIDR allowed to access n8n_port
+n8n_src_ip: []
+
+n8n_db_server: "{{ mysql_server | default('localhost') }}"
+n8n_db_port: 3306
+n8n_db_name: n8n
+n8n_db_user: n8n
+# If not defined, a random one will be created and stored in the {{ n8n_root_dir }}/meta/ansible_dbpass
+#n8n_db_pass: S3cR3t.
+
+# Config dfirectives, will be translated to json in {{ n8n_root_dir }}/etc/n8n.json
+n8n_config_base:
+  database:
+    type: mysqldb
+    mysqldb:
+      database: "{{ n8n_db_name }}"
+      host: "{{ n8n_db_server }}"
+      port: "{{ n8n_db_port }}"
+      user: "{{ n8n_db_user }}"
+      password: "{{ n8n_db_pass }}"
+  generic:
+    timezone: "{{ system_tz | default('Europe/Paris') }}"
+  port: "{{ n8n_port }}"
+# This lets you override just part of the defaults
+n8n_config_extra: {}
+n8n_config: "{{ n8n_config_base | combine(n8n_config_extra,recursive=True) }}"
+
+# An optional list of extra module to install
+n8n_extra_node_modules: []
+
+  # The URL which will be used to reach n8n.
+# You'll likely have to change it, especially if n8n runs behind a reverse proxy
+n8n_public_url: http://{{ inventory_hostname }}:{{ n8n_port }}/
+
+# A secret key used to encrypt data in the DB. A random one is created is not defined here
+# n8n_secret_key: p@ssW0rd
+
+# If enabled, the systemd unit will have ProtectSystem=yes
+# This is recommended most of the time, but there are cases where you might want n8n to
+# be able to write under /usr
+n8n_protect_system: True
+
+# How long to keep workflow execution logs in the DB before pruning them.
+# The value is in hours. Default is 90 days
+n8n_data_max_age: 2160
+
+# Memory limit for the service, in MB
+n8n_mem_limit: 2048
+
+# Extra env var to pass to the service
+# n8n_env_var:
+#   NODE_FUNCTION_ALLOW_BUILTIN: request-promise-native
+n8n_env_var: {}

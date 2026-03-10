@@ -1,0 +1,15 @@
+[Unit]
+Description=ClamAV signature updater
+After=network.target
+
+[Service]
+Type=simple
+User=clamupdate
+Group=clamupdate
+ExecStart=/usr/bin/freshclam --stdout --daemon
+Restart=on-failure
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

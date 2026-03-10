@@ -1,0 +1,7 @@
+RewriteEngine on
+{% for ip in httpd_maintenance_ip | default([]) %}
+RewriteCond %{REMOTE_ADDR} !^{{ ip | replace('.','\.') }}
+{% endfor %}
+RewriteRule ^(.*)$ https://downtime.{{ httpd_primary_domain | default(ansible_domain) }}/ [R=301,L,E=nocache:1]
+Header always set Cache-Control "no-store, no-cache, must-revalidate" env=nocache
+Header always set Expires "Thu, 01 Jan 1970 00:00:00 GMT" env=nocache

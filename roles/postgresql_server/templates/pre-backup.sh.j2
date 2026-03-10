@@ -1,0 +1,61 @@
+#!/bin/sh
+
+set -eo pipefail
+
+DEST=/home/lbkp/pgsql
+
+{% if pg_dump_format == 'text' %}
+{% set dump_options = '-Fp -Cc' %}
+{% set dump_ext = 'sql' %}
+{% elif pg_dump_format == 'custom' %}
+{% set dump_options = '-Fc' %}
+{% set dump_ext = 'sqlc' %}
+{% else %}
+{% set dump_options = '-F' + pg_dump_format %}
+{% set dump_ext = 'dump' %}
+{% endif %}
+
+for DB in $(su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/psql -d postgres -qtc 'SELECT datname from pg_database' | grep -vP '^\s+?template[01]$'")
+do
+{% if pg_compress_cmd %}
+{% if pg_compress_cmd is search('p?xz') %}
+{% set comp_ext = 'xz' %}
+{% elif pg_compress_cmd is search('p?bzip2') %}
+{% set comp_ext = 'bz2' %}
+{% elif pg_compress_cmd is search('(pi)?gz') %}
+{% set comp_ext = 'gz' %}
+{% elif pg_compress_cmd is search('lzop') %}
+{% set comp_ext = 'lzo' %}
+{% elif pg_compress_cmd is search('lz4') %}
+{% set comp_ext = 'lz4' %}
+{% elif pg_compress_cmd is search('zst') %}
+{% set comp_ext = 'zst' %}
+{% else %}
+{% set comp_ext = 'z' %}
+{% endif %}
+  echo "Dumping $DB to $DEST/$DB.{{ dump_ext }}.{{ comp_ext }}"
+  su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dump {{ dump_options }} $DB" | /bin/nice -n 10 {{ pg_compress_cmd }} > $DEST/$DB.{{ dump_ext }}.{{ comp_ext }}
+  echo "Dumping $DB schema to $DEST/$DB.schema.{{ dump_ext }}.{{ comp_ext }}"
+  su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dump --schema-only -Fp $DB" | /bin/nice -n 10 {{ pg_compress_cmd }} > $DEST/$DB.schema.{{ dump_ext }}.{{ comp_ext }}
+{% else %}
+  echo "Dumping $DB to $DEST/$DB.{{ dump_ext }}"
+  su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dump {{ dump_options }}  $DB" > $DEST/$DB.{{ dump_ext }}
+  echo "Dumping $DB schema to $DEST/$DB.schema.sql"
+  su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dump --schema-only -Fp $DB" > $DEST/$DB.schema.sql
+{% endif %}
+done
+{% if pg_compress_cmd %}
+echo "Dumping globals to $DEST/pg_globals.sql.{{ comp_ext }}"
+su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dumpall --globals-only" | /bin/nice -n 10 {{ pg_compress_cmd }} > $DEST/pg_globals.sql.{{ comp_ext }}
+echo "Dumping all schemas to $DEST/pg_schema.sql.{{ comp_ext }}"
+su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dumpall --schema-only" | /bin/nice -n 10 {{ pg_compress_cmd }} > $DEST/pg_schema.sql.{{ comp_ext }}
+{% else %}
+echo "Dumping globals to $DEST/pg_globals.sql"
+su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dumpall --globals-only" > $DEST/pg_globals.sql
+echo "Dumping all schemas to $DEST/pg_schema.sql"
+su - postgres -c "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string,'') }}/bin/pg_dumpall --schema-only" > $DEST/pg_schema.sql
+{% endif %}
+
+echo "Dumping config to $DEST"
+cp -a /var/lib/pgsql/{{ (pg_version != 'default') | ternary(pg_version | string + '/','') }}data/postgresql.conf $DEST/
+cp -a /var/lib/pgsql/{{ (pg_version != 'default') | ternary(pg_version | string + '/','') }}data/pg_hba.conf $DEST/

@@ -1,0 +1,9 @@
+---
+
+dependencies:
+  - role: rust
+  - role: nginx
+  - role: repo_mariadb
+    when: bitwarden_db_engine == 'mysql'
+  - role: mysql_server
+    when: bitwarden_db_engine == 'mysql' and (bitwarden_db_server == 'localhost' or bitwarden_db_server == '127.0.0.1')

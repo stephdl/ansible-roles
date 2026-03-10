@@ -1,0 +1,60 @@
+---
+
+# The version to deploy
+paperless_version: 1.5.0
+# Instance ID, as you can deploy several instances on the same server
+paperless_id: 1
+# URL of the paperless archive
+paperless_archive_url: https://github.com/jonaswinkler/paperless-ng/releases/download/ng-{{ paperless_version }}/paperless-ng-{{ paperless_version }}.tar.xz
+# Expected checksum
+paperless_archive_sha1: edbbbfde6718ee7586acf1212d32ca379058cb15
+# Should ansible handle install and upgrades, or only initial install
+paperless_manage_upgrade: True
+# Root directory where paperless will be installed
+paperless_root_dir: /opt/paperless_{{ paperless_id }}
+# Paperless will monitor this dir and import files from here
+paperless_consume_dir: "{{ paperless_root_dir }}/consume"
+
+# The user under which paperless will run
+paperless_user: paperless_{{ paperless_id }}
+
+# Port used by paperless web interface
+# You should put it behind a reverse proxy
+paperless_port: 8027
+# List of IP/CIDR having access to {{ paperless_port }}
+paperless_src_ip: []
+
+# PostgreSQL database settings
+paperless_db_server: "{{ pg_server | default('localhost') }}"
+paperless_db_port: 5432
+paperless_db_name: paperless_{{ paperless_id }}
+paperless_db_user: paperless_{{ paperless_id }}
+# If the password is not defined, a random one will be generated and stored in {{ papermerge_root_dir }}/meta/ansible_dbpass
+# paperless_db_pass: S3cr3t.
+
+# Redis URL
+paperless_redis_url: redis://localhost:6379/0
+
+# Secret key to create session token. If not defined, a random one will be generated and stored in {{ papermerge_root_dir }}/meta/ansible_secret_key
+# paperless_secret_key: SecretKey
+
+# Public URL where paperless will be available
+paperless_public_url: http://{{ inventory_hostname }}
+
+# Language for the OCR process. Should be a 3 letter code for tesseract.
+# You can use several languages like fra+eng (but it will consume more CPU power)
+paperless_ocr_lang: fra
+
+# Password for the initial admin account. If not defined, a random one will be generated and stored in {{ papermerge_root_dir }}/meta/ansible_admin_pass
+# paperless_admin_pass: p@ssW0rd
+
+# If set, paperless will look for a username sent in the provided HTTP header
+# If a user is found, it'll be automatically authenticated
+# paperless_auth_header: HTTP_REMOTE_USER
+
+# Paperless can detect dates PDF to add metadata. But you might want it to ignore
+# some dates (like birthdays)
+# paperless_ignore_dates:
+#   - 1986-03-29
+#   - 1993-09-12
+paperless_ignore_dates: []

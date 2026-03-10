@@ -1,0 +1,15 @@
+---
+
+- when: diagrams_install_mode != 'none'
+  block:
+    - name: Download diagrams WAR
+      get_url:
+        url: "{{ diagrams_war_url }}"
+        dest: "{{ diagrams_root_dir }}/tmp/draw.war"
+        checksum: sha1:{{ diagrams_war_sha1 }}
+    
+    - name: Move WAR to the webapp dir
+      copy: src={{ diagrams_root_dir }}/tmp/draw.war dest={{ diagrams_root_dir }}/webapps/draw.war remote_src=True
+      notify: restart diagrams
+
+  tags: diagrams

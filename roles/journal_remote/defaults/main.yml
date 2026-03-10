@@ -1,0 +1,8 @@
+---
+
+journal_remote_port: 19532
+journal_remote_src_ip: []
+journal_remote_seal: False
+# journal_remote_crt: /path/to/cert.pem
+# journal_remote_key: /path/to/key.pem
+# journal_remote_ca: /path/to/cacert.pem

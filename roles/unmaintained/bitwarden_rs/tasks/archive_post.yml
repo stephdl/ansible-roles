@@ -1,0 +1,12 @@
+---
+
+- name: Compress previous version
+  command: tar cJf {{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }}.txz ./
+  args:
+    warn: False
+    chdir: "{{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }}"
+  tags: bitwarden
+
+- name: Remove archive dir
+  file: path={{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }} state=absent
+  tags: bitwarden

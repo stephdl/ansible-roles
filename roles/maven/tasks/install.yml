@@ -1,0 +1,46 @@
+---
+
+- name: Install java
+  yum:
+    name:
+      - java-1.8.0-openjdk
+  tags: mvn
+
+- name: Install or update maven
+  block:
+    - name: Download maven
+      get_url:
+        url: "{{ mvn_archive_url }}"
+        dest: "{{ mvn_root_dir }}/tmp/"
+        checksum: sha1:{{ mvn_archive_sha1 }}
+
+    - name: Extract maven archive
+      unarchive:
+        src: "{{ mvn_root_dir }}/tmp/apache-maven-{{ mvn_version }}-bin.tar.gz"
+        dest: "{{ mvn_root_dir }}/tmp/"
+        remote_src: True
+
+    - name: Move maven to its final location
+      synchronize:
+        src: "{{ mvn_root_dir }}/tmp/apache-maven-{{ mvn_version }}/"
+        dest: "{{ mvn_root_dir }}/apache-maven/"
+        recursive: True
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+
+  when: mvn_install_mode != 'none'
+  tags: mvn
+
+  # Needed if you use a proxy, as maven does not honor the standard http_proxy / https_proxy env vars
+- name: Configure maven
+  template: src=maven.xml.j2 dest={{ mvn_root_dir }}/apache-maven/conf/settings.xml
+  tags: jitsi,mvn
+
+- name: Write installed version
+  copy: content={{ mvn_version }} dest={{ mvn_root_dir }}/meta/ansible_version
+  tags: mvn
+
+- name: Deploy profile script
+  template: src=profile.sh.j2 dest=/etc/profile.d/maven.sh mode=755
+  tags: mvn

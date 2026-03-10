@@ -1,0 +1,561 @@
+#!/usr/bin/perl
+use JSON;
+use utf8;
+use Getopt::Long;
+use open ':encoding(utf8)';
+binmode(STDOUT, ":utf8");
+use Time::HiRes qw(usleep);
+
+# version 2020.12.13
+# read param from ENV or Getopt
+
+#version 2012.06.26
+#added item prototype exclusion by item key
+#now 42 colors available
+
+#version 2012.06.14
+#added drawtype parameter
+#added calcfunction parameter
+#showtriggers now defaults to true
+
+#version 2012.06.13.1
+#added showtriggers parameter 
+
+my $user = $ENV{ZBX_API_USER};
+my $pass = $ENV{ZBX_API_PASS};
+my $url  = $ENV{ZBX_API_URL};
+
+GetOptions(
+  'user=s'     => \$user,
+  'password=s' => \$pass,
+  'url=s'      => \$url
+);
+
+if (not defined $user){
+  die "Zabbix API user not provided\n";
+}
+if (not defined $pass){
+  die "Zabbix API passwordnot provided\n";
+}
+if (not defined $url){
+  die "Zabbix API URL not provided\n";
+}
+
+# internal
+$header = "Content-Type:application/json";
+
+our @conf = ();
+%{$conf[0]} = ();
+
+# Disk space, % used
+# only add graphs to hosts linked to this template
+$conf[0]{"template"} = qr{^Template_OS_((Linux_(Server|minimal)|iPasserelle)|Windows_(Minimal|Serveu?r)|PfSense(2)?|OPNSense)$};
+# create a graph with this name in each host
+$conf[0]{"graph"} = 'System: Filesystem usage';
+$conf[0]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[0]{"mintype"} = 1; ### 0=calculated, 1=fixed
+$conf[0]{"maxtype"} = 1; ### 0=calculated, 1=fixed
+$conf[0]{"minvalue"} = 0;
+$conf[0]{"maxvalue"} = 100;
+$conf[0]{"showtriggers"} = 1;
+$conf[0]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[0]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[0]{"regexes"}[0] = '^Used space on\s.*\(%\)';
+
+# Temp sensors
+$conf[1]{"template"} = qr{^Template_OS_(Linux_(Server|minimal)|iPasserelle)$};
+$conf[1]{"graph"} = 'Hardware: Temperatures';
+$conf[1]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[1]{"mintype"} = 0; ### 0=calculated, 1=fixed
+$conf[1]{"maxtype"} = 0; ### 0=calculated, 1=fixed
+$conf[1]{"minvalue"} = 0;
+$conf[1]{"maxvalue"} = 100;
+$conf[1]{"showtriggers"} = 1;
+$conf[1]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[1]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[1]{"regexes"}[0] = '^Temperature\s.*';
+
+# Disk I/O, bps
+$conf[2]{"template"} = qr{^Template_OS_((Linux_(Server|minimal)|iPasserelle)|Windows_(Minimal|Serveu?r))$};
+$conf[2]{"graph"} = 'System: Disks: I/O';
+$conf[2]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[2]{"mintype"} = 0; ### 0=calculated, 1=fixed
+$conf[2]{"maxtype"} = 0; ### 0=calculated, 1=fixed
+$conf[2]{"minvalue"} = 0;
+$conf[2]{"maxvalue"} = 100;
+$conf[2]{"showtriggers"} = 1;
+$conf[2]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[2]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[2]{"regexes"}[0] = '^Writes\son\s(?!(\/dev|sd[e-z]))';
+$conf[2]{"regexes"}[1] = '^Reads\son\s(?!(\/dev|sd[e-z]))';
+
+# Disk I/O, iops
+$conf[3]{"template"} = qr{^Template_OS_((Linux_(Server|minimal)|iPasserelle)|Windows_(Minimal|Serveu?r))$};
+$conf[3]{"graph"} = 'System: Disks: I/O (iops)';
+$conf[3]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[3]{"mintype"} = 0; ### 0=calculated, 1=fixed
+$conf[3]{"maxtype"} = 0; ### 0=calculated, 1=fixed
+$conf[3]{"minvalue"} = 0;
+$conf[3]{"maxvalue"} = 100;
+$conf[3]{"showtriggers"} = 1;
+$conf[3]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[3]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[3]{"regexes"}[0] = '^Write\soperations\son\s(?!(\/dev|sd[e-z]))';
+$conf[3]{"regexes"}[1] = '^Read\soperations\son\s(?!(\/dev|sd[e-z]))';
+
+# Fan and power sensors
+$conf[4]{"template"} = qr{^Template_OS_(Linux_(Server|minimal)|iPasserelle)$};
+$conf[4]{"graph"} = 'Hardware: Fan';
+$conf[4]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[4]{"mintype"} = 0; ### 0=calculated, 1=fixed
+$conf[4]{"maxtype"} = 0; ### 0=calculated, 1=fixed
+$conf[4]{"minvalue"} = 0;
+$conf[4]{"maxvalue"} = 100;
+$conf[4]{"showtriggers"} = 1;
+$conf[4]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[4]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[4]{"regexes"}[0] = '^Rotation speed for\s.*';
+
+$conf[5]{"template"} = qr{^Template_OS_(Linux_(Server|minimal)|iPasserelle)$};
+$conf[5]{"graph"} = 'Hardware: Power';
+$conf[5]{"graphtype"} = 1; ### 0=normal, 1=stacked
+$conf[5]{"mintype"} = 0; ### 0=calculated, 1=fixed
+$conf[5]{"maxtype"} = 0; ### 0=calculated, 1=fixed
+$conf[5]{"minvalue"} = 0;
+$conf[5]{"maxvalue"} = 100;
+$conf[5]{"showtriggers"} = 1;
+$conf[5]{"drawtype"} = 2; ### 0=line, 1=filled, 2=boldline, 3=dot, 4=dashed, 5=gradient
+$conf[5]{"calcfunction"} = 2; ### 1=min, 4=max, 2=avg, 7=all
+$conf[5]{"regexes"}[0] = '^Power consumption\s.*';
+
+# load a json string from a file
+sub loadjson {
+    $result = "";
+
+    # open file
+    open(FILE, "<", $_[0]);
+    # read whole file
+    while (<FILE>) {
+        $result = $result . $_;
+    }
+    close(FILE);
+
+    return $result;
+}
+
+# send json and get result (jsonstr):jsonstr
+sub sendjson {
+    $jsonstr = $_[0];
+
+    # send json to zabbix and get result
+    $res = `curl -s -i -X POST -H $header -d '$data' $url`;
+    # find start of json
+    $i = index($res, "{");
+    # get json only
+    $res_out = substr($res, $i);
+
+    return $res_out;
+}
+
+
+# authenticate with zabbix, returns the auth token
+sub authenticate {
+    # load auth json
+    $data = '{"jsonrpc":"2.0","method":"user.login","params":{"user":"'.$user.'","password":"'.$pass.'"},"id": 1,"auth":null}';
+    # send json
+    $res = sendjson($data);
+
+    # decode json
+    $dec = decode_json($res);
+    # get auth key
+    $auth_out = $dec->{"result"};
+
+    return $auth_out;
+}
+
+# get hostgroups from zabbix (auth)
+sub gethostgroups {
+    $auth_in = $_[0];
+
+    # load hostgroups json
+    $data = '{ "jsonrpc": "2.0", "method": "hostgroup.get", "params": { "output": "extend", "sortfield": "name" }, "id": 1, "auth": "" }';
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    return $dec_out
+}
+
+# get hosts from zabbix (auth, groupid)
+sub gethosts {
+    $auth_in = $_[0];
+    $groupid_in = $_[1];
+
+    # load items json
+    $data = '{ "jsonrpc": "2.0", "method": "host.get", "params": { "output": "extend", "sortfield": "name", "selectParentTemplates": "extend", "groupids": [ "" ] }, "id": 2, "auth": "" }';
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # set groupid filter (outside filter)
+    $dec->{"params"}->{"groupids"}[0] = $groupid_in;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    return $dec_out;
+}
+
+# get items from zabbix (auth, hostid)
+sub getitems {
+    $auth_in = $_[0];
+    $hostid_in = $_[1];
+
+    # load items json
+    $data = '{ "jsonrpc": "2.0", "method": "item.get", "params": { "output": "extend", "sortfield": "name", "filter": { "hostid": "" } }, "id": 1, "auth": "" }';
+
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # set hostid filter
+    $dec->{"params"}->{"filter"}->{"hostid"} = $hostid_in;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    return $dec_out
+}
+
+# get graphs from zabbix (auth, hostid, graphname)
+sub getgraphs {
+    $auth_in = $_[0];
+    $hostid_in = $_[1];
+    $graph_in = $_[2];
+
+    # load graphs json
+    $data = '{ "jsonrpc": "2.0", "method": "graph.get", "params": { "output": "extend", "sortfield": "name", "hostids": [ "" ], "filter": { "name": "" } }, "id": 3, "auth": "" }';
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # set name filter
+    $dec->{"params"}->{"filter"}->{"name"} = $graph_in;
+    # set hostid filter (outside filter)
+    $dec->{"params"}->{"hostids"}[0] = $hostid_in;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    return $dec_out;
+}
+
+# delete graph from zabbix (auth, graphid)
+sub deletegraph {
+    $auth_in = $_[0];
+    $graphid_in = $_[1];
+    
+    # load graphs json
+    $data = '{ "jsonrpc": "2.0", "method": "graph.delete", "params": [ "" ], "id": 4, "auth": "" }';
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # set graphid
+    $hash[0] = $graphid_in;
+    $dec->{"params"} = \@hash;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    print "    "."    "."    "."Graph deleted."."\n";
+
+    return $dec_out;
+}
+
+# search and delete existing graphs from zabbix (auth, hostid, graphname)
+sub deletegraphs {
+    $auth_in = $_[0];
+    $hostid_in = $_[1];
+    $graph_in = $_[2];
+
+    # get graph with name
+    $graphs = getgraphs($auth_in, $hostid_in, $graph_in);
+
+    # each graph in list
+    # filter graphs that do not belong to our hostid
+    foreach $graphi(@{$graphs->{result}}) {
+        # get graph id
+        $graphid = $graphi->{graphid};
+        # get graph name
+        $graph_name = $graphi->{name};
+
+        print "    "."    "."    "."Graph found: ".$graph_name." (".$graphid.")"."\n";
+
+        # delete the graph
+        deletegraph($auth_in, $graphid);
+    }
+}
+
+# create graph in zabbix (auth, graphname, graphtype, mintype, maxtype, minvalue, maxvalue, showtriggers, graphitems, hostid)
+sub creategraph {
+    #ymin_type = 0 -> calculated
+    #ymin_type = 1 -> fixed
+    #graphtype = 0 -> normal
+    #graphtype = 1 -> stack
+
+    #auth
+    $auth_in = $_[0];
+    #graph name
+    $graph_in = $_[1];
+    #graphtype, mintype, maxtype, minvalue, maxvalue
+    $graphtype_in = $_[2];
+    $mintype_in = $_[3];
+    $maxtype_in = $_[4];
+    $minvalue_in = $_[5];
+    $maxvalue_in = $_[6];
+    $showtriggers_in = $_[7];
+    #graphitems
+    $graphitems_in = $_[8];
+    #hostid
+    $hostid_in = $_[9];
+    
+    # load graphs json
+    $data = '{ "jsonrpc": "2.0", "method": "graph.create", "params": { "gitems": [ "" ], "name": "", "width": "900", "height": "300", "yaxismin": "0", "yaxismax": "100",
+           "show_work_period": "1", "show_triggers": "1", "graphtype": "0", "show_legend": "1", "show_3d": "0", "percent_left": "0", "percent_right": "0", "ymin_type": "0",
+           "ymax_type": "0", "ymin_itemid": "0", "ymax_itemid": "0" }, "id": 4, "auth": "" }';
+
+    # decode json
+    $dec = decode_json($data);
+    # set auth
+    $dec->{"auth"} = $auth_in;
+    # set graph name
+    $dec->{"params"}->{"name"} = $graph_in;
+    # set graphtype, mintype, maxtype, minvalue, maxvalue
+    $dec->{"params"}->{graphtype} = $graphtype_in;
+    $dec->{"params"}->{ymin_type} = $mintype_in;
+    $dec->{"params"}->{ymax_type} = $maxtype_in;
+    $dec->{"params"}->{yaxismin} = $minvalue_in;
+    $dec->{"params"}->{yaxismax} = $maxvalue_in;
+    $dec->{"params"}->{show_triggers} = $showtriggers_in;
+    # set graph gitems
+    $dec->{"params"}->{gitems} = $graphitems_in;
+    # encode back to data
+    $data = encode_json($dec);
+
+    # send json
+    $res = sendjson($data);
+    # decode json
+    $dec_out = decode_json($res);
+
+    print "    "."    "."    "."Graph created: ".$graph_in."\n";
+
+    return $dec_out;
+}
+
+
+##########
+# 42 total items
+##########
+# dark colors
+$colors[0][0] = "5299AD"; # blue1
+$colors[0][1] = "5D549A"; # violet
+$colors[0][2] = "87B457"; # green
+$colors[0][3] = "CF545E"; # red
+$colors[0][4] = "CDDA13"; # lemon
+$colors[0][5] = "5DAE99"; # turquise
+$colors[0][6] = "DD844C"; # orange
+$colors[0][7] = "AE5C8A"; # mauve
+$colors[0][8] = "BD9F83"; # ltbrown
+$colors[0][9] = "6B9BD4"; # blue2
+$colors[0][10] = "B75F73"; #red-brown
+$colors[0][11] = "646560"; # kaky
+$colors[0][12] = "335098"; # deepblue
+$colors[0][13] = "5FBFDB"; # bleu
+$colors[0][14] = "D1CE85"; # yellow
+$colors[0][15] = "909090"; # grey
+$colors[0][16] = "A16254"; # brown
+$colors[0][17] = "E8678D"; # pink
+$colors[0][18] = "62B55A"; # deepgreen
+$colors[0][19] = "A599AD"; # greypurple
+$colors[0][20] = "6A5DD9"; # violet2
+# light colors
+$colors[1][0] = "98D6E7"; # blue1
+$colors[1][1] = "9E7EDF"; # violet
+$colors[1][2] = "BDDA83"; # green
+$colors[1][3] = "EF747E"; # red
+$colors[1][4] = "EDFA33"; # lemon
+$colors[1][5] = "7EC392"; # tuquise
+$colors[1][6] = "EDA46C"; # orange
+$colors[1][7] = "DF93D7"; # mauve
+$colors[1][8] = "E2BB91"; # ltbrown
+$colors[1][9] = "A0CBEA"; # blue2
+$colors[1][10] = "CB868B"; # red-brown
+$colors[1][11] = "77897D"; # kaky
+$colors[1][12] = "5370B8"; #deepblue
+$colors[1][13] = "76DAF7"; # bleu
+$colors[1][14] = "EAD770"; # yellow
+$colors[1][15] = "AEAEAE"; # grey
+$colors[1][16] = "B97A6F"; # brown
+$colors[1][17] = "E8849D"; # pink
+$colors[1][18] = "95D36E"; # deepgreen
+$colors[1][19] = "B7AACF"; # greypurple
+$colors[1][20] = "8A7DF9"; # violet2
+
+print "\n";
+
+# authenticate with zabbix
+$auth = authenticate();
+
+# get hostgroup list
+$hostgroups = gethostgroups($auth);
+
+# each hostgroup in list
+foreach $hostgroup(@{$hostgroups->{result}}) {
+    # get groupid and name
+    $groupid = $hostgroup->{groupid};
+    $name = $hostgroup->{name};
+
+    # not templates or discovered hosts
+    next if ((lc($name) eq "templates") || (lc($name) eq "discovered hosts") || (lc($name) eq "modèles"));
+
+    # get hosts list
+    $hosts = gethosts($auth, $groupid);
+
+    print "HOSTGROUP: ".$name." (".$groupid.")"."\n";    
+
+    # each host in list
+    foreach $host(@{$hosts->{result}}) {
+        sleep(1);
+
+        # get parent templates
+        $templates = $host->{parentTemplates};
+        for (my $i = 0; $i < @conf; ++$i){
+            my $template = $conf[$i]{"template"};
+            my $graph = $conf[$i]{"graph"};
+            my $graphtype = $conf[$i]{"graphetype"};
+            my $mintype = $conf[$i]{"mintype"};
+            my $maxtype = $conf[$i]{"maxtype"};
+            my $minvalue = $conf[$i]{"minvalue"};
+            my $maxvalue = $conf[$i]{"maxvalue"};
+            my $showtriggers = $conf[$i]{"showtriggers"};
+            my $drawtype = $conf[$i]{"drawtype"};
+            my $calcfunction = $conf[$i]{"calcfunction"};
+            my @regexes = ();
+            $regexes[0] = $conf[$i]{"regexes"}[0];
+            $regexes[1] = $conf[$i]{"regexes"}[1] if (defined $conf[$i]{"regexes"}[1]);
+
+            # match results
+            $templatematch = 0;        
+                
+            # each template in list
+            # filter hosts that do not belong to our template
+            foreach $templatei(@{$templates}) {
+                # template name match
+                $templatematch = 1 if ($templatei->{name} =~ m/$template/i);
+            }
+
+            # template match
+            next unless ($templatematch);
+            # get host id and name
+            $name = $host->{name};
+            print "host $name matches $template\n";
+            $hostid = $host->{hostid};
+            # reset graph item array
+            @graph_item = ();
+
+            print "    "."HOST: ".$name." (".$hostid.")"."\n";
+        
+            #########
+            # search for existing graphs and delete if found
+            #########
+            deletegraphs($auth, $hostid, $graph);
+
+            # get item list
+            $items = getitems($auth, $hostid);
+            $count = 0;
+            # reset colorbase;
+            $colorbase = 0;
+            # reset colorindexes;
+            @colorindex = 0;
+
+            # each item in list
+            foreach $item(@{$items->{result}}) {
+                # get item name
+                $item_name = $item->{name};
+                #get item id
+                $item_id = $item->{itemid};
+                #get item key
+                $item_key = $item->{key_};
+                # reset regex index
+                $regexindex = 0;
+                # reset host item array
+                @host_item = ();
+
+                # each regex in list
+                foreach $regex(@regexes) {
+                    # item name match regex and item key is not prototype
+                    next unless (($item_name =~ m/$regex/) && ($item_key !~ m/.*{#.*}/) && (@graph_item < 19));
+                    print "    "."    "."ITEM: ".$item_name." (".$item_id.")"."\n";
+
+                    # we may have exceeded color count, if so, use other base (light, ultralight)
+                    if ($colorindex[$regexindex] > @{$colors[0]}) { 
+                        # move to next color base
+                        $colorbase++;
+                        # reset color index;
+                        $colorindex[$regexindex] = 0;
+
+                        print "    "."    "."WARNING: Not enough colors, switched to another color base"."\n";
+                    }
+
+                    $graph_item[$count]->{itemid} = $item_id;
+                    $graph_item[$count]->{drawtype} = $drawtype;
+                    $graph_item[$count]->{sortorder} = $count;
+                    $graph_item[$count]->{color} = $colors[$colorbase + $regexindex][$colorindex[$regexindex]];
+                    $graph_item[$count]->{yaxisside} = "0";  ### 0=left, 1=right;
+                    $graph_item[$count]->{type} = "0"; 
+                    $graph_item[$count]->{calc_fnc} = $calcfunction;
+
+                    # inc count;
+                    $count++;
+                    # inc colorindex;
+                    $colorindex[$regexindex]++;
+            
+                    # inc regexindex
+                    $regexindex++;
+            }
+        }
+        #########
+        # create a new graph
+        #########
+        creategraph($auth, $graph, $graphtype, $mintype, $maxtype, $minvalue, $maxvalue, $showtriggers, \@graph_item, $hostid);
+        
+        }
+    }
+}
+
+print "\n";

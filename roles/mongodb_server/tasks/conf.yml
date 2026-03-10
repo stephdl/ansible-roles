@@ -1,0 +1,40 @@
+---
+
+- name: Deploy mongorc.js for the root user
+  template: src=mongorc.js.j2 dest=/root/.mongorc.js mode=600
+  register: mongo_mongorc
+  tags: mongo
+
+- when: mongo_mongorc.changed
+  block:
+
+    - name: Temporarily disable auth
+      template: src=mongod.conf.j2 dest=/etc/mongod.conf
+      vars:
+        - mongo_auth: False
+
+    - name: Restart mongo
+      service: name=mongod state=restarted
+
+    - name: Create the admin user
+      mongodb_user:
+        database: admin
+        name: "{{ mongo_admin_user }}"
+        password: "{{ mongo_admin_pass }}"
+        login_port: "{{ mongo_port }}"
+        roles:
+          - readWriteAnyDatabase
+          - userAdminAnyDatabase
+          - dbAdminAnyDatabase
+      tags: mongo
+
+  tags: mongo
+
+- name: Deploy configuration
+  template: src=mongod.conf.j2 dest=/etc/mongod.conf
+  notify: restart mongod
+  tags: mongo
+
+- name: Deploy mongorc.js for the root user
+  template: src=mongorc.js.j2 dest=/root/.mongorc.js mode=600
+  tags: mongo

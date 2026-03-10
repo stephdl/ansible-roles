@@ -1,0 +1,6 @@
+---
+
+mongo_packages:
+  - mongodb-org-server
+  - mongodb-org
+  - python-pip

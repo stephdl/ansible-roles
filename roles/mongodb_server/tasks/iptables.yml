@@ -1,0 +1,9 @@
+---
+
+- name: Handle mongodb port
+  iptables_raw:
+    name: mongo_ports
+    state: "{{ (mongo_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ mongo_port }} -s {{ mongo_src_ip | join(',') }} -j ACCEPT\n"
+  tags: firewall,mongo
+

@@ -1,0 +1,164 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - git
+      - gcc
+      - openssl-devel
+      - libffi-devel
+      - openldap-devel
+      - python3-devel
+      - python3-pip
+      - python3-virtualenv
+      - python-setuptools
+      - postgresql-devel
+      - postgresql11
+  tags: psono
+
+- when: psono_server_install_mode != 'none'
+  tags: psono
+  block:
+    - name: Download psono
+      get_url:
+        url: "{{ item.url }}"
+        dest: "{{ psono_root_dir }}/tmp"
+        checksum: sha1:{{ item.sha1 }}
+      loop:
+        - url: "{{ psono_server_archive_url }}"
+          sha1: "{{ psono_server_archive_sha1 }}"
+    
+    - name: Extract server archive
+      unarchive:
+        src: "{{ psono_root_dir }}/tmp/psono-server-v{{ psono_server_version }}.tar.gz"
+        dest: "{{ psono_root_dir }}/tmp/"
+        remote_src: True
+    
+    - name: Move files to their final location
+      synchronize:
+        src: "{{ psono_root_dir }}/tmp/psono-server-v{{ psono_server_version }}/"
+        dest: "{{ psono_root_dir }}/server/app/"
+        recursive: True
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+      notify: restart psono-server
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ psono_db_user }}"
+    password: "{{ psono_db_pass }}"
+    login_host: "{{ psono_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: psono
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ psono_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ psono_db_user }}"
+    login_host: "{{ psono_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: psono
+
+- name: Enable required PostgreSQL extensions
+  postgresql_ext:
+    name: "{{ item }}"
+    db: "{{ psono_db_name }}"
+    login_host: "{{ psono_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  loop:
+    - pgcrypto
+    - ltree
+  tags: psono
+
+- name: Create the virtualenv
+  pip:
+    name:
+      - gunicorn
+    state: "{{ (psono_server_install_mode == 'none') | ternary('present', 'latest') }}"
+    virtualenv: "{{ psono_root_dir }}/server/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  tags: psono
+
+- name: Install python modules in the virtualenv
+  pip:
+    requirements: "{{ psono_root_dir }}/server/app/requirements.txt"
+    state: "{{ (psono_server_install_mode == 'none') | ternary('present', 'latest') }}"
+    virtualenv: "{{ psono_root_dir }}/server/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  tags: psono
+
+- name: Deploy systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - psono-server.service
+    - psono-cleartoken.service
+    - psono-cleartoken.timer
+  register: psono_units
+  notify: restart psono-server
+  tags: psono
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: psono_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: psono
+
+- when: psono_client_install_mode != 'none'
+  tags: psono
+  block:
+    - name: Download psono client
+      get_url:
+        url: "{{ item.url }}"
+        dest: "{{ psono_root_dir }}/tmp/client.zip"
+        checksum: sha1:{{ item.sha1 }}
+      loop:
+        - url: "{{ psono_client_archive_url }}"
+          sha1: "{{ psono_client_archive_sha1 }}"
+    
+    - name: Remove previous version
+      file: path={{ psono_root_dir }}/client state=absent
+    - file: path={{ psono_root_dir }}/client state=directory
+    
+    - name: Extract archive
+      unarchive:
+        src: "{{ psono_root_dir }}/tmp/client.zip"
+        dest: "{{ psono_root_dir }}/client/"
+        remote_src: True
+
+- when: psono_admin_install_mode != 'none'
+  tags: psono
+  block:
+    - name: Download psono admin
+      get_url:
+        url: "{{ item.url }}"
+        dest: "{{ psono_root_dir }}/tmp/admin.zip"
+        checksum: sha1:{{ item.sha1 }}
+      loop:
+        - url: "{{ psono_admin_archive_url }}"
+          sha1: "{{ psono_admin_archive_sha1 }}"
+    
+    - name: Remove previous version
+      file: path={{ psono_root_dir }}/admin state=absent
+    - file: path={{ psono_root_dir }}/admin state=directory
+    
+    - name: Extract archive
+      unarchive:
+        src: "{{ psono_root_dir }}/tmp/admin.zip"
+        dest: "{{ psono_root_dir }}/admin/"
+        remote_src: True
+  
+- name: Install backup pre/post hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/psono.sh mode=700
+  loop:
+    - pre
+    - post
+  tags: psono

@@ -1,0 +1,5 @@
+[Service]
+LimitNOFILE={{ mysql_open_files_limit | default('8192') }}
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=1

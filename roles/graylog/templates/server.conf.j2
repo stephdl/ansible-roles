@@ -1,0 +1,60 @@
+is_master = {{ graylog_is_master | ternary('true','false') }}
+node_id_file = {{ graylog_root_dir }}/state/node-id
+password_secret = {{ graylog_pass_secret }}
+root_password_sha2 = {{ graylog_admin_pass | hash('sha256') }}
+root_email = {{ system_admin_email | default('""') }}
+root_timezone = {{ system_tz | default('UTC') }}
+http_bind_address = 0.0.0.0:{{ graylog_api_port }}
+{% if graylog_external_uri is defined %}
+http_external_uri = {{ graylog_external_uri }}{% if not graylog_external_uri is search('/$') %}/{% endif %}
+
+{% endif %}
+http_enable_gzip = false
+{% if graylog_http_src_ip | length > 0 and '0.0.0.0/0' not in graylog_http_src_ip %}
+trusted_proxies = {% for host in graylog_http_src_ip %}{{ host }}{% if not host is search('/\d+$') %}/32{% endif %}{% if not loop.last %},{% else %}{% endif %}{% endfor %}
+
+{% endif %}
+elasticsearch_hosts = {{ graylog_es_hosts | join(',') }}
+elasticsearch_cluster_name = {{ graylog_es_cluster_name | default('elasticsearch') }}
+{% if graylog_mongo_pass is defined and graylog_mongo_pass != False and graylog_mongo_url | length == 1 %}
+mongodb_uri = {% for url in graylog_mongo_url %}{{ url | urlsplit('scheme') }}://{{ graylog_mongo_user }}:{{ graylog_mongo_pass | urlencode | regex_replace('/','%2F') }}@{{ url | urlsplit('hostname') }}{% if url | urlsplit('port') %}:{{ url | urlsplit('port') }}{% endif %}{{ url | urlsplit('path') }}?{{ url | urlsplit('query') }}{% if not loop.last %},{% endif %}
+{% endfor %}
+{% else %}
+mongodb_uri = {{ graylog_mongo_url | join(',') }}
+{% endif %}
+
+message_journal_enabled = true
+
+transport_email_enabled = true
+transport_email_hostname = localhost
+transport_email_port = 25
+transport_email_use_auth = false
+transport_email_from_email = graylog@{{ ansible_domain }}
+{% if graylog_external_uri is defined %}
+transport_email_web_interface_url = {{ graylog_external_uri }}
+{% endif %}
+
+{% if system_proxy is defined and system_proxy != '' %}
+http_proxy_uri = {{ system_proxy }}
+http_non_proxy_hosts = {{ (system_proxy_no_proxy | default([]) + ansible_all_ipv4_addresses) | join(',') }}
+{% endif %}
+
+bin_dir = {{ graylog_root_dir }}/app/bin
+data_dir = {{ graylog_root_dir }}/data
+plugin_dir = {{ graylog_root_dir }}/app/plugin
+message_journal_dir = {{ graylog_root_dir }}/data/journal
+message_journal_max_size = {{ graylog_journal_max_size }}gb
+
+allow_leading_wildcard_searches = true
+
+{% if 'dnsresolver' in graylog_plugins_to_install %}
+dns_resolver_enabled = true
+{% endif %}
+
+{% if graylog_tls_versions | length > 0 %}
+enabled_tls_protocols = {{ graylog_tls_versions | join(',') }}
+{% endif %}
+
+{% if graylog_es_version is defined %}
+elasticsearch_version = {{ graylog_es_version }}
+{% endif %}

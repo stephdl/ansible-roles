@@ -1,0 +1,11 @@
+{% if pg_version != 'default' %}
+[postgresql]
+baseurl = https://download.postgresql.org/pub/repos/yum/{{ pg_version }}/redhat/rhel-$releasever-$basearch
+gpgcheck = 1
+gpgkey = https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG-{{ pg_version }}
+name = PostgreSQL
+{% if ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('8', '>=') %}
+# Workaround a bug in dnf which would make the default module mask packages from postgres repo
+module_hotfixes = true
+{% endif %}
+{% endif %}

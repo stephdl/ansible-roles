@@ -1,0 +1,12 @@
+{% for server in ntp_servers %}
+server {{ server }} iburst
+{% endfor %}
+keyfile {{ ntp_chrony_keyfile }}
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+{% if samba_role is defined and samba_role in ['dc','rodc'] %}
+# Running Samba DC
+ntpsigndsocket /var/lib/samba/ntp_signd
+allow all
+{% endif %}

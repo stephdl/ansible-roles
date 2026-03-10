@@ -1,0 +1,8 @@
+---
+
+- name: Handle pgAdmin4 port
+  iptables_raw:
+    name: pga_port
+    state: "{{ (pga_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ pga_port }} -s {{ pga_src_ip | join(',') }} -j ACCEPT"
+  tags: pgadmin4

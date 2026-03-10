@@ -1,0 +1,97 @@
+--- /opt/zimbra/libexec/zmpostfixpolicyd.bak	2019-07-18 21:24:39.000000000 +0200
++++ /opt/zimbra/libexec/zmpostfixpolicyd	2020-11-23 10:02:37.956775250 +0100
+@@ -30,7 +30,7 @@
+ my $syslog_facility="mail";
+ my $syslog_options="pid";
+ our $syslog_priority="info";
+-our ($verbose, %attr, @ldap_url, $ldap_starttls_supported, $postfix_pw);
++our ($verbose, %attr, @ldap_url, $ldap_starttls_supported, $postfix_pw, $zimbra_pw, $delim_re);
+ my ($option, $action, $ldap_url, @val);
+ 
+ $ENV{'HOME'}='/opt/zimbra';
+@@ -43,14 +43,17 @@
+ chomp ($ldap_starttls_supported);
+ $postfix_pw = $localxml->{key}->{ldap_postfix_password}->{value};
+ chomp($postfix_pw);
++$zimbra_pw = $localxml->{key}->{zimbra_ldap_password}->{value};
++chomp($zimbra_pw);
+ $ldap_url = $localxml->{key}->{ldap_url}->{value};
+ chomp($ldap_url);
+ @ldap_url = split / /, $ldap_url;
+ 
+ sub smtpd_access_policy {
+-  my($domain, $ldap, $mesg, $user, $daddr, @attrs, $result);
++  my($domain, $ldap, $mesg, $user, $canon_user, $daddr, @attrs, $result);
+   $daddr = lc $attr{recipient};
+   ($user, $domain) = split /\@/, lc $attr{recipient};
++  $canon_user = (defined $delim_re) ? (split /$delim_re/, $user)[0] : $user;
+   syslog $syslog_priority, "Recipient Domain: %s", $domain if $verbose;
+   syslog $syslog_priority, "Recipient userid: %s", $user if $verbose;
+   foreach my $url (@ldap_url) {
+@@ -90,8 +93,9 @@
+       $mesg = $ldap->search_s(
+                 "",
+                 LDAP_SCOPE_SUBTREE,
+-                "(&(|(zimbraMailDeliveryAddress=$user"."$robject)(zimbraMailDeliveryAddress=$daddr)(zimbraMailAlias=$user".
+-                "$robject)(zimbraMailAlias=$daddr)(zimbraMailCatchAllAddress=$user"."$robject)(zimbraMailCatchAllAddress=$robject)".
++                "(&(|(zimbraMailDeliveryAddress=$user"."$robject)(zimbraMailDeliveryAddress=$canon_user"."$robject)".
++                "(zimbraMailDeliveryAddress=$daddr)(zimbraMailAlias=$user"."$robject)(zimbraMailAlias=$canon_user"."$robject)".
++                "(zimbraMailAlias=$daddr)(zimbraMailCatchAllAddress=$user"."$robject)(zimbraMailCatchAllAddress=$robject)".
+ 		"(zimbraMailCatchAllAddress=$daddr))(zimbraMailStatus=enabled))",
+                 \@attrs,
+                 0,
+@@ -140,6 +144,54 @@
+ #
+ select((select(STDOUT), $| = 1)[0]);
+ 
++# Try to get recipient delimiter, if defined
++# This will allow checking for valid recipient on alias domains
++# even for recipient using delimiter. Eg user+foobar@alias.example.org
++# will correctly check if user@example.org is valid
++my ($ldap, $mesg, @attrs, $result);
++foreach my $url (@ldap_url) {
++  $ldap=Net::LDAPapi->new(-url=>$url);
++  if ( $ldap_starttls_supported ) {
++    $mesg = $ldap->start_tls_s();
++      if ($mesg != 0) {
++        next;
++      }
++  }
++  $mesg = $ldap->bind_s("uid=zimbra,cn=admins,cn=zimbra",$zimbra_pw);
++  if ($mesg != 0) {
++    next;
++  } else {
++    last;
++  }
++}
++if ($mesg == 0){
++  @attrs=('zimbraMtaRecipientDelimiter');
++  $mesg = $ldap->search_s(
++            "",
++            LDAP_SCOPE_SUBTREE,
++            "(&(cn=config)(objectClass=zimbraGlobalConfig))",
++            \@attrs,
++            0,
++            $result
++          );
++  my $ent = $ldap->first_entry();
++  if ($ent != 0){
++    my $delim = ($ldap->get_values('zimbraMtaRecipientDelimiter'))[0];
++    if ($delim ne ''){
++      $delim_re = qr{[$delim]};
++      syslog $syslog_priority, "Recipient delimiter regex is $delim_re" if $verbose;
++    } else {
++      syslog $syslog_priority, "Recipient delimiter is an empty string so it won't be used" if $verbose;
++    }
++  } else {
++    syslog $syslog_priority, "Recipient delimiter not found" if $verbose;
++  }
++  # Unbind, everything else will bind with the postfix LDAP user
++  $ldap->unbind;
++} else {
++  syslog $syslog_priority, "Couldn't bind with zimbra account, recipient delimiter won't be used" if $verbose;
++}
++
+ #
+ # Receive a bunch of attributes, evaluate the policy, send the result.
+ #

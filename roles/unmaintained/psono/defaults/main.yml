@@ -1,0 +1,94 @@
+---
+
+# Version to deploy
+psono_server_version: 1.13.5
+psono_server_archive_url: https://gitlab.com/psono/psono-server/-/archive/v{{ psono_server_version }}/psono-server-v{{ psono_server_version }}.tar.gz
+psono_server_archive_sha1: 49ebacb389e01b7a6007b6c94468d60714cae658
+
+psono_client_version: 1.15.6
+psono_client_archive_url: https://psono.jfrog.io/psono/psono/client/v{{ psono_client_version }}/webclient.zip
+psono_client_archive_sha1: 8ab1a2270afb6a3542bdb618b4c11dc21f869a40
+
+psono_admin_version: 1.1.0
+psono_admin_archive_url: https://psono.jfrog.io/psono/psono/admin-client/v1.1.0/webclient.zip
+psono_admin_archive_sha1: 43b5621c43da2604eb1ec827ab8f9b7d8729aef0
+
+# Should ansible manage upgrades or only initial install
+psono_manage_upgrade: True
+
+# Directory where psono will be installed
+psono_root_dir: /opt/psono
+
+# Psono database settings
+psono_db_server: "{{ pg_server | default('localhost') }}"
+psono_db_port: 5432
+psono_db_name: psono
+psono_db_user: psono
+# Will be generated if not defined
+#psono_db_pass: S3crEt.
+
+# Unix account under which psono will run
+psono_user: psono
+
+# TCP port on which psono server will bind
+psono_server_port: 5130
+# List of IP / cidr for which the port will be opened
+psono_server_src_ip: []
+# LIst of IP / cidr for which access through nginx will be allowed
+psono_web_src_ip: []
+
+# psono_secret_key: 
+# psono_activtion_link_secret:
+# psono_db_secret:
+# psono_email_secret_salt:
+# psono_private_key:
+# psono_public_key:
+
+psono_allowed_hosts:
+  - '*'
+psono_allowed_domains:
+  - "{{ ansible_domain }}"
+  - "{{ psono_public_url | urlsplit('hostname') }}"
+
+psono_allow_lost_password: False
+# Should user registration be allowed
+psono_allow_registration: True
+# Optional list of email domains which will be accepted for registration
+# psono_registration_email_filter: []
+
+# Public URL on which you can access psono
+# will most likely need to be adapted (point on your rev proxy)
+psono_public_url: http://{{ inventory_hostname }}:{{ psono_server_port }}
+
+# Certificate for nginx proxy
+# You can either specify a path for cert and key
+# psono_cert_path: /path/to/cert.pem
+# psono_key_path: /path/to/key.pem
+#
+# Or you can set this to the name of a certificate obtained with dehydrated
+# psono_letsencrypt_cert: psono.domain.tld
+#
+# Or you can just set it to True so Let's Encrypt cert will be created based on the hostname in the public_url
+# psono_letsencrypt_cert: True
+psono_letsencrypt_cert: False
+
+# From email used
+psono_from_email: psono-noreply@{{ ansible_domain }}
+
+# Psono can use redis to cache stuff
+psono_redis_server: redis://localhost:6379/3
+
+# config.json for both client and admin
+psono_client_base_config:
+  backend_servers:
+    - title: Psono Password Manager
+      url: "{{ psono_public_url | default('') }}"
+  base_url: "{{ psono_public_url | default('') }}"
+  allow_custom_server: False
+  allow_registration: "{{ psono_allow_registration }}"
+  allow_lost_password: "{{ psono_allow_lost_password }}"
+  authentication_methods:
+    - AUTHKEY
+psono_client_extra_conf: {}
+psono_client_conf: "{{ psono_client_base_config | combine(psono_client_extra_conf, recursive=True) }}"
+

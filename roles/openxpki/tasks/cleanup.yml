@@ -1,0 +1,24 @@
+---
+
+- name: List sources
+  shell: find {{ pki_root_dir }}/src -maxdepth 1 -mindepth 1 -exec basename "{}" \;
+  register: pki_sources
+  changed_when: False
+  tags: pki
+
+  # Note : we keep sources and tgz for the currently installed version
+- name: Remove previous sources
+  file: path={{ pki_root_dir }}/src/{{ item }} state=absent
+  loop: "{{ pki_sources.stdout_lines }}"
+  when:
+    - item != 'openxpki-' ~ pki_version
+    - item != 'openxpki-' ~ pki_version ~ '.tar.gz'
+    - item != 'openxpki-config-' ~ pki_config_version
+    - item != 'openxpki-config-' ~ pki_config_version ~ '.tar.gz'
+  tags: pki
+
+- name: Remove obsolete and temp files and directories
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ pki_root_dir }}/db_dumps"
+  tags: pki

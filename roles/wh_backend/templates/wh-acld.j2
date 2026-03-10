@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+while true; do
+{% for client in wh_clients %}
+{% for app in client.apps %}
+  if [ -e /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp/reset -o -e /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp/reset.txt ]; then
+    echo Reseting permissions for {{ client.name }} - {{ app.name }}
+    sh /opt/wh/{{ client.name }}/apps/{{ app.name }}/bin/perms.sh
+    echo Permissions for {{ client.name }} - {{ app.name }} have been reseted
+    rm -f /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp/reset /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp/reset.txt
+  fi
+{% endfor %}
+{% endfor %}
+  sleep 5
+done

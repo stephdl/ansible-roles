@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ nd_root_dir }}"
+    - version: "{{ nd_current_version }}"
+  tags: navidrome

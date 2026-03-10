@@ -1,0 +1,30 @@
+---
+
+- name: Create directories
+  file:
+    path: "{{ funkwhale_root_dir }}/{{ item.dir }}"
+    state: directory
+    owner: "{{ item.user | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop:
+    - dir: /
+    - dir: api
+    - dir: front
+    - dir: data
+    - dir: data/media
+    - dir: data/music
+    - dir: data/static
+    - dir: config
+      group: "{{ funkwhale_user }}"
+      mode: 750
+    - dir: archives
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: tmp
+      mode: 700
+    - dir: backup
+      mode: 700
+  tags: funkwhale
+

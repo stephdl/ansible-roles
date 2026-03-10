@@ -1,0 +1,31 @@
+---
+
+# Only change several instances are deployed on the same server
+# in which case you must also set a different element_root_dir
+element_id: element
+
+# Version to deploy, and expected sha1
+element_version: 1.9.5
+# sha1sum of the tar.gz
+element_archive_sha1: ca6f65fa29a78bcef905a2aef0616840be32b63f
+
+# Where to install element
+element_root_dir: /opt/matrix/element
+
+# Default servers
+# element_default_home_server: https://matrix.org
+element_default_identity_server: https://vector.im
+
+# Should ansible manage upgrades or only initial install
+element_manage_upgrade: True
+
+# Should a alilas be created, eg element to access it on /element
+# element_web_alias: element
+
+# Optional list of allowed IP address. If undefined, everyone can access it
+# element_allowed_ip: 
+#   - 12.13.14.15
+#   - 16.17.18.19
+
+# Jitsi server to use
+# element_jitsi_server: jitsi.example.net

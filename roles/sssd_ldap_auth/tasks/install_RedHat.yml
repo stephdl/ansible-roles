@@ -1,0 +1,9 @@
+---
+
+- name: Install sssd and the needed tools
+  yum:
+    name:
+      - sssd
+      - oddjob-mkhomedir
+      - authconfig
+  tags: auth

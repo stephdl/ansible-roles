@@ -1,0 +1,40 @@
+pidfile="/var/run/turnserver/turnserver.pid"
+verbose
+fingerprint
+{% if turnserver_auth_secret is defined %}
+use-auth-secret
+static-auth-secret {{ turnserver_auth_secret }}
+{% else %}
+lt-cred-mech
+{% endif %}
+no-sslv2
+no-sslv3
+no-loopback-peers
+no-multicast-peers
+realm {{ turnserver_realm | default(ansible_domain) }}
+proc-user turnserver
+proc-group turnserver
+syslog
+
+{% for ip in turnserver_listen_ip %}
+listening-ip {{ ip }}
+{% endfor %}
+
+{% if not turnserver_allow_non_tls %}
+no-tcp
+no-udp
+{% endif %}
+
+listening-port {{ turnserver_port }}
+alt-listening-port {{ turnserver_alt_port }}
+
+{% if turnserver_tls %}
+tls-listening-port {{ turnserver_tls_port }}
+alt-tls-listening-port {{ turnserver_alt_tls_port }}
+cert {{ turnserver_tls_cert }}
+pkey {{ turnserver_tls_key }}
+{% endif %}
+
+{% if turnserver_external_ip is defined %}
+external-ip {{ turnserver_external_ip }}
+{% endif %}

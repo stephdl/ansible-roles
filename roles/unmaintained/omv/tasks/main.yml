@@ -1,0 +1,168 @@
+---
+- name: Install needed packages
+  apt:
+    name:
+      - libsasl2-modules-gssapi-mit
+      - libwbclient-sssd
+      - python-lxml # Needed for XML file manipulation
+      - patch       # Needed to patch session.inc to support Auth HTTP
+  when: ad_auth | default(False)
+  tags: omv
+
+- name: Install Extra repo
+  apt: deb=https://github.com/OpenMediaVault-Plugin-Developers/packages/raw/master/openmediavault-omvextrasorg_latest_all4.deb
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  tags: omv
+
+- name: Check if we've joined the domaine
+  command: net ads info
+  register: omv_joined
+  ignore_errors: True
+  changed_when: False
+  when: ad_auth | default(False)
+  tags: omv
+
+- name: Configure OMV system
+  xml:
+    path: /etc/openmediavault/config.xml
+    xpath: /config/{{ item.element }}
+    value: "{{ item.value }}"
+  with_items:
+    - element: services/smb/enable
+      value: 1
+    - element: services/smb/workgroup
+      value: "{{ ad_domain | default(samba_domain) }}"
+    - element: services/smb/loglevel
+      value: 3
+    - element: services/smb/extraoptions
+      value: |
+        security = ads
+        realm = {{ ad_realm | default(samba_realm) }}
+        kerberos method = secrets and keytab
+        idmap config {{ ad_realm | default(samba_realm) }} : backend  = sss
+        idmap config *:backend = tdb
+        idmap config *:range = 1000-19999
+        logging = systemd
+    - element: system/powermanagement/powerbtn
+      value: shutdown
+    - element: services/ssh/enable
+      value: 1
+    - element: services/ssh/permitrootlogin
+      value: "{{ sshd_permit_root_login | default(False) | ternary('1','0') }}"
+  register: omv_conf
+  when: ad_auth | default(False)
+  tags: omv
+
+- name: Configure proxy
+  xml:
+    path: /etc/openmediavault/config.xml
+    xpath: /config/proxy/{{ item.1 }}/{{ item.0.element }}
+    value: "{{ item.0.value }}"
+  with_nested:
+    - - element: enable
+        value: 1
+      - element: host
+        value: "{{ system_proxy | urlsplit('hostname') }}"
+      - element: port
+        value: "{{ system_proxy | urlsplit('port') }}"
+    - - http
+      - https
+      - ftp
+  when: system_proxy is defined and system_proxy != ''
+  tags: omv
+
+- name: Disable proxy
+  xml:
+    path: /etc/openmediavault/config.xml
+    xpath: /config/proxy/{{ item }}/enable
+    value: 0
+  with_items:
+    - http
+    - https
+    - ftp
+  when: system_proxy is not defined or system_proxy == ''
+  tags: omv
+
+- name: Expand configuration
+  command: /usr/share/openmediavault/mkconf/{{ item }}
+  with_items:
+    - samba
+    - profile
+    - timezone
+  when: ad_auth | default(False) and omv_conf.changed
+  tags: omv
+
+- name: Start and enable smbd
+  service: name=smbd state=started enabled=True
+  tags: omv
+
+- name: Join the domain with net ads to populate secrets.tdb
+  command: net ads join {{ ad_realm | default(samba_realm) | upper }} -U {{ ad_admin | default('Administrator') }}%{{ samba_dc_admin_pass }}
+  no_log: True
+  when: ad_auth | default(False) and omv_joined.rc != 0
+  tags: omv
+
+- name: Rise max uid and gid so domain accounts are available (and only domain accounts
+  lineinfile:
+    path: /etc/login.defs
+    regexp: "^{{ item.0 }}_{{ item.1.minmax }}"
+    line: "{{ item.0 }}_{{ item.1.minmax }}        {{ item.1.value }}"
+  with_nested:
+    - - GID
+      - UID
+    - - minmax: MAX
+        value: 2000200000
+      - minmax: MIN
+        value: 20000
+  when: ad_auth | default(False)
+  tags: omv
+
+- name: Install pre and post backup scripts
+  template: src=omv_{{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/omv.sh mode=755
+  with_items:
+    - pre
+    - post
+  tags: omv
+
+- name: Handle services ports
+  iptables_raw:
+    name: "{{ item.description }}"
+    state: "{{ (item.ports | length > 0) | ternary('present','absent') }}"
+    rules: "{% if 'tcp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'tcp' %}-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT\n{% endif %}
+            {% if 'udp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'udp' %}-A INPUT -m state --state NEW -p udp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT{% endif %}"
+  when: iptables_manage | default(True)
+  with_items:
+    - ports: "{{ omv_http_ports }}"
+      description: omv_http_ports
+      src: "{{ omv_http_src_ip }}"
+    - ports: "{{ omv_rsyncd_ports }}"
+      description: omv_rsyncd_ports
+      src: "{{ omv_rsyncd_src_ip }}"
+    - ports: "{{ omv_smb_ports }}"
+      description: omv_smb_ports
+      src: "{{ omv_smb_src_ip }}"
+    - ports: "{{ omv_ftp_ports }}"
+      description: omv_ftp_ports
+      src: "{{ omv_ftp_src_ip }}"
+    - ports: "{{ omv_nfs_ports }}"
+      description: omv_nfs_ports
+      src: "{{ omv_nfs_src_ip }}"
+      proto: [tcp,udp]
+  tags: [firewall,omv]
+
+- name: Patch the web interface to support HTTP auth
+  patch:
+    src: auth_http.patch
+    dest: /usr/share/php/openmediavault/session.inc
+    backup: True
+  when: omv_auth_http | default(False)
+  tags: omv
+
+- name: Patch the engine daemon to prevent resetting file owner
+  patch:
+    src: dont_reset_owner.patch
+    dest: /usr/share/openmediavault/engined/rpc/sharemgmt.inc
+    backup: True
+  notify: restart openmediavault-engined
+  tags: omv

@@ -1,0 +1,47 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if zabbix_server_backup_hooks %}
+mkdir -p /home/lbkp/zabbix
+# First, backup the schema
+/usr/bin/mysqldump --user={{ zabbix_server_db_user | quote }} \
+                   --password={{ zabbix_server_db_pass | quote }} \
+                   --host={{ zabbix_server_db_server | quote }} \
+                   --port={{ zabbix_server_db_port }} \
+                   --no-data \
+                   --quick --single-transaction \
+                   --add-drop-table {{ zabbix_server_db_name | quote }} | zstd -T0 -c > /home/lbkp/zabbix/{{ zabbix_server_db_name }}_schema.sql.zst
+
+# Then, backup data
+{% if zabbix_server_backup_on_full_only %}
+if [[ "$1" == "full" ]]; then
+  /usr/bin/mysqldump --user={{ zabbix_server_db_user | quote }} \
+                     --password={{ zabbix_server_db_pass | quote }} \
+                     --host={{ zabbix_server_db_server | quote }} \
+                     --port={{ zabbix_server_db_port }} \
+                     --no-create-info \
+                     --quick --single-transaction \
+                     --add-locks \
+                     {{ zabbix_server_db_name | quote }} | zstd -T0 -c > /home/lbkp/zabbix/{{ zabbix_server_db_name }}_data.sql.zst
+else
+{% endif %}
+  /usr/bin/mysqldump --user={{ zabbix_server_db_user | quote }} \
+                     --password={{ zabbix_server_db_pass | quote }} \
+                     --host={{ zabbix_server_db_server | quote }} \
+                     --port={{ zabbix_server_db_port }} \
+                     --no-create-info \
+{% if zabbix_server_backup_on_full_only %}
+{% for table in ['events', 'history', 'history_uint', 'history_str', 'history_text', 'trends', 'trends_uint'] %}
+                     --ignore-table={{ zabbix_server_db_name }}.{{ table }} \
+{% endfor %}
+{% endif %}
+                     --quick --single-transaction \
+                     --add-locks \
+                   {{ zabbix_server_db_name | quote }} | zstd -T0 -c > /home/lbkp/zabbix/{{ zabbix_server_db_name }}_data.sql.zst
+{% if zabbix_server_backup_on_full_only %}
+fi
+{% endif %}
+{% else %}
+# pre and post backup hooks are disabled on this host
+{% endif %}

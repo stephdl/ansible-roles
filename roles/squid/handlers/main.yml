@@ -1,0 +1,23 @@
+---
+
+- name: reload squid
+  service: name=squid state=reloaded
+
+- name: restart squid
+  service: name=squid state=restarted
+
+- name: restart c-icap
+  service: name=c-icap state={{ squid_scan_av | ternary('restarted', 'stopped') }}
+
+- name: restart squid-clamd
+  service: name=squid-clamd state={{ squid_scan_av | ternary('restarted', 'stopped') }}
+
+- name: restart ufdb
+  service: name={{ squid_ufdb_unit.stat.exists | ternary('ufdbGuard','ufdb') }} state={{ squid_filter_url | ternary('restarted', 'stopped') }}
+
+- name: update ufdb
+  command: /usr/local/bin/ufdb_update.sh
+  notify: restart ufdb
+
+- name: restart ufdb
+  service: name={{ squid_ufdb_unit.stat.exists | ternary('ufdbGuard','ufdb') }} state={{ squid_filter_url | ternary('reloaded', 'stopped') }}

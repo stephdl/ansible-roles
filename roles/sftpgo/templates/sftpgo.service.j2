@@ -1,0 +1,33 @@
+[Unit]
+Description=SFTPGo Server
+After=network.target mariadb.service mysqld.service postgresql.service
+
+[Service]
+User={{ sftpgo_user }}
+Group={{ sftpgo_user }}
+Type=simple
+WorkingDirectory={{ sftpgo_root_dir }}/data
+ExecStart={{ sftpgo_root_dir }}/app/sftpgo --config-file={{ sftpgo_root_dir }}/etc/sftpgo.yml --config-dir={{ sftpgo_root_dir }}/etc --log-file-path='' serve
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+Restart=always
+StartLimitInterval=0
+RestartSec=10s
+PrivateTmp=true
+PrivateDevices=yes
+ProtectSystem=strict
+ReadWritePaths={{ sftpgo_root_dir }}/etc/ {{ sftpgo_root_dir }}/data/ {{ sftpgo_root_dir }}/tmp
+ProtectHome=yes
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+UMask=077
+MemoryLimit=2048M
+# Allow binding on privileged ports
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

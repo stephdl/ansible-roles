@@ -1,0 +1,22 @@
+---
+
+- name: Install RabbitMQ
+  yum:
+    name:
+      - rabbitmq-server
+  tags: rabbitmq
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/rabbitmq mode=755
+  loop:
+    - pre
+    - post
+  tags: rabbitmq
+
+- name: Create directories
+  file: path=/etc/rabbitmq/ssl state=directory owner=rabbitmq group=rabbitmq mode=700
+  tags: rabbitmq
+
+- name: Install dehydrated hook
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/rabbitmq.sh mode=755
+  tags: rabbitmq

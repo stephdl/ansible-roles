@@ -1,0 +1,14 @@
+{% if element_web_alias is defined %}
+Alias /{{ element_web_alias }} {{ element_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+<Directory {{ element_root_dir }}/web>
+  AllowOverride None
+  Options None
+{% if element_allowed_ip is defined %}
+  Require ip {{ element_allowed_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+</Directory>

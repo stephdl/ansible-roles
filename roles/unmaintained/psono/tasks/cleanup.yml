@@ -1,0 +1,9 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ psono_root_dir }}/tmp/psono-server-v{{ psono_server_version }}.tar.gz"
+    - "{{ psono_root_dir }}/tmp/psono-server-v{{ psono_server_version }}"
+    - "{{ psono_root_dir }}/tmp/.psono_server"
+  tags: psono

@@ -1,0 +1,6 @@
+---
+
+- name: Write version
+  copy: content={{ gitea_version }} dest={{ gitea_root_dir }}/meta/ansible_version
+  tags: gitea
+

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if cs_lapi_enabled %}
+{% if cs_db_engine == 'mysql' %}
+/usr/bin/mysqldump \
+{% if cs_db_server not in ['localhost','127.0.0.1'] %}
+  --user={{ cs_db_user | quote }} \
+  --password={{ cs_db_pass | quote }} \
+  --host={{ cs_db_server | quote }} \
+  --port={{ cs_db_port | quote }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ cs_db_name | quote }} | zstd -c > {{ cs_root_dir }}/backup/{{ cs_db_name }}.sql.zst
+{% else %}
+sqlite3 {{ cs_root_dir }}/data/crowdsec.db .dump | zstd -c > {{ cs_root_dir }}/backup/crowdsec.sql.zst
+{% endif %}
+{% endif %}

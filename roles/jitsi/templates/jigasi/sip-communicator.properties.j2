@@ -1,0 +1,54 @@
+# Default room to which inbound called without a Jitsi-Conference-Room header
+org.jitsi.jigasi.DEFAULT_JVB_ROOM_NAME={{ jitsi_jigasi_default_room }}
+
+net.java.sip.communicator.impl.protocol.SingleCallInProgressPolicy.enabled=false
+
+# Disable packet capture
+net.java.sip.communicator.packetlogging.PACKET_LOGGING_ENABLED=false
+
+# Enable brewery
+org.jitsi.jigasi.BREWERY_ENABLED=true
+org.jitsi.jigasi.MUC_SERVICE_ADDRESS=conference.{{ jitsi_domain }}
+
+{% if jitsi_jigasi %}
+# SIP acount
+net.java.sip.communicator.impl.protocol.sip.acc=acc
+net.java.sip.communicator.impl.protocol.sip.acc.ACCOUNT_UID=SIP\:{{ jitsi_jigasi_sip_user }}
+net.java.sip.communicator.impl.protocol.sip.acc.PASSWORD={{ jitsi_jigasi_sip_secret | b64encode }}
+net.java.sip.communicator.impl.protocol.sip.acc.PROTOCOL_NAME=SIP
+net.java.sip.communicator.impl.protocol.sip.acc.SERVER_ADDRESS={{ jitsi_jigasi_sip_server }}
+net.java.sip.communicator.impl.protocol.sip.acc.USER_ID={{ jitsi_jigasi_sip_user }}
+net.java.sip.communicator.impl.protocol.sip.acc.KEEP_ALIVE_INTERVAL=25
+net.java.sip.communicator.impl.protocol.sip.acc.KEEP_ALIVE_METHOD=OPTIONS
+net.java.sip.communicator.impl.protocol.sip.acc.VOICEMAIL_ENABLED=false
+net.java.sip.communicator.impl.protocol.sip.acc.OVERRIDE_ENCODINGS=false
+net.java.sip.communicator.impl.protocol.sip.acc.DOMAIN_BASE={{ jitsi_domain }}
+net.java.sip.communicator.impl.protocol.sip.acc.PROXY_ADDRESS={{ jitsi_jigasi_sip_server }}
+net.java.sip.communicator.impl.protocol.sip.acc.PROXY_AUTO_CONFIG=false
+net.java.sip.communicator.impl.protocol.sip.acc.PROXY_PORT={{ jitsi_jigasi_sip_port }}
+net.java.sip.communicator.impl.protocol.sip.acc.PREFERRED_TRANSPORT={{ jitsi_jigasi_sip_transport }}
+{% else %}
+# No SIP acc configured, jigasi will be disabled
+{% endif %}
+
+# XMPP account
+net.java.sip.communicator.impl.protocol.jabber.acc=acc
+net.java.sip.communicator.impl.protocol.jabber.acc.ACCOUNT_UID=Jabber:jigasi@{{ jitsi_auth_domain }}
+net.java.sip.communicator.impl.protocol.jabber.acc.USER_ID=jigasi@{{ jitsi_auth_domain }}
+net.java.sip.communicator.impl.protocol.jabber.acc.IS_SERVER_OVERRIDDEN=true
+net.java.sip.communicator.impl.protocol.jabber.acc.SERVER_ADDRESS={{ inventory_hostname }}
+net.java.sip.communicator.impl.protocol.jabber.acc.PASSWORD={{ jitsi_jigasi_xmpp_pass | b64encode }}
+net.java.sip.communicator.impl.protocol.jabber.acc.RESOURCE_PRIORITY=30
+net.java.sip.communicator.impl.protocol.jabber.acc.BREWERY=JigasiBrewery@internal.{{ jitsi_auth_domain }}
+net.java.sip.communicator.impl.protocol.jabber.acc.DOMAIN_BASE={{ jitsi_domain }}
+
+org.jitsi.jigasi.xmpp.acc.USER_ID=jigasi@auth.{{ jitsi_domain }}
+org.jitsi.jigasi.xmpp.acc.PASS={{ jitsi_jigasi_xmpp_pass }}
+org.jitsi.jigasi.xmpp.acc.ANONYMOUS_AUTH=false
+org.jitsi.jigasi.xmpp.acc.IS_SERVER_OVERRIDDEN=true
+org.jitsi.jigasi.xmpp.acc.SERVER_ADDRESS={{ inventory_hostname }}
+org.jitsi.jigasi.xmpp.acc.JINGLE_NODES_ENABLED=false
+org.jitsi.jigasi.xmpp.acc.AUTO_DISCOVER_STUN=false
+org.jitsi.jigasi.xmpp.acc.IM_DISABLED=true
+org.jitsi.jigasi.xmpp.acc.SERVER_STORED_INFO_DISABLED=true
+org.jitsi.jigasi.xmpp.acc.IS_FILE_TRANSFER_DISABLED=true

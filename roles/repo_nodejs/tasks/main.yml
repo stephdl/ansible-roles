@@ -1,0 +1,6 @@
+---
+
+- name: Configure NodeJS repository
+  template: src=nodejs.repo.j2 dest=/etc/yum.repos.d/nodejs.repo
+  tags: repo
+

@@ -1,0 +1,29 @@
+---
+
+- name: Create directory structure
+  file:
+    path: "{{ nd_root_dir }}/{{ item.dir }}"
+    state: directory
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop:
+    - dir: /
+      group: "{{ nd_user }}"
+      mode: 750
+    - dir: /data
+      owner: "{{ nd_user }}"
+    - dir: /etc
+      group: "{{ nd_user }}"
+      mode: 750
+    - dir: /music
+    - dir: /bin
+    - dir: /tmp
+    - dir: meta
+      mode: 700
+    - dir: backup
+      mode: 700
+    - dir: archives
+      mode: 700
+  tags: navidrome
+

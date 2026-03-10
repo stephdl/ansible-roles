@@ -1,0 +1,5 @@
+---
+# The tracking center needs /var/log/syslog
+system_disable_syslog: False
+# postfix conf is handled by PMG templating engine
+system_postfix: False

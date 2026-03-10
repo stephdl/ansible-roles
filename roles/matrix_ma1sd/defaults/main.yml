@@ -1,0 +1,75 @@
+---
+
+ma1sd_version: 2.5.0
+ma1sd_archive_url: https://github.com/ma1uta/ma1sd/releases/download/{{ ma1sd_version }}/ma1sd.zip
+ma1sd_archive_sha1: 6126570dfa567794e15b3846cd69a4295740ad39
+
+# Manage only install or also upgrades ?
+ma1sd_manage_upgrade: True
+# Install directory
+ma1sd_root_dir: /opt/matrix/ma1sd
+# User account (will be created if missing)
+ma1sd_user: ma1sd
+
+# Memory limit for the service, in MB
+ma1sd_max_mem: 2048
+
+# TCP port on which the service will bind
+ma1sd_port: 8083
+
+# List of IP address allowed to access this port. Default is none (restricted to loopback)
+ma1sd_src_ip: []
+
+# External server to which forward queries
+# if no match is found localy
+# ma1sd_forwarders:
+#   - https://matrix.org
+#   - https://vector.im
+
+# Domain of your Matrix instance. Default to synapse_server_name if present
+# ma1sd_matrix_domain: matrix.example.com
+
+# ma1sd_server_name: matrix-id.example.com
+# ma1sd_public_url: https://matrix-id.domain.com/
+
+# Are recursive lookups allowed
+# ma1sd_recursive_lookups: False
+# And if yes, restrict it to certain IP only
+# ma1sd_recursive_lookups_ip:
+#   - 192.168.1.0/24
+#   - 172.20.0.0/16
+
+# Should we run LDAP lookups. Most settings can be taken from synapse if installed
+ma1sd_ldap_lookup: True
+ma1sd_ldap_filter: "{{ ad_auth | default(False) | ternary('(&(objectCategory=person)(objectClass=user)(primaryGroupId=513))','(objectClass=inetOrgPerson)') }}"
+ma1sd_ldap_tls: True    # Note that this is TLS, usually on port 636. Start TLS is not supported
+ma1sd_ldap_server: "{{ ad_auth | default(False) | ternary(ad_realm | default(samba_realm) | default(ansible_domain) | default(ansible_domain) | lower,'ldap.example.org') }}"
+ma1sd_ldap_port: "{{ ma1sd_ldap_tls | ternary('636','389') }}"
+#ma1sd_ldap_bind_dn: cn=ma1sd,ou=DSA,dc=example,dc=org
+#ma1sd_ldap_bind_pass: secret
+ma1sd_ldap_base: "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'dc=example,dc=org') }}"
+ma1sd_ldap_uid_type: uid
+ma1sd_ldap_uid_value: "{{ ad_auth | default(False) | ternary('samaccountname','uid') }}"
+ma1sd_ldap_attr_name: cn
+ma1sd_ldap_attr_mail:
+  - mail
+  - otherMailbox
+ma1sd_ldap_attr_tel:
+  - telephoneNumber
+  - mobile
+  - homePhone
+  - otherTelephone
+  - otherMobile
+  - otherHomePhone
+ma1sd_ldap_attr_other: []
+
+# Outgoing email settings
+# Will use synapse settings if available
+# ma1sd_smtp_from: ma1sd@domain.com
+
+# Overwrite the DNS name of your Matrix server
+ma1sd_dns_overwrite:
+  - name: "{{ ma1sd_matrix_domain | default(synapse_server_name) }}"
+    value: http://localhost:8008
+
+...

@@ -1,0 +1,9 @@
+window.Em.Application.initializer({
+    name: "oxi-localconfig",
+    initialize: function(container, application) {
+        var cc = application.ConfigController;
+        cc.reopen({
+            url: "cgi-bin/webui.fcgi"
+        });
+    }
+});

@@ -1,0 +1,11 @@
+[default]
+server = {{ patrix_server }}
+{% if patrix_user is defined and patrix_pass is defined %}
+user = {{ patrix_user }}
+password = {{ patrix_pass }}
+{% elif patrix_token is defined %}
+access_token = {{ patrix_token }}
+{% endif %}
+{% if patrix_room is defined %}
+room = {{ patrix_room }}
+{% endif %}

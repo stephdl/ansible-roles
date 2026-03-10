@@ -1,0 +1,10 @@
+unifi.xmx={{ unifi_mem_limit }}
+unifi.xms={{ unifi_mem_limit }}
+unifi.G1GC.enabled=true
+autobackup.dir={{ unifi_root_dir }}/backup
+unifi.http.port={{ unifi_http_port }}
+unifi.https.port={{ unifi_https_port }}
+portal.http.port={{ unifi_portal_http_port }}
+portal.https.port={{ unifi_portal_https_port }}
+is_default=false
+uuid={{ inventory_hostname | to_uuid }}

@@ -1,0 +1,6 @@
+---
+
+letsencrypt_packages:
+  - python3-pip
+  - python3-setuptools
+  - curl

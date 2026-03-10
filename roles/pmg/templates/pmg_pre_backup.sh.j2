@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/systemd-cat /usr/bin/pmgbackup backup
+cp -a /etc/opendkim/keys /home/lbkp/pmg/

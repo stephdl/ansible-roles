@@ -1,0 +1,10 @@
+#!/bin/bash
+
+/sbin/fstrim -v --all
+
+# Proxmox container support
+if [ -x /usr/sbin/pct ]; then
+  for CONTAINER in $(/usr/sbin/pct list | awk '/^[0-9]/ {print $1}'); do
+    /sbin/fstrim -v /proc/$(lxc-info -n $CONTAINER -p | awk '{print $2}')/root
+  done
+fi

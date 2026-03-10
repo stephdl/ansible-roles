@@ -1,0 +1,10 @@
+[sysvol]
+path = /var/lib/samba/sysvol/
+comment = DC sysvol
+uid = root
+gid = root
+read only = yes
+{% if samba_sysvol_rsync_pass is defined %}
+auth users = sysvol-replication
+secrets file = /etc/samba/rsync-sysvol.secret
+{% endif %}

@@ -1,0 +1,15 @@
+[http]
+port = {{ documize_port }}
+
+[database]
+{% if documize_db_engine == 'mysql' %}
+type = "mysql"
+connection = "{{ documize_db_user }}:{{ documize_db_pass }}@tcp({{ documize_db_server }}:{{ documize_db_port }})/{{ documize_db_name }}"
+{% elif documize_db_engine == 'postgres' %}
+type = "postgresql"
+connection = "host={{ documize_db_server }} port={{ documize_db_port }} dbname={{ documize_db_name }} user={{ documize_db_user }} password={{ documize_db_pass }} sslmode=disable"
+{% endif %}
+salt = "{{ documize_salt }}"
+
+[install]
+location = "selfhost"

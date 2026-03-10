@@ -1,0 +1,4 @@
+---
+
+# Can be stable, edge, test or nightly
+docker_branch: stable

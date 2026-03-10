@@ -1,0 +1,59 @@
+<?php
+
+$login['admin'] = 'sqladmin';
+$password['admin'] = '{{ mysql_admin_pass | regex_replace('\'', '\\\'')}}';
+{% for user in pma_sso_users | default([]) %}
+$login['{{ user.user }}'] = '{{ user.sql_login }}';
+$password['{{ user.user }}'] = '{{ user.sql_password | regex_replace('\'', '\\\'') }}';
+{% endfor %}
+
+{% for group in pma_sso_groups | default([]) %}
+$g_login['{{ group.group }}'] = '{{ group.sql_login }}';
+$g_password['{{ group.group }}'] = '{{ group.sql_password | regex_replace('\'', '\\\'') }}';
+{% endfor %}
+
+{% for client in wh_clients | default([]) %}
+$g_login['Client_{{ client.name }}'] = '{{ client.name | regex_replace('\'', '\\\'') }}';
+$g_password['Client_{{ client.name }}'] = '{{ client.db_pass | default((wh_pass_seed | password_hash('sha256', 65534 | random(seed=client.name) | string))[9:27]) | regex_replace('\'', '\\\'') }}';
+{% endfor %}
+
+{% for field in pma_sso_user_fields %}
+if (!isSet($ssologin) && isSet($_SERVER['{{ field }}'])){
+    $ssologin = $_SERVER['{{ field }}'];
+}
+{% endfor %}
+{% for field in pma_sso_groups_fields %}
+if (!isSet($ssogroups) && isSet($_SERVER['{{ field }}'])){
+    $ssogroups = explode('; ', $_SERVER['{{ field }}']);
+}
+{% endfor %}
+
+if(isSet($ssologin) && isSet($login[$ssologin]) && isSet($password[$ssologin])) {
+    session_set_cookie_params(0, '/', '', 0);
+    session_name('PmaSignonSession');
+    session_start();
+    $_SESSION['PMA_single_signon_user'] = $login[$ssologin];
+    $_SESSION['PMA_single_signon_password'] = $password[$ssologin];
+    session_write_close();
+    header('Location: /index.php');
+    exit(0);
+} elseif (isSet($ssogroups)) {
+    foreach ($ssogroups as $group){
+        if (isSet($g_login[$group]) && isSet($g_password[$group])){
+            session_set_cookie_params(0, '/', '', 0);
+            session_name('PmaSignonSession');
+            session_start();
+            $_SESSION['PMA_single_signon_user'] = $g_login[$group];
+            $_SESSION['PMA_single_signon_password'] = $g_password[$group];
+            session_write_close();
+            header('Location: /index.php');
+            exit(0);
+        }
+    }
+}
+
+header('HTTP/1.0 403 Forbidden');
+echo 'Not logged in the SSO system';
+die;
+
+?>

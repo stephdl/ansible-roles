@@ -1,0 +1,37 @@
+---
+
+# Version to deploy
+pim_version: 5.0.43
+# User under which the PIM will run
+pim_user: php-pim_{{ pim_id }}
+# If you install several pim instance on the same host, you should change the ID for each of them
+pim_id: 1
+# Root directory of the installation
+pim_root_dir: /opt/pim_{{ pim_id }}
+# Should anisble handle upgrades or just initial install
+pim_manage_upgrade: True
+
+# PHP version to use
+pim_php_version: 74
+
+# Database settings
+pim_db_server: "{{ mysql_server | default('localhost') }}"
+pim_db_port: 3306
+pim_db_name: akeneopim_{{ pim_id }}
+pim_db_user: akeneopim_{{ pim_id }}
+# A random pass will be generated and stored in {{ pim_root_dir }}/meta/ansible_dbpass if not defined
+# pim_db_pass: S3cr3t.
+
+# A secret used to sign cookies. A random one will be generated and stored in {{ pim_root_dir }}/meta/ansible_secret if not defined
+# pim_secret: ChangeMe
+
+# Elasticsearch host
+pim_es_server: localhost:9200
+
+# Public URL used to reach AKeneo. Note that you'll have to define a vhost for Akeneo PIM to be reachable
+pim_public_url: http://pim.{{ inventory_hostname }}/
+
+# Define the initial admin password. If not defined, a random one will be generated ans stored under {{ pim_root_dir }}/meta/ansible_admin_pass
+# Note that this is only used on initial install, and will be ignored for upgrades
+# pim_admin_pass: p@ssw0rd
+pim_mail_url: "null://localhost&sender_address=no-reply@{{ ansible_domain }}"

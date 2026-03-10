@@ -1,0 +1,137 @@
+config_version = {{ ampache_config_version }}
+{% if ampache_local_web_path is defined %}
+local_web_path = "{{ ampache_local_web_path }}"
+{% endif %}
+database_hostname = {{ ampache_mysql_server }}
+{% if ampache_mysql_port is defined %}
+database_port = "{{ ampache_mysql_port }}"
+{% endif %}
+database_name = "{{ ampache_mysql_db }}"
+database_username = "{{ ampache_mysql_user }}"
+database_password = "{{ ampache_mysql_pass }}"
+secret_key = "{{ ampache_key }}"
+session_length = 3600
+stream_length = 7200
+remember_length = 604800
+session_name = ampache
+session_cookielife = 0
+auth_methods = "{{ ampache_auth_methods | join(',') }}"
+{% if 'ldap' in ampache_auth_methods %}
+ldap_url = "{{ ampache_ldap_url }}"
+ldap_username = "{{ ampache_ldap_username }}"
+ldap_password = "{{ ampache_ldap_password }}"
+ldap_start_tls = "{{ ampache_ldap_starttls | ternary('true','false') }}"
+ldap_search_dn = "{{ ampache_ldap_search_dn }}"
+ldap_objectclass = "{{ ampache_ldap_objectclass }}"
+ldap_filter = "{{ ampache_ldap_filter }}"
+ldap_email_field = "{{ ampache_ldap_email_field }}"
+ldap_name_field  = "{{ ampache_ldap_name_field }}"
+external_auto_update = "true"
+{% endif %}
+{% if ampache_logout_redirect is defined %}
+logout_redirect = "{{ ampache_logout_redirect }}"
+{% endif %}
+access_control  = "true"
+require_session = "true"
+require_localnet_session = "true"
+metadata_order = "{{ ampache_metadata_order }}"
+getid3_tag_order = "id3v2,id3v1,vorbiscomment,quicktime,matroska,ape,asf,avi,mpeg,riff"
+deferred_ext_metadata = "false"
+additional_genre_delimiters = "[/]{2}|[/\\\\|,;]"
+catalog_file_pattern = "mp3|mpc|m4p|m4a|aac|ogg|oga|wav|aif|aiff|rm|wma|asf|flac|opus|spx|ra|ape|shn|wv"
+catalog_video_pattern = "avi|mpg|mpeg|flv|m4v|mp4|webm|mkv|wmv|ogv|mov|divx|m2ts"
+catalog_playlist_pattern = "m3u|m3u8|pls|asx|xspf"
+catalog_prefix_pattern = "The|An|A|Das|Ein|Eine|Les|Le|La"
+track_user_ip = "true"
+allow_zip_download = "true"
+allow_zip_types = "album"
+use_auth = "true"
+ratings = "false"
+userflags = "true"
+directplay = "true"
+sociable = "false"
+licensing = "false"
+memory_cache = "true"
+album_art_store_disk = "true"
+local_metadata_dir = "{{ ampache_root_dir }}/data/metadata"
+max_upload_size = 1048576
+resize_images = "false"
+art_order = "db,tags,folder,musicbrainz,lastfm,google"
+lastfm_api_key = "{{ ampache_lastfm_api_key }}"
+lastfm_api_secret = "{{ ampache_lastfm_api_secret }}"
+channel = "false"
+live_stream = "false"
+refresh_limit = "60"
+show_footer_statistics = "false"
+debug = "true"
+debug_level = 5
+log_path = "{{ ampache_root_dir }}/logs/"
+log_filename = "%name.%Y%m%d.log"
+site_charset = "UTF-8"
+{% if 'ldap' in ampache_auth_methods or 'http' in ampache_auth_methods %}
+auto_create = "true"
+auto_user = "user"
+{% endif %}
+allow_public_registration = "false"
+generate_video_preview = "true"
+max_bit_rate = {{ ampache_max_bit_rate }}
+min_bit_rate = {{ ampache_min_bit_rate }}
+transcode_m4a = {{ ampache_transcode_m4a }}
+transcode_flac = {{ ampache_transcode_flac }}
+transcode_mpc = {{ ampache_transcode_mpc }}
+transcode_ogg = {{ ampache_transcode_ogg }}
+transcode_oga = {{ ampache_transcode_oga }}
+transcode_wav = {{ ampache_transcode_wav }}
+transcode_wma = {{ ampache_transcode_wma }}
+transcode_aif = {{ ampache_transcode_aif }}
+transcode_aiff = {{ ampache_transcode_aiff }}
+transcode_ape = {{ ampache_transcode_ape }}
+transcode_shn = {{ ampache_transcode_shn }}
+transcode_mp3 = {{ ampache_transcode_mp3 }}
+transcode_avi = {{ ampache_transcode_avi }}
+transcode_mkv = {{ ampache_transcode_mkv }}
+transcode_mpg = {{ ampache_transcode_mpg }}
+transcode_mpeg = {{ ampache_transcode_mpeg }}
+transcode_m4v = {{ ampache_transcode_m4v }}
+transcode_mp4 = {{ ampache_transcode_mp4 }}
+transcode_mov = {{ ampache_transcode_mov }}
+transcode_wmv = {{ ampache_transcode_wmv }}
+transcode_ogv = {{ ampache_transcode_ogv }}
+transcode_divx = {{ ampache_transcode_divx }}
+transcode_m2ts = {{ ampache_transcode_m2ts }}
+transcode_webm = {{ ampache_transcode_webm }}
+transcode_flv = {{ ampache_transcode_flv }}
+encode_target = {{ ampache_encode_target }}
+encode_player_webplayer_target = {{ ampache_encode_player_webplayer }}
+transcode_player_api_mp3 = {{ ampache_transcode_player_api_mp3 }}
+encode_video_target = {{ ampache_encode_video_target }}
+transcode_player_customize = "true"
+transcode_cmd = "/bin/ffmpeg"
+transcode_input = "-i %FILE%"
+encode_args_mp3 = "-vn -b:a %BITRATE%K -c:a libmp3lame -f mp3 pipe:1"
+encode_args_ogg = "-vn -b:a %BITRATE%K -c:a libvorbis -f ogg pipe:1"
+encode_args_m4a = "-vn -b:a %BITRATE%K -c:a libfdk_aac -f adts pipe:1"
+encode_args_wav = "-vn -b:a %BITRATE%K -c:a pcm_s16le -f wav pipe:1"
+encode_args_opus = "-vn -b:a %BITRATE%K -c:a libopus -compression_level 10 -vsync 2 -f ogg pipe:1"
+encode_args_flv = "-b:a %BITRATE%K -ar 44100 -ac 2 -v 0 -f flv -c:v libx264 -preset superfast -threads 0 pipe:1"
+encode_args_webm = "-q %QUALITY% -f webm -c:v libvpx -maxrate %MAXBITRATE%k -preset superfast -threads 0 pipe:1"
+encode_args_ts = "-q %QUALITY% -s %RESOLUTION% -f mpegts -c:v libx264 -c:a libmp3lame -maxrate %MAXBITRATE%k -preset superfast -threads 0 pipe:1"
+encode_get_image = "-ss %TIME% -f image2 -vframes 1 pipe:1"
+encode_srt = "-vf \"subtitles='%SRTFILE%'\""
+encode_ss_frame = "-ss %TIME%"
+encode_ss_duration = "-t %DURATION%"
+force_ssl = "true"
+common_abbr = "divx,xvid,dvdrip,hdtv,lol,axxo,repack,xor,pdtv,real,vtv,caph,2hd,proper,fqm,uncut,topaz,tvt,notv,fpn,fov,orenji,0tv,omicron,dsr,ws,sys,crimson,wat,hiqt,internal,brrip,boheme,vost,vostfr,fastsub,addiction,x264,LOL,720p,1080p,YIFY,evolve,fihtv,first,bokutox,bluray,tvboom,info"
+mail_enable = "true"
+mail_type = "sendmail"
+mail_domain = "{{ ansible_domain }}"
+{% if system_proxy is defined and system_proxy != '' %}
+proxy_host = "{{ system_proxy | urlsplit('hostname') }}"
+proxy_port = "{{ system_proxy | urlsplit('port') }}"
+proxy_user = "{{ system_proxy | urlsplit('username') }}"
+proxy_pass = "{{ system_proxy | urlsplit('password') }}"
+{% endif %}
+metadata_order_video = "filename,getID3"
+registration_display_fields = "fullname,website"
+registration_mandatory_fields = "fullnamep"
+allow_upload_scripts = "false"

@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable dockerd
+  service: name=docker state=started enabled=True
+  register: docker_start
+  tags: docker

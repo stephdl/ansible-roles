@@ -1,0 +1,6 @@
+---
+
+- name: Restore SELinux contexts
+  command: restorecon -R {{ mailman_root_dir }}
+  changed_when: False
+  tags: mailman

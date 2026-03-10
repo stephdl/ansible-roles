@@ -1,0 +1,62 @@
+---
+
+- name: Install packages
+  yum: name={{ item }} state=present
+  with_items:
+    - sssd-ad
+      #- sssd-libwbclient
+    - adcli
+    - oddjob-mkhomedir
+    - krb5-workstation
+  tags: auth
+
+- name: Set LDAP base
+  set_fact: ad_ldap_base=DC={{ ad_realm | regex_replace('\.',',DC=') }}
+  tags: auth
+
+- name: Check if authconfig needs to update pam config
+  command: "grep -c -P '^auth\\s+sufficient\\s+pam_sss.so' /etc/pam.d/system-auth"
+  register: ad_authconfig_done
+  changed_when: False
+  ignore_errors: True
+  tags: auth
+
+- name: Configure the PAM stack
+  command: authconfig --enablesssd --enablesssdauth --enablemkhomedir --update
+  when: ad_authconfig_done.stdout | int < 1
+  tags: auth
+
+- name: Deploy sssd configuration
+  template: src=sssd.conf.j2 dest=/etc/sssd/sssd.conf mode=600
+  notify: restart sssd
+  tags: auth
+
+- name: Deploy krb5 configuration
+  template: src=krb5.conf.j2 dest=/etc/krb5.conf
+  tags: auth
+
+- name: Check if running on a DC
+  stat: path=/var/lib/samba/private/secrets.keytab
+  register: ad_dc_keytab
+  tags: auth
+
+- name: Copy the keytab
+  copy: src=/var/lib/samba/private/secrets.keytab dest=/etc/krb5.keytab mode=600 remote_src=True
+  when: ad_dc_keytab.stat.exists
+  tags: auth
+
+- name: Check if we already have our keytab file
+  stat: path=/etc/krb5.keytab
+  register: ad_keytab
+  tags: auth
+
+- name: Join the domain
+  command: adcli join {{ ad_realm }} --login-user={{ ad_admin }} --host-fqdn={{ ansible_hostname }}.{{ ad_realm }} --stdin-password
+  args:
+    stdin: "{{ ad_admin_pass }}"
+  when: not ad_keytab.stat.exists
+  tags: auth
+
+- name: Start and enable sssd
+  service: name=sssd state=started enabled=True
+  tags: auth

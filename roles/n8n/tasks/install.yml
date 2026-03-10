@@ -1,0 +1,65 @@
+---
+
+- name: Install nodejs and dependencies
+  yum:
+    name:
+      - nodejs
+      - gcc
+      - gcc-c++
+      - make
+      - sqlite-devel
+      - python3
+  tags: n8n
+
+- name: Wipe node_module on upgrade
+  file: path={{ n8n_root_dir }}/app/node_modules state=absent
+  when: n8n_install_mode == 'upgrade'
+  tags: n8n
+
+- name: Install n8n
+  npm:
+    name: n8n
+    path: "{{ n8n_root_dir }}/app"
+    version: "{{ n8n_version }}"
+  environment:
+    - npm_config_python: /bin/python3 # This is needed for sqlite3 build
+  become_user: "{{ n8n_user }}"
+  notify: restart n8n
+  tags: n8n
+
+- name: Install extra NodeJS modules
+  npm:
+    name: "{{ item }}"
+    path: "{{ n8n_root_dir }}/app"
+  become_user: "{{ n8n_user }}"
+  notify: restart n8n
+  when: n8n_extra_node_modules | length > 0
+  loop: "{{ n8n_extra_node_modules }}"
+  tags: n8n
+
+# Create the database
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ n8n_db_name }}"
+    - db_user: "{{ n8n_db_user }}"
+    - db_server: "{{ n8n_db_server }}"
+    - db_pass: "{{ n8n_db_pass }}"
+  tags: n8n
+
+- name: Deploy systemd unit
+  template: src=n8n.service.j2 dest=/etc/systemd/system/n8n.service
+  register: n8n_unit
+  notify: restart n8n
+  tags: n8n
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: n8n_unit.changed
+  tags: n8n
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/n8n mode=700
+  loop:
+    - pre
+    - post
+  tags: n8n

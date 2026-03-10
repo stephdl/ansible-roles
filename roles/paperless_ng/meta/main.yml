@@ -1,0 +1,10 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: mkdir
+  - role: postgresql_server
+    when: paperless_db_server in ['localhost','127.0.0.1']
+  - role: redis_server
+    when: paperless_redis_url | urlsplit('hostname') in ['localhost','127.0.0.1']
+  - role: repo_rpmfusion # for ffmpeg, required by unpaper

@@ -1,0 +1,3 @@
+---
+- name: start zmldapsync-wh
+  service: name=zmldapsync-wh state=started

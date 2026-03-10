@@ -1,0 +1,11 @@
+---
+
+dependencies:
+  - role: postgresql_server
+    when:
+      - mailman_db_engine == 'postgres'
+      - mailman_db_server in ['127.0.0.1','localhost']
+  - role: mysql_server
+    when:
+      - mailman_db_engine == 'mysql'
+      - mailman_db_server in ['127.0.0.1','localhost']

@@ -1,0 +1,22 @@
+---
+
+# version to deploy
+jenkins_version: 2.332.2
+# URL of the source archive
+jenkins_war_url: http://mirror.gruenehoelle.nl/jenkins/war-stable/{{ jenkins_version }}/jenkins.war
+# sha1sum of the archive
+jenkins_war_sha256: c7aa41378608437400922b9dbf75b34719204080f939fcdb5c5ddb24b07a117c
+
+# Root directory where jenkins will be installed
+jenkins_root_dir: /opt/jenkins
+
+# User account under which jenkins will run
+jenkins_user: jenkins
+
+# jenkins server component
+jenkins_server_port: 8080
+# List of IP/CIDR having access to jenkins_server_port
+jenkins_server_src_ip: []
+
+# Public URL used to access jenkins
+jenkins_public_url: http://{{ inventory_hostname }}

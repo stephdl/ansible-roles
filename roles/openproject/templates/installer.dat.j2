@@ -1,0 +1,11 @@
+postgres/autoinstall reuse
+postgres/db_host {{ openproject_db_server }}
+postgres/db_port {{ openproject_db_port }}
+postgres/db_username {{ openproject_db_user }}
+postgres/db_password {{ openproject_db_pass }}
+postgres/db_name {{ openproject_db_name }}
+server/autoinstall skip
+smtp/autoinstall sendmail
+smtp/admin_email {{ openproject_admin_email }}
+memcached/autoinstall skip
+server/ssl no

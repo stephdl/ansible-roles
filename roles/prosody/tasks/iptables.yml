@@ -1,0 +1,19 @@
+---
+
+- name: Handle ports for prosody
+  iptables_raw:
+    name: prosody_port_{{ item.name }}
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -p tcp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  loop:
+    - name: c2s
+      src_ip: "{{ prosody_c2s_src_ip }}"
+      ports: "{{ prosody_c2s_ports }}"
+    - name: s2s
+      src_ip: "{{ prosody_s2s_src_ip }}"
+      ports: "{{ prosody_s2s_ports }}"
+    - name: http
+      src_ip: "{{ prosody_http_src_ip }}"
+      ports: "{{ prosody_http_ports }}"
+  when: iptables_manage | default(True)
+  tags: firewall,prosody

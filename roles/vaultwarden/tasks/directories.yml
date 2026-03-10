@@ -1,0 +1,25 @@
+---
+
+- name: Create directories
+  file: path={{ vaultwarden_root_dir }}/{{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /
+      mode: 755
+    - dir: etc
+      group: "{{ vaultwarden_user }}"
+      mode: 750
+    - dir: tmp
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: archives
+      mode: 700
+    - dir: data
+      owner: "{{ vaultwarden_user }}"
+      group: "{{ vaultwarden_user }}"
+      mode: 700
+    - dir: web-vault
+    - dir: bin
+    - dir: backup
+      mode: 700
+  tags: vaultwarden

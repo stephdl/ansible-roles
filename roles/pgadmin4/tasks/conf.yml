@@ -1,0 +1,37 @@
+---
+
+- name: Deploy local configuration
+  template: src=config_local.py.j2 dest={{ pga_root_dir }}/venv/lib/python3.6/site-packages/pgadmin4/config_local.py
+  notify: restart pgadmin4
+  tags: pgadmin4
+
+- name: Check if the config DB exists
+  stat: path={{ pga_root_dir }}/data/pgadmin4.db
+  register: pga_db
+  tags: pgadmin4
+
+- name: Initial setup of pgadmin4
+  expect:
+    command: "{{ pga_root_dir }}/venv/bin/python {{ pga_root_dir }}/venv/lib/python3.6/site-packages/pgadmin4/setup.py"
+    timeout: 120
+    echo: true
+    responses:
+      'Email address:\s?': "admin@{{ ansible_domain }}"
+      '(Retype )?[Pp]assword:\s?': "pgadmin"
+  become_user: pgadmin4_{{ pga_id }}
+  when:
+    - not pga_db.stat.exists
+    - pga_auth | length >= 1
+  tags: pgadmin4
+
+- name: Initial setup of pgAdmin4
+  command: "{{ pga_root_dir }}/venv/bin/python {{ pga_root_dir }}/venv/lib/python3.6/site-packages/pgadmin4/setup.py"
+  become_user: pgadmin4_{{ pga_id }}
+  when:
+    - not pga_db.stat.exists
+    - pga_auth | length < 1
+  tags: pgadmin4
+
+- name: Configure logrotate
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/pgadmin4_{{ pga_id }}
+  tags: pgadmin4

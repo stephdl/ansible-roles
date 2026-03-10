@@ -1,0 +1,365 @@
+# Dokuwiki
+download.dokuwiki.org
+
+# various
+.github.com
+raw.githubusercontent.com
+objects.githubusercontent.com
+github-releases.githubusercontent.com
+packagecloud.io
+.cloudfront.net
+packagist.org
+downloads.sourceforge.net
+dl.bintray.com
+publicsuffix.org
+www.internic.net
+tzurl.org
+gitlab.com
+.lapiole.org
+archive.apache.org
+ftp.gnu.org
+
+# GLPI
+github-production-release-asset-2e65be.s3.amazonaws.com
+
+# phpMyAdmin
+files.phpmyadmin.net
+
+# Framasoft git server
+git.framasoft.org
+framagit.org
+
+# Python
+www.python.org
+pypi.python.org
+pypi.org
+files.pythonhosted.org
+
+# Ruby
+api.rubygems.org
+
+# Seadrive
+download.seadrive.org
+rpm.seadrive.org
+linux-clients.seafile.com
+s3.eu-central-1.amazonaws.com
+
+# GLPI
+forge.glpi-project.org
+
+# Chrome on Linux
+dl.google.com
+
+# Hosts several things, including the Zabbix datasource for Grafana
+.storage.googleapis.com
+# And kubernetes packages
+packages.cloud.google.com
+
+# Grafana repo
+grafanarel.s3.amazonaws.com
+packages.grafana.com
+grafana.com
+
+# Lemonldap::NG repo
+lemonldap-ng.org
+
+# NodeJS
+rpm.nodesource.com
+deb.nodesource.com
+nodejs.org
+
+# Jenkins
+updates.jenkins.io
+get.jenkins.io
+updates.jenkins-ci.org
+mirrors.jenkins-ci.org
+mirrors.tuna.tsinghua.edu.cn
+ftp.yz.yamagata-u.ac.jp
+mirror.esuni.jp
+mirror.serverion.com
+mirror.xmission.com
+archives.jenkins-ci.org
+ftp-chi.osuosl.org
+ftp-nyc.osuosl.org
+insights.cloudbees.com
+mirror.gruenehoelle.nl
+ftp.halifax.rwth-aachen.de
+download.cypress.io
+cdn.cypress.io
+ftp.belnet.be
+
+# nux dextop
+li.nux.ro
+mirror.li.nux.ro
+
+# Onlyoffice
+download.onlyoffice.com
+
+# ClamAV
+database.clamav.net
+db.local.clamav.net
+
+# SOGo
+packages.inverse.ca
+
+# spamassassin
+spamassassin.apache.org
+sa-update.spamassassin.org
+sa-update.dnswl.org
+sa-update.fossies.org
+sa-update.secnap.net
+sa-update.razx.cloud
+sa-update.bitwell.fi
+www.sa-update.pccc.com
+sa-update.verein-clean.net
+data.phishtank.com
+cdn.phishtank.com
+openphish.com
+
+# Odoo
+nightly.odoo.com
+
+# Matomo
+builds.matomo.org
+
+# PostgreSQL
+download.postgresql.org
+ftp.postgresql.org
+apt.postgresql.org
+www.postgresql.org
+
+# Java / Gradle / Maven
+services.gradle.org
+downloads.gradle.org
+downloads.gradle-dn.com
+plugins.gradle.org
+plugins-artifacts.gradle.org
+.maven.org
+repo.maven.apache.org
+www.ibibilio.net
+mirrors.ibiblio.org
+repo.exist.com
+artifacts.alfresco.com
+jcenter.bintray.com
+repo.fusesource.com
+repository.jboss.org
+jcenter.bintray.com
+repo.jenkins-ci.org
+smslib.org
+repox.sonarsource.com
+oss.sonatype.org
+repo.spring.io
+maven.wso2.org
+packages.confluent.io
+maven.fabric.io
+jitpack.io
+miroir.univ-lorraine.fr
+download.java.net
+forumarchivebuilder.googlecode.com
+maven.java.net
+redshift-maven-repository.s3-website-us-east-1.amazonaws.com
+
+# Unifi
+www.ubnt.com
+dl.ubnt.com
+fw-update.ubnt.com
+www.ui.com
+
+# Perl
+.plackperl.org
+.metacpan.org
+.cpan.org
+.perl.org
+
+# MariaDB
+yum.mariadb.org
+
+# OpenMediaVault
+packages.openmediavault.org
+openmediavault.github.io
+
+# FusionInventory
+debian.fusioninventory.org
+
+# Proxmox
+download.proxmox.com
+enterprise.proxmox.com
+
+# Bluemind
+pkg.bluemind.net
+download.bluemind.net
+
+# TranquilIT
+wapt.tranquil.it
+samba.tranquil.it
+
+# Gitea
+dl.gitea.io
+storage.gitea.io
+
+# MongoDB
+repo.mongodb.org
+www.mongodb.org
+
+# Elasticsearch
+artifacts.elastic.co
+
+# Graylog
+packages.graylog2.org
+graylog2-package-repository.s3.amazonaws.com
+versioncheck.graylog.com
+downloads.graylog.org
+graylog-downloads.herokuapp.com
+graylog2-releases.s3.amazonaws.com
+graylog2-releases.s3.eu-west-1.amazonaws.com
+
+
+# NPM / NodeJS
+registry.npmjs.org
+registry.npmjs.com
+# Yarn
+yarnpkg.com
+registry.yarnpkg.com
+classic.yarnpkg.com
+dl.yarnpkg.com
+# IOJS
+iojs.org
+
+# Asterisk / FreePBX
+ast.tucny.com
+.freepbx.org
+katanafpbx.schmoozecom.com
+sounds.sng7.com
+
+# Elrepo
+.elrepo.org
+
+# Zimbra
+repo.zimbra.com
+files.zimbra.com
+www.zimbra.com
+
+# Zextras for Zimbra
+openzal.org
+update.zextras.com
+download.zextras.com
+
+# ZFS On Linux
+download.zfsonlinux.org
+
+# Funkwhale
+dev.funkwhale.audio
+coverartarchive.org
+.archive.org
+
+# Zabbix
+repo.zabbix.com
+git.zabbix.com
+
+# Maxming GeoIP
+updates.maxmind.com
+
+# Docker
+download.docker.com
+apt.dockerproject.org
+auth.docker.io
+registry-1.docker.io
+production.cloudflare.docker.com
+docker.elastic.co
+docker-auth.elastic.co
+get.docker.com
+
+# Artifactory (jfrog)
+docker.bintray.io
+akamai.bintray.com
+service.jfrog.org
+repo.jfrog.org
+
+# Sonar
+update.sonarsource.org
+
+# RocketChat
+marketplace.rocket.chat
+releases.rocket.chat
+
+# Openproject
+dl.packager.io
+
+# Alpine Linux
+dl-cdn.alpinelinux.org
+alpine-pkgs.sgerrand.com
+
+# Psono
+psono.jfrog.io
+
+# RH UBI
+cdn-ubi.redhat.com
+
+# Various SF mirrors
+.dl.sourceforge.net
+
+# Rust lang
+static.rust-lang.org
+crates.io
+static.crates.io
+
+# Fontawesome
+npm.fontawesome.com
+dl.fontawesome.com
+
+# Google fonts
+fonts.googleapis.com
+fonts.gstatic.com
+
+# Jitsi
+download.jitsi.org
+# Needed to build Jitsi Meet
+packages.matrix.org
+gitlab.matrix.org
+repository.apache.org
+
+# Prosody
+hg.prosody.im
+
+# Wordpress
+api.wordpress.org
+downloads.wordpress.org
+
+# Yubico
+.yubico.com
+
+# Openresty
+openresty.org
+
+# Tiny Tiny RSS
+tt-rss.org
+
+# RPM Fusion
+rpmfusion.org
+download1.rpmfusion.org
+
+# Composer
+getcomposer.org
+
+# Sentry
+downloads.sentry-cdn.com
+
+# iTop cmd extension store
+store.itophub.io
+
+# Crowdsec
+crowdsec-statics-assets.s3-eu-west-1.amazonaws.com
+api.crowdsec.net
+www.cloudflare.com
+
+# Metabase
+static.metabase.com
+downloads.metabase.com
+
+# Zimbra / Zextras
+go.zextras.com
+
+# Zulip
+www.zulip.org
+packages.groonga.org
+

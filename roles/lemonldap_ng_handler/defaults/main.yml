@@ -1,0 +1,9 @@
+---
+llng_conf_backend: soap
+# llng_soap_uri: https://auth.domain.org/index.pl/config
+# llng_soap_user: user
+# llng_soap_pass: password
+# llng_reload_ip:
+#   - 192.168.133.254
+
+...

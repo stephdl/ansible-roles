@@ -1,0 +1,6 @@
+---
+
+- name: Create user account
+  user: name={{ seafile_user }} comment="Seafile user account" system=True shell=/sbin/nologin
+  tags: seafile
+

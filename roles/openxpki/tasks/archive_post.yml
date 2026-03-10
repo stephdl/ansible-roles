@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ pki_root_dir }}"
+    - version: "{{ pki_current_version }}"
+  tags: pki
+

@@ -1,0 +1,84 @@
+; {{ ansible_managed }}
+
+[all]
+logLevel                   = info
+logger                     = Lemonldap::NG::Common::Logger::Syslog
+{% if llng_conf_backend == 'file' %}
+globalStorage        = Apache::Session::File
+globalStorageOptions       = {                                                   \
+  'Directory'      => '/var/lib/lemonldap-ng/sessions/',                         \
+  'LockDirectory'  => '/var/lib/lemonldap-ng/sessions/lock/',                    \
+  'generateModule' => 'Lemonldap::NG::Common::Apache::Session::Generate::SHA256' \
+}
+{% endif %}
+localSessionStorage        = Cache::FileCache
+localSessionStorageOptions = {                        \
+  'namespace'          => 'sessions',                 \
+  'default_expires_in' => '300',                      \
+  'directory_umask'    => '007',                      \
+  'cache_root'         => '/var/cache/lemonldap-ng',  \
+  'cache_depth'        => 3                           \
+}
+{% if llng_conf_backend == 'mysql' %}
+{% for type in llng_session_tables.keys() | list %}
+{{ type }}Storage        = Apache::Session::Browseable::MySQL
+{{ type }}StorageOptions = { \
+  'DataSource'     => 'DBI:mysql:database={{ llng_db_name }};host={{ llng_db_server }};mysql_enable_utf8=1', \
+  'UserName'       => '{{ llng_handler_db_user }}', \
+  'Password'       => '{{ llng_handler_db_pass }}', \
+  'TableName'      => '{{ llng_session_tables[type].name }}', \
+{% if llng_session_tables[type].index is defined %}
+  'Index'          => '{{ llng_session_tables[type].index }}', \
+{% endif %}
+  'generateModule' => 'Lemonldap::NG::Common::Apache::Session::Generate::SHA256' \
+}
+{% endfor %}
+{% endif %}
+
+[configuration]
+{% if llng_conf_backend == 'file' %}
+type                = File
+dirName             = /var/lib/lemonldap-ng/conf
+{% elif llng_conf_backend == 'api' %}
+type                = REST
+baseUrl             = {{ llng_api_uri }}
+{% if llng_api_user is defined and llng_api_pass is defined %}
+User                = {{ llng_api_user }}
+Password            = {{ llng_api_pass }}
+{% endif %}
+proxyOptions        = { timeout => 5 }
+{% elif llng_conf_backend == 'mysql' %}
+type                = CDBI
+dbiChain            = DBI:mysql:database={{ llng_db_name }};host={{ llng_db_server }}
+dbiUser             = {{ (llng_manager or llng_portal) | ternary(llng_db_user,llng_handler_db_user) }}
+dbiPassword         = {{ (llng_manager or llng_portal) | ternary(llng_db_pass,llng_handler_db_pass) }}
+{% endif %}
+localStorage        = Cache::FileCache
+localStorageOptions = {                              \
+  'namespace'          => 'config',                  \
+  'default_expires_in' => '600',                     \
+  'directory_umask'    => '007',                     \
+  'cache_root'         => '/var/cache/lemonldap-ng', \
+  'cache_depth'        => 0                          \
+}
+
+{% if llng_portal %}
+[portal]
+staticPrefix = /static
+templateDir  = /usr/share/lemonldap-ng/portal/templates
+languages    = fr, en, it, es, de
+{% endif %}
+
+{% if llng_manager %}
+[manager]
+protection     = {{ llng_manager_protection }}
+staticPrefix   = /static
+languages      = fr, en, it, es, de
+templateDir    = /usr/share/lemonldap-ng/manager/htdocs/templates
+enabledModules = conf, sessions, notifications, 2ndFA
+{% endif %}
+
+[handler]
+https         = 1
+status        = 0
+hideSignature = 1

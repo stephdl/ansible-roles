@@ -1,0 +1,305 @@
+---
+
+squid_http_ports:
+  - port: 3128
+  - port: 3129
+    mode: intercept
+
+squid_https_ports:
+  - port: 3130
+    mode: intercept
+    options:
+      - ssl-bump
+      - cert=/etc/squid/tls/cert.pem
+      - key=/etc/squid/tls/key.pem
+      - generate-host-certificates=off
+
+squid_nat_http_ports: [80]
+squid_nat_https_ports: [443,8006,8443]
+
+squid_src_ip: "{{ squid_servers_ip + squid_workstations_ip + squid_admins_ip + squid_vip_ip + squid_guests_ip }}"
+squid_safe_ports: [ 80, 443, 21 ]
+squid_ssl_ports: [ 443, 8006, 8007, 8443, 8448 ]
+
+# Admin email displayed on denied and error pages
+# squid_admin_email: admin@example.com
+
+# Should we scan content with ClamAV. Default is disabled
+squid_scan_av: True
+# Files bigger than (in bytes) this won't be scanned
+squid_av_max_size: 5000000
+
+squid_servers_ip:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+squid_workstations_ip:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+squid_vip_ip: []
+squid_admins_ip: []
+squid_guests_ip: []
+
+squid_base_acl:
+  - name: safe_ports
+    type: port
+    items: "{{ squid_safe_ports }}"
+  - name: ssl_ports
+    type: port
+    items: "{{ squid_ssl_ports }}"
+  - name: servers_src
+    type: src
+    items: "{{ squid_servers_ip }}"
+  - name: workstations_src
+    type: src
+    items: "{{ squid_workstations_ip }}"
+  - name: guests_src
+    type: src
+    items: "{{ squid_guests_ip }}"
+  - name: vip_src
+    type: src
+    items: "{{ squid_vip_ip }}"
+  - name: admins_src
+    type: src
+    items: "{{ squid_admins_ip }}"
+  - name: av_src
+    type: src
+    items: "{{ (squid_vip_ip + squid_workstations_ip + squid_guests_ip + squid_servers_ip) | unique }}" # Everyone except admins will have AV scans. Admins might need to check suspucious stuff
+  - name: servers_dst
+    type: dst
+    items: "{{ squid_servers_ip }}"
+  - name: workstations_dst
+    type: dst
+    items: "{{ squid_workstations_ip }}"
+  - name: guests_dst
+    type: dst
+    items: "{{ squid_guests_ip }}"
+  - name: localnet_src
+    type: src
+    items: "{{ (squid_servers_ip + squid_workstations_ip + squid_vip_ip + squid_admins_ip + squid_guests_ip) | unique }}"
+  - name: localnet_dst
+    type: dst
+    items: "{{ (squid_servers_ip + squid_workstations_ip + squid_vip_ip + squid_admins_ip + squid_guests_ip) | unique }}"
+  - name: connect
+    type: method
+    items: [ CONNECT ]
+  - name: sys_urls
+    type: url_regex
+    items: []
+  - name: sys_domains
+    type: dstdomain
+    items:
+      - '"/etc/squid/acl/software_windows.domains"'
+      - '"/etc/squid/acl/service_fws.domains"'
+      - '"/etc/squid/acl/service_various.domains"'
+      - '"/etc/squid/acl/software_epel.domains"'
+      - '"/etc/squid/acl/software_centos.domains"'
+      - '"/etc/squid/acl/software_almalinux.domains"'
+      - '"/etc/squid/acl/software_debian.domains"'
+      - '"/etc/squid/acl/software_various.domains"'
+      - '"/etc/squid/acl/software_smeserver.domains"'
+      - '"/etc/squid/acl/software_remi.domains"'
+  - name: local_whitelist_domains
+    type: dstdomain
+    items:
+      - '"/etc/squid/acl/local_whitelist.domains"'
+  - name: local_blacklist_domains
+    type: dstdomain
+    items:
+      - '"/etc/squid/acl/local_blacklist.domains"'
+  - name: local_whitelist_urls
+    type: dstdomain
+    items:
+      - '"/etc/squid/acl/local_whitelist.urls"'
+  - name: local_blacklist_urls
+    type: dstdomain
+    items:
+      - '"/etc/squid/acl/local_blacklist.urls"'
+  - name: local_whitelist_sni
+    type: ssl::server_name
+    items:
+      - '"/etc/squid/acl/local_whitelist.domains"'
+  - name: local_blacklist_sni
+    type: ssl::server_name
+    items:
+      - '"/etc/squid/acl/local_blacklist.domains"'
+  - name: wuconnect
+    type: dstdomain
+    items:
+      - www.update.microsoft.com
+      - sls.microsoft.com
+  - name: no_av_scan_req
+    type: req_mime_type
+    items:
+      - '-i ^text/plain'
+      - '-i ^text/css'
+      - '-i ^application/xml'
+      - '-i ^application/json'
+      - '-i ^image/'
+      - '-i ^audio/'
+      - '-i ^video/'
+  - name: no_av_scan_rep
+    type: rep_mime_type
+    items:
+      - '-i ^text/plain'
+      - '-i ^text/css'
+      - '-i ^application/xml'
+      - '-i ^application/json'
+      - '-i ^image/'
+      - '-i ^audio/'
+      - '-i ^video/'
+  - name: sslbump_step1
+    type: at_step
+    items: [SslBump1]
+  - name: sslbump_step2
+    type: at_step
+    items: [SslBump2]
+  - name: sslbump_step3
+    type: at_step
+    items: [SslBump3]
+
+# List of URL regex not to cache
+squid_no_cache:
+  - 'https?://.*\.letsencrypt\.org/'
+
+squid_extra_acl: []
+squid_acl: "{{ squid_base_acl + squid_extra_acl }}"
+
+squid_local_whitelist: []
+squid_local_blacklist: []
+
+# Access rules. There's always a last default deny all access rule
+squid_base_http_access:
+  - policy: allow
+    match: "local_whitelist_domains"
+    priority: 10
+  - policy: allow
+    match: "local_whitelist_urls"
+    priority: 10
+  - policy: deny
+    match: "local_blacklist_domains"
+    priority: 20
+  - policy: deny
+    match: "local_blacklist_urls"
+    priority: 20
+  - policy: allow
+    match:
+      - "localhost"
+      - "manager"
+    priority: 100
+  - policy: deny
+    match: "manager"
+    priority: 200
+  - policy: deny
+    match:
+      - "!connect"
+      - "!safe_ports"
+    priority: 300
+  - policy: deny
+    match:
+      - "connect"
+      - "!ssl_ports"
+    priority: 400
+  - policy: allow
+    match:
+      - "localnet_src"
+      - "sys_urls"
+    priority: 500
+  - policy: allow
+    match:
+      - "localnet_src"
+      - "sys_domains"
+    priority: 500
+  - policy: allow
+    match:
+      - "CONNECT"
+      - "wuconnect"
+      - "localnet_src"
+    priority: 700
+  - policy: deny
+    match: "localnet_dst"
+    priority: 800
+  - policy: allow
+    match: "vip_src"
+    priority: 1300
+  - policy: allow
+    match: "admins_src"
+    priority: 1400
+squid_extra_http_access: []
+squid_http_access: "{{ squid_base_http_access + squid_extra_http_access }}"
+
+squid_base_ssl_bump:
+  - policy: peek
+    match:
+      - "sslbump_step1"
+      - "all"
+    priority: 100
+  - policy: splice
+    match: "local_whitelist_sni"
+    priority: 200
+  - policy: terminate
+    match: "local_blacklist_sni"
+    priority: 300
+  - policy: splice
+    match: "all"
+    priority: 400
+squid_extra_ssl_bump: []
+squid_ssl_bump: "{{ squid_base_ssl_bump + squid_extra_ssl_bump }}"
+
+# Should disk cache be enabled
+squid_disk_cache: True
+# Size of the on-disk cache, in MB
+squid_disk_cache_size: 2048
+# Size of the in-memory cache, in MB
+squid_mem_cache_size: 200
+# Max size of objects to cache, in MB
+squid_max_object_size: 300
+
+# Filter URL using ufdbGuard
+squid_filter_url: True
+squid_ufdb_deny_tunnels: True
+squid_ufdb_blocked_url: http://{{ inventory_hostname }}/cgi-bin/URLblocked.cgi?admin=Le staff IT&color=orange&size=normal&clientaddr=%a&clientname=%n&clientuser=%i&clientgroup=%s&category=%t&url=%u
+# Should we update blacklists from the university of Toulouse
+squid_ufdb_update_from_univ: True
+
+# Categories blocked for everyone, except admins (but including vip)
+squid_ufdb_base_dangerous_categories:
+  - cryptojacking
+  - ddos
+  - malware
+  - phishing
+squid_ufdb_extra_dangerous_categories: []
+squid_ufdb_dangerous_categories: "{{ squid_ufdb_base_dangerous_categories + squid_ufdb_extra_dangerous_categories }}"
+# Blocked for regular user (workstations)
+squid_ufdb_base_blocked_categories:
+  - warez
+  - redirector
+  - strict_redirector
+  - strong_redirector
+squid_ufdb_guests_blocked_categories:
+  - warez
+  - redirector
+  - strict_redirector
+  - strong_redirector
+  - adult
+  - agressif
+  - astrology
+  - arjel
+  - dangerous_material
+  - ddos
+  - download
+  - drogue
+  - gambling
+  - hacking
+  - malware
+  - marketingware
+  - mixed_adult
+  - mobile-phone
+  - phishing
+squid_ufdb_extra_blocked_categories: []
+squid_ufdb_blocked_categories: "{{ squid_ufdb_base_blocked_categories + squid_ufdb_extra_blocked_categories }}"
+
+# If you need to write a custom configuration snippet
+squid_custom_config: |
+  # No custom configuration defined

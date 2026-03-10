@@ -1,0 +1,23 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: pgadmin4
+
+- name: Check if a 2.7 venv exists
+  stat: path={{ pga_root_dir }}/lib/python2.7
+  register: pga_venv_27
+  tags: pgadmin4
+
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: "{{ pga_root_dir }}"
+        - version: "{{ pga_version }}"
+    - set_fact: pga_install_mode={{ install_mode }}
+    - set_fact: pga_current_version={{ current_version | default('') }}
+  tags: pgadmin4

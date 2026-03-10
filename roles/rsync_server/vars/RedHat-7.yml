@@ -1,0 +1,5 @@
+---
+
+rsync_packages:
+  - rsync
+  - libsemanage-python

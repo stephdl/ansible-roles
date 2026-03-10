@@ -1,0 +1,21 @@
+---
+
+oo_db_server: "{{ mysql_server | default('localhost') }}"
+oo_db_name: onlyoffice
+oo_db_user: onlyoffice
+oo_db_port: 3306
+# Random created if not set
+# oo_db_pass: SeCr3t
+
+# Redis server
+oo_redis_server: localhost
+oo_redis_port: 6379
+
+# Secret key
+# oo_secret: XXXX
+
+oo_ds_vhost: onlyoffice-ds.{{ ansible_domain }}
+
+# Is auto-saving of file enabled
+# If true, files will be saved every 5 minutes
+oo_auto_save: True

@@ -1,0 +1,11 @@
+---
+
+mongo_port: 27017
+mongo_src_ip: []
+mongo_db_path: /var/lib/mongo
+# Should authorization be enabled
+mongo_auth: True
+mongo_admin_user: mongoadmin
+# A random one will be created if not defined here
+# mongo_admin_pass: S3cr3t.
+...

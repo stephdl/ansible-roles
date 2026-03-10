@@ -1,0 +1,40 @@
+---
+
+- name: Create filebeat snippet direcories
+  file: path=/etc/filebeat/ansible_{{ item }}.d state=directory
+  loop:
+    - inputs
+    - modules
+  tags: log,mkdir
+
+- name: Create journald directory
+  file: path=/var/log/journal state=directory
+  notify: restart journald
+  when: ansible_service_mgr == 'systemd'
+  tags: log,mkdir
+
+- name: Create systemd config dir
+  file: path=/etc/systemd/system state=directory
+  tags: conf,mkdir
+
+- name: Create local SELinux policy directory
+  file: path=/etc/selinux/targeted/local state=directory
+  when: ansible_selinux.status == 'enabled'
+  tags: selinux,mkdir
+
+- name: Create pre/post backup directories
+  file: path=/etc/backup/{{ item }}.d state=directory
+  loop:
+    - pre
+    - post
+  tags: backup,mkdir
+
+- name: Create dehydrated hook directories
+  file: path=/etc/dehydrated/{{ item }}.d state=directory
+  loop:
+    - hooks_deploy_cert
+  tags: ssl,web,mkdir
+
+- name: Create bash_completion dir
+  file: path=/etc/bash_completion.d state=directory
+  tags: mkdir

@@ -1,0 +1,8 @@
+---
+
+- set_fact: sysconfdir=/etc/sysconfig
+  when: ansible_os_family == 'RedHat'
+  tags: docker
+
+- set_fact: sysconfdir=/etc/default
+  when: ansible_os_family == 'Debian'

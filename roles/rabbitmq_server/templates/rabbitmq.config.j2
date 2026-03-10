@@ -1,0 +1,12 @@
+%% {{ ansible_managed }}
+
+[
+  {rabbit, [
+      {tcp_listeners, [{{ rabbitmq_port }}]}
+     ,{reverse_dns_lookups, false}
+{% if rabbitmq_guest_from_anywhere %}
+     ,{loopback_users, []}
+{% endif %}
+    ]
+  }
+].

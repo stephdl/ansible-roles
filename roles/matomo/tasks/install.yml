@@ -1,0 +1,181 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - unzip
+      - mariadb
+      - acl
+      - php{{ matomo_php_version }}-php-pecl-geoip
+  tags: matomo
+
+- name: Download Matomo
+  get_url:
+    url: "{{ matomo_archive_url }}"
+    dest: "{{ matomo_root_dir }}/tmp/"
+    checksum: "sha1:{{ matomo_archive_sha1 }}"
+  when: matomo_install_mode != 'none'
+  tags: matomo
+
+- name: Extract matomo archive
+  unarchive:
+    src: "{{ matomo_root_dir }}/tmp/matomo-{{ matomo_version }}.tar.gz"
+    dest: "{{ matomo_root_dir }}/tmp"
+    remote_src: yes
+  when: matomo_install_mode != 'none'
+  tags: matomo
+
+- name: Check if we have the list of core plugins
+  stat: path={{ matomo_root_dir }}/meta/core_plugins.txt
+  register: matomo_core_plugins_list
+  tags: matomo
+
+- name: Build a list of core plugins, which should never be removed
+  shell: find {{ matomo_root_dir }}/web/plugins/ -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \; > {{ matomo_root_dir }}/meta/core_plugins.txt
+  when:
+    - matomo_install_mode == 'none'
+    - not matomo_core_plugins_list.stat.exists
+  changed_when: False
+  tags: matomo
+
+- name: Build a list of core plugins, which should never be removed
+  shell: find {{ matomo_root_dir }}/tmp/matomo/plugins/ -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \; > {{ matomo_root_dir }}/meta/core_plugins.txt
+  when: matomo_install_mode != "none"
+  changed_when: False
+  tags: matomo
+
+- name: Remove known non core plugins from the list
+  lineinfile: path={{ matomo_root_dir }}/meta/core_plugins.txt regexp='^{{ item }}$' state=absent
+  with_items: "{{ matomo_plugins.keys() | list }}"
+  tags: matomo
+
+- name: Read core plugins list
+  command: cat {{ matomo_root_dir }}/meta/core_plugins.txt
+  register: matomo_core_plugins
+  changed_when: False
+  tags: matomo
+
+- name: List previously installed plugins
+  shell: find {{ matomo_root_dir }}/archives/{{ matomo_current_version }}/web/plugins/ -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \;
+  register: matomo_previous_plugins
+  when: matomo_install_mode == "upgrade"
+  changed_when: False
+  tags: matomo
+
+- name: Move matomo to the web directory
+  synchronize:
+    src: "{{ matomo_root_dir }}/tmp/matomo/"
+    dest: "{{ matomo_root_dir }}/web/"
+    recursive: True
+    delete: True
+    rsync_opts:
+      - '--exclude=config/config.ini.php'
+  delegate_to: "{{ inventory_hostname }}"
+  when: matomo_install_mode != "none"
+  tags: matomo
+
+- name: Restore previous unmanaged plugins
+  synchronize:
+    src: "{{ matomo_root_dir }}/archives/{{ matomo_current_version }}/web/plugins/{{ item }}"
+    dest: "{{ matomo_root_dir }}/web/plugins/"
+    delegate_to: "{{ inventory_hostname }}"
+    recursive: True
+  with_items: "{{ matomo_previous_plugins.stdout_lines }}"
+  when:
+    - matomo_install_mode == 'upgrade'
+    - not matomo_remove_unmanaged_plugins
+  tags: matomo
+
+- name: List installed plugins
+  shell: find {{ matomo_root_dir }}/web/plugins/ -mindepth 1 -maxdepth 1 -type d -exec basename "{}" \;
+  register: matomo_current_plugins
+  changed_when: False
+  tags: matomo
+
+- name: Disable unmanaged plugins
+  command: php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console plugin:deactivate {{ item }}
+  with_items: "{{ matomo_current_plugins.stdout_lines }}"
+  when:
+    - item not in matomo_plugins_to_install
+    - item not in matomo_core_plugins.stdout
+    - matomo_remove_unmanaged_plugins
+  tags: matomo
+
+- name: Remove unmanaged plugins
+  file: path={{ matomo_root_dir }}/web/plugins/{{ item }} state=absent
+  with_items: "{{ matomo_current_plugins.stdout_lines }}"
+  when:
+    - item not in matomo_plugins_to_install
+    - item not in matomo_core_plugins.stdout
+    - matomo_remove_unmanaged_plugins
+  tags: matomo
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ matomo_db_name }}"
+    - db_user: "{{ matomo_db_user }}"
+    - db_server: "{{ matomo_db_server }}"
+    - db_pass: "{{ matomo_db_pass }}"
+  tags: matomo
+
+- set_fact: matomo_db_created={{ db_created }}
+  tags: matomo
+
+- name: Copy the DB structure
+  copy: src=matomo.sql dest={{ matomo_root_dir }}/tmp/matomo.sql
+  when: matomo_install_mode == 'install'
+  tags: matomo
+
+- name: Init the database
+  mysql_db:
+    state: import
+    login_host: "{{ matomo_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    name: "{{ matomo_db_name }}"
+    target: "{{ matomo_root_dir }}/tmp/matomo.sql"
+  when:
+    - matomo_install_mode == 'install'
+    - matomo_db_created.changed
+  tags: matomo
+
+- name: Build a list of installed plugins
+  shell: find {{ matomo_root_dir }}/web/plugins -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: matomo_installed_plugins
+  changed_when: False
+  tags: matomo
+
+- name: Download plugins
+  get_url:
+    url: http://plugins.matomo.org/api/2.0/plugins/{{ item }}/download/{{ matomo_plugins[item].version }}
+    dest: "{{ matomo_root_dir }}/tmp"
+    checksum: "sha1:{{ matomo_plugins[item].sha1 }}"
+  when: item not in matomo_installed_plugins.stdout_lines
+  with_items: "{{ matomo_plugins_to_install }}"
+  tags: matomo
+
+- name: Extract plugins
+  unarchive:
+    src: "{{ matomo_root_dir }}/tmp/{{ item }}-{{ matomo_plugins[item].version }}.zip"
+    dest: "{{ matomo_root_dir }}/web/plugins/"
+    remote_src: yes
+  when: item not in matomo_installed_plugins.stdout_lines
+  with_items: "{{ matomo_plugins_to_install }}"
+  tags: matomo
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/matomo_{{ matomo_id }} mode=750
+  loop:
+    - pre
+    - post
+  tags: matomo
+
+- name: Setup cron task
+  cron:
+    name: matomo_{{ matomo_id }}
+    special_time: hourly
+    user: "{{ matomo_php_user }}"
+    job: "/bin/php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console core:archive --url={{ matomo_public_url }} 2>&1 | /bin/systemd-cat -t matomo_{{ matomo_id }}"
+    cron_file: matomo_{{ matomo_id }}
+  tags: matomo
+

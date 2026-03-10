@@ -1,0 +1,5 @@
+---
+
+- name: Create meta directory
+  file: path=/etc/onlyoffice/meta state=directory mode=700
+  tags: oo

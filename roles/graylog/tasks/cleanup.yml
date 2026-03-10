@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ graylog_root_dir }}/tmp/graylog-{{ graylog_version }}.tgz"
+    - "{{ graylog_root_dir }}/tmp/graylog-{{ graylog_version }}"
+  tags: graylog

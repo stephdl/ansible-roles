@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if etherpad_db_server not in ['localhost', '127.0.0.1'] %}
+  --user={{ etherpad_db_user }} \
+  --password={{ etherpad_db_pass | quote }} \
+  --host={{ etherpad_db_server }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ etherpad_db_name }} | zstd -c > {{ etherpad_root_dir }}/backup/{{ etherpad_db_name }}.sql.zst

@@ -1,0 +1,9 @@
+---
+
+- name: Handle Zimbra spell ports
+  iptables_raw:
+    name: zcs_spell_ports
+    state: "{{ (zcs_cluster_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport  7780 -s {{ zcs_http_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs

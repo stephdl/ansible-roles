@@ -1,0 +1,20 @@
+---
+
+- name: Handle graylog ports
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p {{ item.proto | default('tcp') }} -m multiport --dports {{ item.port }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  loop:
+    - port: "{{ graylog_http_ports | join(',') }}"
+      name: graylog_http_ports
+      src_ip: "{{ graylog_http_src_ip }}"
+    - port: "{{ graylog_listeners_tcp_ports | join(',') }}"
+      name: graylog_listeners_tcp_ports
+      src_ip: "{{ graylog_listeners_src_ip }}"
+    - port: "{{ graylog_listeners_udp_ports | join(',') }}"
+      proto: udp
+      name: graylog_listeners_udp_ports
+      src_ip: "{{ graylog_listeners_src_ip }}"
+  tags: firewall,graylog

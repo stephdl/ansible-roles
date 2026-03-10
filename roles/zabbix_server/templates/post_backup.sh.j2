@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+{% if zabbix_server_backup_hooks %}
+rm -f /home/lbkp/zabbix/*
+{% else %}
+# pre and post backup hooks are disabled on this host
+{% endif %}

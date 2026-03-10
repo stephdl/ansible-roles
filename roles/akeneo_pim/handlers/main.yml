@@ -1,0 +1,7 @@
+---
+
+- name: restart akeneo-pim
+  service: name={{ item }} state=restarted
+  loop:
+    - akeneo-pim_{{ pim_id }}-jobs
+    - akeneo-pim_{{ pim_id }}-events-api

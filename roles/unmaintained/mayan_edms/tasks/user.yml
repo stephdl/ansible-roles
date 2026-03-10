@@ -1,0 +1,6 @@
+---
+
+- name: Create mayan user account
+  user: name={{ mayan_user }} home={{ mayan_root_dir }} system=True
+  tags: mayan
+

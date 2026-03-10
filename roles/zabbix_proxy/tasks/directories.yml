@@ -1,0 +1,8 @@
+---
+
+- name: Create needed directories
+  file: path=/var/lib/zabbix/{{ item }} state=directory owner=root group=zabbix mode=770
+  with_items:
+    - db
+    - tmp
+  tags: zabbix

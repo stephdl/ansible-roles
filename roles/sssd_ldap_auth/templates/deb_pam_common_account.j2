@@ -1,0 +1,5 @@
+account     required      pam_unix.so
+account     sufficient    pam_localuser.so
+account     sufficient    pam_succeed_if.so uid < 1000 quiet
+account     [success=1 new_authtok_reqd=done default=ignore] pam_sss.so
+account     required      pam_permit.so

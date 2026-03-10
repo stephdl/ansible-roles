@@ -1,0 +1,12 @@
+---
+
+- name:  Handle appsmith ports in the firewall
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ item.port }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  loop:
+    - name: appsmith_server_port
+      port: "{{ appsmith_server_port }}"
+      src_ip: "{{ appsmith_server_src_ip }}"
+  tags: firewall,appsmith

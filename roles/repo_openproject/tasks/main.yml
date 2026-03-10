@@ -1,0 +1,28 @@
+---
+
+- name: Configure Openproject repository
+  yum_repository:
+    file: openproject
+    name: openproject
+    description: Repository for opf/openproject (stable/{{ openproject_branch }}) packages
+    baseurl: https://dl.packager.io/srv/rpm/opf/openproject/stable/{{ openproject_branch }}/el/$releasever/$basearch
+    gpgcheck: 0
+    repo_gpgcheck: 1
+    gpgkey: https://dl.packager.io/srv/opf/openproject/key
+    includepkgs:
+      - openproject
+  tags: repo,openproject
+
+  # pgloader is required to migrate openproject from mysql to postgresql
+- name: Configure pgloader repository
+  yum_repository:
+    file: openproject
+    name: pgloader-ccl
+    description: Repository for opf/pgloader-ccl (master) packages
+    baseurl: https://dl.packager.io/srv/rpm/opf/pgloader-ccl/master/el/$releasever/$basearch
+    gpgcheck: 0
+    repo_gpgcheck: 1
+    gpgkey: https://dl.packager.io/srv/opf/pgloader-ccl/key
+    includepkgs:
+      - pgloader-ccl
+  tags: repo,openproject

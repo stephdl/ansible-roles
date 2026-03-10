@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: repo_zfs
+    when: ansible_os_family == 'RedHat'
+  - role: zfs_common

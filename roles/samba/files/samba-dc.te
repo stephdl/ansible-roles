@@ -1,0 +1,11 @@
+module samba-dc 1.0;
+
+require {
+        type ntpd_var_run_t;
+        type chronyd_t;
+        class sock_file write;
+}
+
+#============= chronyd_t ==============
+allow chronyd_t ntpd_var_run_t:sock_file write;
+

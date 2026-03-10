@@ -1,0 +1,6 @@
+---
+
+- name: Write installed version
+  copy: content={{ mailman_version[item] }} dest={{ mailman_root_dir }}/meta/ansible_{{ item }}_version
+  loop: "{{ mailman_version.keys() | list }}"
+  tags: mailman

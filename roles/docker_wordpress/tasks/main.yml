@@ -1,0 +1,64 @@
+---
+
+- name: Create conf folder
+  file:
+    path: "{{ wh_docker_root_dir }}/conf"
+    state: directory
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create containers folders for conf
+  with_items: "{{ wh_docker }}"
+  file:
+    path: "{{ wh_docker_root_dir }}/conf/{{ item.wh_docker_name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create wordpress folder
+  file:
+    path: "{{ wh_docker_root_dir }}/wordpress"
+    state: directory
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create containers folders for wordpress
+  with_items: "{{ wh_docker }}"
+  file:
+    path: "{{ wh_docker_root_dir }}/wordpress/{{ item.wh_docker_name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy docker-compose YML file
+  with_items: "{{ wh_docker }}"
+  template:
+    src: docker-compose.j2
+    dest: "{{ wh_docker_root_dir }}/conf/{{ item.wh_docker_name }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+
+- name: Create custom PHP config file for each containers
+  with_items: "{{ wh_docker }}"
+  file:
+    path: "{{ wh_docker_root_dir }}/wordpress/{{ item.wh_docker_name }}/custom.ini"
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart Docker
+  service: name=docker state=restarted
+
+- name: Launch containers
+  with_items: "{{ wh_docker }}"
+  command: "docker-compose -f {{ wh_docker_root_dir }}/conf/{{ item.wh_docker_name }}/docker-compose.yml up -d"
+
+# - name: Send an welcome email message
+  # TODO

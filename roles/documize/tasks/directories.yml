@@ -1,0 +1,20 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ documize_root_dir }}"
+    - dir: "{{ documize_root_dir }}/tmp"
+      group: "{{ documize_user }}"
+      mode: 770
+    - dir: "{{ documize_root_dir }}/bin"
+    - dir: "{{ documize_root_dir }}/etc"
+      group: "{{ documize_user }}"
+      mode: 750
+    - dir: "{{ documize_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ documize_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ documize_root_dir }}/archives"
+      mode: 700
+  tags: documize

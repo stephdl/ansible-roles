@@ -1,0 +1,67 @@
+---
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/nginx/{{ item }}
+  with_items:
+    - nginx.conf
+    - mime.types
+    - ansible_modules.d/10-common.conf
+    - ansible_location.d/10-status.conf
+    - ansible_conf.d/09-cacheable.conf
+    - ansible_conf.d/maintenance.inc
+    - ansible_conf.d/perf.inc
+    - ansible_conf.d/force_ssl.inc
+    - ansible_conf.d/acme.inc
+    - ansible_conf.d/custom.inc
+    - ansible_conf.d/cache.inc
+    - ansible_conf.d/10-cache.conf
+    - ansible_conf.d/10-perf.conf
+    - ansible_conf.d/10-limits.conf
+    - ansible_conf.d/10-ws.conf
+    - ansible_conf.d/10-ssl.conf
+    - ansible_conf.d/30-vhosts.conf
+  notify: reload nginx
+  tags: [web,conf]
+
+- name: Remove naxsi configuration
+  file: path=/etc/nginx/{{ item }} state=absent
+  loop:
+    - ansible_conf.d/naxsi.inc
+    - ansible_conf.d/10-naxsi_rules.conf
+  notify: reload nginx
+  tags: web,conf
+
+- name: Remove obsolete configuration
+  file: path=/etc/nginx/{{ item }} state=absent
+  with_items:
+    - ansible_conf.d/filter.inc
+    - ansible_conf.d/10-filter.conf
+    - ansible_conf.d/headers.inc
+  notify: reload nginx
+  tags: [web,conf]
+
+  # TODO make it configurable
+- name: Create dummy white and blacklist files for nginx
+  copy:
+    content: "# TODO"
+    dest: /etc/nginx/bots.d/{{ item }}
+  with_items:
+    - bad-referrer-words.conf
+    - blacklist-domains.conf
+    - blacklist-ips.conf
+    - blacklist-user-agents.conf
+    - custom-bad-referrers.conf
+    - whitelist-domains.conf
+    - whitelist-ips.conf
+  tags: web
+
+- name: Configure log rotation
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/nginx
+  tags: web
+
+- name: Ensure log files has correct permission
+  file: path=/var/log/nginx/{{ item }} owner=nginx group=nginx state=touch
+  loop:
+    - error.log
+    - access.log
+  changed_when: False
+  tags: web

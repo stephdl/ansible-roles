@@ -1,0 +1,6 @@
+{% if system_proxy is defined and system_proxy != '' %}
+systemProp.http.proxyHost={{ system_proxy | urlsplit('hostname') }}
+systemProp.http.proxyPort={{ system_proxy | urlsplit('port') }}
+systemProp.https.proxyHost={{ system_proxy | urlsplit('hostname') }}
+systemProp.https.proxyPort={{ system_proxy | urlsplit('port') }}
+{% endif %}

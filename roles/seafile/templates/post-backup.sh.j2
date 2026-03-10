@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+# Delete database dumps
+rm -f {{ seafile_root_dir }}/backup/*
+
+# Umount fuse FS
+{{ seafile_root_dir }}/seafile-server/seaf-fuse.sh stop

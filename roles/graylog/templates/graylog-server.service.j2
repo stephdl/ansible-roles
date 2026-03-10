@@ -1,0 +1,37 @@
+[Unit]
+Description=Graylog server
+Documentation=http://docs.graylog.org/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=graylog
+Group=graylog
+LimitNOFILE=64000
+ExecStart=/usr/bin/java \
+            -Xms{{ graylog_jvm_mem }} -Xmx{{ graylog_jvm_mem }} -Djdk.tls.acknowledgeCloseNotify=true \
+            -XX:NewRatio=1 -server -XX:+ResizeTLAB \
+            -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled \
+            -XX:+CMSClassUnloadingEnabled -XX:-OmitStackTraceInFastThrow \
+            -Dlog4j.configurationFile=file://{{ graylog_root_dir }}/etc/log4j2.xml \
+            -Djava.library.path={{ graylog_root_dir }}/app/lib/sigar \
+            -jar {{ graylog_root_dir }}/app/graylog.jar server -f {{ graylog_root_dir }}/etc/server.conf -np
+
+# When a JVM receives a SIGTERM signal it exits with 143.
+SuccessExitStatus=143
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=graylog-server
+
+# Allow binding on privileged ports
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

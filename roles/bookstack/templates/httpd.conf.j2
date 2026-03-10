@@ -1,0 +1,39 @@
+{% if bookstack_web_alias is defined and bookstack_web_alias != False %}
+Alias /{{ bookstack_web_alias | regex_replace('^/','') }} {{ bookstack_root_dir }}/app/public
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ bookstack_root_dir }}/app/public>
+  AllowOverride All
+  Options FollowSymLinks
+{% if bookstack_src_ip is defined and bookstack_src_ip | length > 0 %}
+  Require ip {{ bookstack_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ bookstack_php_fpm_pool | default('bookstack_' + bookstack_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+  RewriteEngine On
+
+  # Handle Authorization Header
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Redirect Trailing Slashes If Not A Folder...
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} (.+)/$
+  RewriteRule ^ %1 [L,R=301]
+
+  # Send Requests To Front Controller...
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+
+  <FilesMatch "(\.git.*)">
+    Require all denied
+  </FilesMatch>
+
+</Directory>

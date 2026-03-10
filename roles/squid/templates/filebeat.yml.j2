@@ -1,0 +1,8 @@
+- type: log
+  enabled: True
+  paths:
+    - /var/log/squid/*.log
+    - /var/log/ufdbGuard/*.log
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

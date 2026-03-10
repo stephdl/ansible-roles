@@ -1,0 +1,8 @@
+---
+
+- name: Create directories
+  file: path={{ rust_root_dir }}/{{ item }} state=directory
+  loop:
+    - tmp
+    - bin
+  tags: rust

@@ -1,0 +1,6 @@
+---
+
+gitea_packages:
+  - sclo-git212-git
+  - git-lfs
+gitea_scl_cmd: '/bin/scl enable sclo-git212 -- '

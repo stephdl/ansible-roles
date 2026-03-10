@@ -1,0 +1,32 @@
+---
+
+- name: Create directories
+  file: path={{ paperless_root_dir }}/{{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /
+      owner: "{{ paperless_user }}"
+      mode: 700
+    - dir: /meta
+      mode: 700
+    - dir: /tmp
+      owner: "{{ paperless_user }}"
+      mode: 700
+    - dir: archives
+      mode: 700
+    - dir: backup
+      mode: 700
+    - dir: venv
+    - dir: app
+    - dir: data
+      owner: "{{ paperless_user }}"
+      mode: 700
+    - dir: media
+      owner: "{{ paperless_user }}"
+      mode: 700
+    - dir: static
+    - dir: consume
+      owner: "{{ paperless_user }}"
+    - dir: log
+      owner: "{{ paperless_user }}"
+      mode: 700
+  tags: ged

@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ synadm_root_dir }}"
+    - version: "{{ synadm_current_version }}"
+  tags: matrix

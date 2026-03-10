@@ -1,0 +1,5 @@
+---
+
+- name: Create user account
+  user: name={{ papermerge_user }} home={{ papermerge_root_dir }} system=True
+  tags: ged

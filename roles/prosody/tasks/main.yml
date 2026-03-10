@@ -1,0 +1,8 @@
+---
+
+- include: directories.yml
+- include: install.yml
+- include: facts.yml
+- include: conf.yml
+- include: iptables.yml
+- include: service.yml

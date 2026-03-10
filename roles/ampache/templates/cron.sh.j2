@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Rotate logs
+find {{ ampache_root_dir }}/logs -type f -mtime +7 -exec rm -f "{}" \;
+find {{ ampache_root_dir }}/logs -type f -mtime +1 -exec xz -T0 "{}" \;
+
+# Do we have a previous filelist to compare against ?
+PREV_HASH=$(cat {{ ampache_root_dir }}/tmp/data_hash.txt || echo 'none')
+
+# Now, compute a hash of the filelist
+NEW_HASH=$(find {{ ampache_root_dir }}/data/{music,video} | sha1sum | cut -d' ' -f1)
+
+# Write new hash so we can compare next time
+echo -n $NEW_HASH > {{ ampache_root_dir }}/tmp/data_hash.txt
+
+# If file list has changed since last time, then update the catalog
+if [ "$PREV_HASH" != "$NEW_HASH" ]; then
+  # Clean (remove files which doesn't exists anymore)
+  /bin/php{{ ampache_php_version }} {{ ampache_root_dir }}/web/bin/cli run:updateCatalog -c > /dev/null 2>&1
+  # Add (files added)
+  /bin/php{{ ampache_php_version }} {{ ampache_root_dir }}/web/bin/cli run:updateCatalog -a > /dev/null 2>&1
+  # Update graphics
+  /bin/php{{ ampache_php_version }} {{ ampache_root_dir }}/web/bin/cli run:updateCatalog -g > /dev/null 2>&1
+fi
+
+# Now check if files have changed recently. We can have the same file list, but metadata updates
+NEW_FILES=$(find {{ ampache_root_dir }}/data/{music,video} -type f -mtime -1 | wc -l)
+if [ "$NEW_FILES" -gt "0" ]; then
+  # Verify (update metadata)
+  /bin/php{{ ampache_php_version }} {{ ampache_root_dir }}/web/bin/cli run:updateCatalog -e > /dev/null 2>&1
+fi

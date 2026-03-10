@@ -1,0 +1,24 @@
+---
+
+- set_fact:
+    megacli: MegaCli-{{ megacli_version }}.noarch.rpm
+
+- name: Check if MegaCLi is installed
+  shell: rpm -q --qf "%{VERSION}-%{RELEASE}" MegaCli 2>/dev/null
+  register: megacli_installed_version
+  changed_when: False
+  failed_when: False
+  when: lsi_controllers | length > 0
+
+- name: Copy MegaCli package
+  copy: src={{ megacli }} dest=/tmp
+  when:
+    - lsi_controllers | length > 0
+    - megacli_installed_version.stdout != megacli_version
+
+- name: Install MegaCli
+  yum: name=/tmp/{{ megacli }} state=present
+  when:
+    - lsi_controllers | length > 0
+    - megacli_installed_version.stdout != megacli_version
+

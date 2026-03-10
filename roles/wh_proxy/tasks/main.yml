@@ -1,0 +1,46 @@
+---
+
+- set_fact: role_wh_proxy={{ True }}
+  tags: web
+
+- name: Deploy web hosting vhosts
+  template: src=nginx_vhosts.conf.j2 dest=/etc/nginx/ansible_conf.d/31-vhosts_wh.conf
+  notify: reload nginx
+  tags: web
+
+- name: Build a list of client vhosts
+  set_fact:
+    wh_vhosts: "{{ wh_vhosts | default([]) + [ item.1.vhost | default(item.0.name + '-' + item.1.name + '.wh.fws.fr') ] }}"
+  loop: "{{ wh_clients | default([]) | subelements('apps') }}"
+  tags: web
+
+- name: Check if Let's Encrypt's cert exist (web hosting)
+  stat: path=/var/lib/dehydrated/certificates/certs/{{ item }}/fullchain.pem
+  register: wh_letsencrypt_certs
+  with_items: "{{ wh_vhosts }}"
+  tags: web
+
+- name: Create directories for missing Let's Encrypt cert (web hosting)
+  file: path=/var/lib/dehydrated/certificates/certs/{{ item.item }} state=directory
+  with_items: "{{ wh_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt cert to the default one (web hosting)
+  file: src={{ nginx_cert_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item }}/fullchain.pem state=link
+  with_items: "{{ wh_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt key to the default one (web hosting)
+  file: src={{ nginx_key_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item }}/privkey.pem state=link
+  with_items: "{{ wh_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+

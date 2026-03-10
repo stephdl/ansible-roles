@@ -1,0 +1,8 @@
+[Unit]
+Description=Train spamassassin beayes from an IMAP account
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/imap-sa-learn
+ExecStart=/usr/local/bin/imap-sa-learn
+TimeoutSec=7200

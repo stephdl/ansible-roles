@@ -1,0 +1,43 @@
+---
+
+- when: not rust_hash.stat.exists
+  block:
+    - name: Download rustup script
+      get_url:
+        url: https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
+        dest: "{{ rust_root_dir }}/tmp"
+        mode: 755
+      tags: rust
+
+    - name: Install rust
+      command: "{{ rust_root_dir }}/tmp/rustup-init -y --no-modify-path"
+      environment:
+        - RUSTUP_HOME: "{{ rust_root_dir }}"
+        - CARGO_HOME: "{{ rust_root_dir }}"
+      tags: rust
+
+- when: rust_hash.stat.exists and (ansible_date_time.epoch | int - rust_hash.stat.mtime) > (30 * 60 * 60 * 24)
+  block:
+    - name: Update rust
+      command: "{{ rust_root_dir }}/bin/rustup update"
+  environment:
+    - RUSTUP_HOME: "{{ rust_root_dir }}"
+    - CARGO_HOME: "{{ rust_root_dir }}"
+  tags: rust
+
+- name: Include rust dir in PATH
+  copy:
+    content: |
+      #!/bin/bash
+      export PATH="{{ rust_root_dir }}/bin:$PATH"
+      export RUSTUP_HOME={{ rust_root_dir }}
+      export CARGO_HOME={{ rust_root_dir }}
+    dest: /etc/profile.d/rust.sh
+    mode: 755
+  tags: rust
+
+- name: Install bash completion
+  shell: "{{ rust_root_dir }}/bin/rustup completions bash > /etc/bash_completion.d/rust"
+  args:
+    creates: /etc/bash_completion.d/rust
+  tags: rust

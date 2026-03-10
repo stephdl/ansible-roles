@@ -1,0 +1,10 @@
+---
+
+- name: restart openvpn
+  service: name=openvpn@{{ item.item.name }} state=restarted
+  loop: "{{ ovpn_daemons_mod.results }}"
+  when: item.changed
+
+- name: restart all openvpn
+  service: name=openvpn@{{ item.name }} state=restarted
+  loop: "{{ ovpn_daemons }}"

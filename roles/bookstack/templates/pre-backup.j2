@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if bookstack_db_server not in ['localhost','127.0.0.1'] %}
+  --user={{ bookstack_db_user | quote }} \
+  --password={{ bookstack_db_pass | quote }} \
+  --host={{ bookstack_db_server | quote }} \
+  --port={{ bookstack_db_port | quote }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ bookstack_db_name | quote }} | zstd -c > {{ bookstack_root_dir }}/backup/{{ bookstack_db_name }}.sql.zst
+

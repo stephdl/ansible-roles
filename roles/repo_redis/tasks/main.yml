@@ -1,0 +1,12 @@
+---
+
+- name: Configure Remi repo for redis
+  yum_repository:
+    name: redis
+    file: redis
+    description: Remi repo for Redis server
+    baseurl: http://rpms.remirepo.net/enterprise/7/remi/$basearch/
+    gpgcheck: True
+    gpgkey: http://rpms.remirepo.net/RPM-GPG-KEY-remi
+    includepkgs: redis*
+  tags: repo

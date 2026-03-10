@@ -1,0 +1,53 @@
+server {
+  listen 80;
+  listen 443 ssl http2;
+  server_name {{ llng_manager_vhost }};
+
+  include /etc/nginx/ansible_conf.d/acme.inc;
+  include /etc/nginx/ansible_conf.d/perf.inc;
+  include /etc/nginx/ansible_conf.d/force_ssl.inc;
+  root /usr/share/lemonldap-ng/manager/htdocs/;
+
+{% if llng_manager_ssl is defined %}
+{% if llng_manager_ssl.cert is defined and llng_manager_ssl.key is defined %}
+  ssl_certificate {{ llng_manager_ssl.cert }};
+  ssl_certificate_key {{ llng_manager_ssl.key }};
+{% elif llng_manager_ssl.letsencrypt_cert is defined %}
+  ssl_certificate /var/lib/dehydrated/certificates/certs/{{ llng_manager_ssl.letsencrypt_cert }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ llng_manager_ssl.letsencrypt_cert }}/privkey.pem;
+{% endif %}
+{% endif %}
+
+  if ($uri !~ ^/(manager\.psgi|static|doc|fr-doc|lib|javascript|favicon|\.well\-known/acme\-challenge/[^/]+)) {
+    rewrite ^/(.*)$ /manager.psgi/$1 break;
+  }
+
+  location  ~ ^(?<sc>/.*\.psgi)(?:$|/) {
+    include /etc/nginx/fastcgi_params;
+    fastcgi_pass unix:/var/run/llng-fastcgi-server/llng-fastcgi.sock;
+    fastcgi_param LLTYPE manager;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_split_path_info ^(.*\.psgi)(/.*)$;
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+  }
+
+  location / {
+    index manager.psgi;
+{% for ip in llng_manager_src_ip %}
+    allow {{ ip }};
+{% endfor %}
+    deny all;
+    try_files $uri $uri/ =404;
+  }
+
+  location /doc/ {
+    alias /usr/share/lemonldap-ng/doc/;
+    index index.html start.html;
+  }
+  location /lib/ {
+    alias /usr/share/lemonldap-ng/doc/pages/documentation/current/lib/;
+  }
+  location /static/ {
+    alias /usr/share/lemonldap-ng/manager/htdocs/static/;
+  }
+}

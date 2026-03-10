@@ -1,0 +1,10 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ bitwarden_root_dir }}/tmp/bitwarden_rs-{{ bitwarden_version }}"
+    - "{{ bitwarden_root_dir }}/tmp/bitwarden_rs-{{ bitwarden_version }}.tar.gz"
+    - "{{ bitwarden_root_dir }}/tmp/web-vault"
+    - "{{ bitwarden_root_dir }}/tmp/bw_web_v{{ bitwarden_web_version }}.tar.gz"
+  tags: bitwarden

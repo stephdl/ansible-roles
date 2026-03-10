@@ -1,0 +1,26 @@
+[Unit]
+Description=Metabase opensource BI
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User={{ metabase_user }}
+WorkingDirectory={{ metabase_root_dir }}/app
+EnvironmentFile={{ metabase_root_dir }}/etc/env
+ExecStart=/usr/bin/java -Djava.net.preferIPv4Stack=true \
+{% if system_proxy is defined and system_proxy != '' %}
+            -Dhttp.proxyHost={{ system_proxy | urlsplit('hostname') }} -Dhttp.proxyPort={{ system_proxy | urlsplit('port') }} \
+            -Dhttps.proxyHost={{ system_proxy | urlsplit('hostname') }} -Dhttps.proxyPort={{ system_proxy | urlsplit('port') }} \
+{% endif %}
+            -jar {{ metabase_root_dir }}/app/metabase.jar
+SuccessExitStatus=143
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,37 @@
+---
+
+system_timers_base: []
+system_timers_extra: []
+system_timers: "{{ system_timers_base + system_timers_extra }}"
+
+# Default settings, if not specified for a timer
+system_timer_defaults:
+  description: System timer managed by ansible
+  calendar: daily
+  persistent: False
+  enabled: True
+  user: root
+  max_duration: 0
+
+# Define systemd timers
+# system_timers:
+#   - id: vaccuum-db
+#     calendar: weekly
+#     enabled: True
+#     user: postgres
+#     command: |
+#       #!/bin/bash -e
+#       start=`date +%s`
+#       echo "Start purging data older than ${RETENTION_TIME_IN_DAYS} days"
+#       psql -U postgres -d exchangeStatusDB << EOF
+#         delete
+#         from tracking
+#         where timestamp < now()-'${RETENTION_TIME_IN_DAYS} day'::interval;
+#       EOF
+#       end=`date +%s`
+#       echo Purge ended and take `expr $end - $start` seconds.
+#
+#   - id: dump
+#     calendar: daily
+#     command: |
+#       mysqldump --all-databases > /opt/backup/mysql.sql

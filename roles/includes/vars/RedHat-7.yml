@@ -1,0 +1,5 @@
+---
+
+webapps_mysql_packages:
+  - MySQL-python
+  - "{{ (mysql_engine is defined and mysql_engine == 'mysql') | ternary('mysql','mariadb') }}"

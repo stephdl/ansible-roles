@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p {{ unifi_root_dir }}/backup/mongo
+mongodump --quiet --port 27117 --out {{ unifi_root_dir }}/backup/mongo

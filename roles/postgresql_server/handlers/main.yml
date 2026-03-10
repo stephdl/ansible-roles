@@ -1,0 +1,7 @@
+---
+- name: reload postgresql
+  service: name=postgresql{{ (pg_version != 'default') | ternary('-' + pg_version | string,'') }} state=reloaded
+
+- name: restart postgresql
+  service: name=postgresql{{ (pg_version != 'default') | ternary('-' + pg_version | string,'') }} state=restarted
+...

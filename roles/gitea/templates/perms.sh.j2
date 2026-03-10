@@ -1,0 +1,5 @@
+#!/bin/bash
+
+restorecon -R {{ gitea_root_dir }}
+chown root:root {{ gitea_root_dir }}/bin/gitea
+chmod 755 {{ gitea_root_dir }}/bin/gitea

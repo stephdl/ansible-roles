@@ -1,0 +1,79 @@
+---
+
+matomo_id: 1
+matomo_root_dir: /opt/matomo_{{ matomo_id }}
+matomo_version: 3.14.1
+matomo_archive_url: https://builds.matomo.org/matomo-{{ matomo_version }}.tar.gz
+matomo_archive_sha1: d27769ce98d8a8101309cf3e4a0e982df39cf37a
+matomo_php_user: php-matomo_{{ matomo_id }}
+matomo_manage_upgrade: True
+matomo_php_version: 74
+# matomo_php_fpm_pool: matomo
+matomo_db_server: "{{ mysql_server | default('localhost') }}"
+matomo_db_port: 3306
+matomo_db_name: matomo_{{ matomo_id }}
+matomo_db_user: matomo_{{ matomo_id }}
+# matomo_db_pass:
+
+# Public matomo URL
+matomo_public_url: https://matomo.{{ inventory_hostname }}
+
+# If defined, restrict access to those hosts
+# matomo_src_ip:
+#   - 192.168.7.0/24
+
+# If defined, will add an alias in apache conf. Else, a vhost will have to be created
+# matomo_alias: matomo
+
+# Auth settings
+# This is the default settings
+matomo_ldap_base:
+  enabled: "{{ (ldap_auth | default(False) or ad_auth | default(False)) | ternary(True,False) }}"
+  use_ldap_for_authentication: 1
+  use_webserver_auth: 1
+  hostname: "{{ ad_auth | default(False) | ternary('ldaps://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_uri | default('ldap://ldap' ~ ansible_domain) | regex_replace('^ldap://(.*)','ldaps://\\1')) }}"
+  port: ""
+  ldap_user_filter: "{{ ad_auth | default(False) | ternary('(&(objectCategory=person)(objectClass=user)(primaryGroupId=513))',ldap_user_object_class | default('(objectClass=inetOrgPerson)')) }}"
+  base_dn: "{{ ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_user_base | default('ou=Users') + ',' + ldap_base | default(ansible_domain | regex_replace('\\.',',dc='))) }}"
+  ldap_user_id_field: "{{ ad_auth | default(False) | ternary('sAMAccountName', 'uid') }}"
+  ldap_alias_field: cn
+  ldap_last_name_field: sn
+  ldap_first_name_field: givenName
+  ldap_mail_field: mail
+  servers[]: ldap
+  admin_user: ""
+  admin_pass: ""
+# And this the ones which should be overriden host_vars)
+matomo_ldap: {}
+# And this is the combination of both, which will be used in the role
+matomo_ldap_all: "{{ matomo_ldap_base | combine(matomo_ldap) }}}"
+
+# List of plugins which can be installed by ansible
+matomo_plugins:
+  LoginHttpAuth:
+    version: 3.0.1
+    sha1: 5d56fb010372fa593b050796eeff7fa37f031f60
+  LoginLdap:
+    version: 4.0.8
+    sha1: 9f698725b8c3ff07f9feed9bfbb9b4f3f2defea6
+  ArchiveSite:
+    version: 0.1.1
+    sha1: f1578a585df347a5e6c4ded34db9d816ef36e8ed
+  CustomAlerts:
+    version: 3.0.6
+    sha1: 6e7b7cc0e290c73b2b54ae067de6761b62fb56d9
+  CustomDimensions:
+    version: 3.1.10
+    sha1: 6dc679652e6d5f4a1808ecd3a095de77a7fc14f4
+  SecurityInfo:
+    version: 3.0.7
+    sha1: 2f3bc984e979d8a977b2c580d41985455dc24128
+
+matomo_base_plugins_to_install:
+  - LoginLdap
+  - SecurityInfo
+
+matomo_extra_plugins_to_install: []
+matomo_plugins_to_install: "{{ matomo_base_plugins_to_install + matomo_extra_plugins_to_install }}"
+# Should we remove unmanaged plugins, those installed manually, not using ansible
+matomo_remove_unmanaged_plugins: True

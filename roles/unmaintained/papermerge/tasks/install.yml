@@ -1,0 +1,120 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - rh-python38-python-pip
+      - rh-python38-python-setuptools
+      - rh-python38-python-devel
+      - python-setuptools
+      - python-psycopg2
+      - postgresql-devel
+      - postgresql14
+      - tesseract
+      - tesseract-langpack-fra
+      - tesseract-langpack-deu
+      - tesseract-langpack-spa
+      - tesseract-langpack-ita
+      - pdftk
+      - glibc.i686       # pdftk from nux-dextop only exists for i686
+      - libstdc++.i686   # so install a few i686 libs to get it working
+      - zlib.i686
+      - poppler-utils
+      - ImageMagick
+      - git
+      - tar
+  tags: ged
+
+- when: papermerge_install_mode != 'none'
+  block:
+    - name: Download papermerge
+      get_url:
+        url: "{{ papermerge_archive_url }}"
+        dest: "{{ papermerge_root_dir }}/tmp/"
+        checksum: "sha1:{{ papermerge_archive_sha1 }}"
+
+    - name: Extract the archive
+      unarchive: src={{ papermerge_root_dir }}/tmp/papermerge-{{ papermerge_version }}.tar.gz dest={{ papermerge_root_dir }}/tmp remote_src=True
+
+    - name: Move papermerge to the correct dir
+      synchronize:
+        src: "{{ papermerge_root_dir }}/tmp/papermerge-{{ papermerge_version }}/"
+        dest: "{{ papermerge_root_dir }}/app/"
+        recursive: True
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Fix permissions on the app folder
+      file: path={{ papermerge_root_dir }}/app/ owner={{ papermerge_user }} group=nginx mode=750
+
+    - name: Wipe the venv on upgrades
+      file: path={{ papermerge_root_dir }}/venv state=absent
+    
+    - name: Create the venv dir
+      file: path={{ papermerge_root_dir }}/venv state=directory
+
+    - name: Create the venv
+      pip:
+        requirements: "{{ papermerge_root_dir }}/app/requirements/base.txt"
+        virtualenv: "{{ papermerge_root_dir }}/venv"
+        virtualenv_command: /opt/rh/rh-python38/root/bin/python -m venv
+      notify: restart papermerge
+
+    - name: Install additional python modules
+      pip:
+        name:
+          - psycopg2-binary # building fails here, Python.h not found (??)
+          - gunicorn
+        virtualenv: "{{ papermerge_root_dir }}/venv"
+        virtualenv_command: /opt/rh/rh-python38/root/usr/bin/python -m venv
+      notify: restart papermerge
+  tags: ged
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ papermerge_db_user }}"
+    password: "{{ papermerge_db_pass }}"
+    login_host: "{{ papermerge_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: ged
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ papermerge_db_name }}"
+    encoding: UTF-8
+    template: template0
+    owner: "{{ papermerge_db_user }}"
+    login_host: "{{ papermerge_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: ged
+
+- name: Create systemd units
+  template: src={{ item }}.service.j2 dest=/etc/systemd/system/{{ item }}.service
+  loop:
+    - papermerge-web
+    - papermerge-worker
+  notify: restart papermerge
+  register: papermerge_units
+  tags: ged
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: papermerge_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: ged
+
+- name: Install a wrapper for manage.py
+  copy:
+    content: |
+      #!/bin/bash
+      cd {{ papermerge_root_dir }}/app
+      {{ papermerge_root_dir }}/venv/bin/python ./manage.py $@
+    dest: /usr/local/bin/papermerge
+    mode: 755
+  tags: ged
+
+- name: Set permission on the queue dir
+  file: path={{ papermerge_root_dir }}/tmp/queue state=directory owner={{ papermerge_user }} group={{ papermerge_user }}
+  tags: ged

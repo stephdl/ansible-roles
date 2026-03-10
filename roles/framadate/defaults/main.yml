@@ -1,0 +1,48 @@
+---
+
+# A unique ID for this instance. You can deploy several framadate instances on the same machine
+framadate_id: 1
+
+# Root dir where the app will be installed. Each instance must have a different install path
+framadate_root_dir: /opt/framadate_{{ framadate_id }}
+
+# The version to deploy
+framadate_version: '1.1.17'
+
+# Should ansible manage upgrades, or only initial installation
+framadate_manage_upgrade: True
+
+# The URL to download framadate archive
+framadate_zip_url: https://framagit.org/framasoft/framadate/framadate/-/archive/{{ framadate_version }}/framadate-{{ framadate_version }}.zip
+
+# The sha1 checksum of the archive
+framadate_zip_sha1: 5c0782f1db6a797df70047c3715003178956ca3d
+
+# The user account under which PHP is executed
+framadate_php_user: php-framadate_{{ framadate_id }}
+
+# The version of PHP to use
+framadate_php_version: 74
+
+# Alternatively, use a custom php pool, which must be defined manually
+#framadate_php_fpm_pool: php70
+
+# Database parameters, framadate_mysql_pass must be set
+framadate_mysql_server: "{{ mysql_server | default('localhost') }}"
+framadate_mysql_port: 3306
+framadate_mysql_db: framadate_{{ framadate_id }}
+framadate_mysql_user: framadate_{{ framadate_id }}
+# If not set, a default one will be generated
+# framadate_mysql_pass: framadate
+
+# The email of the admin
+#framadate_admin_email: admin@domain.net
+
+# Logo URL. Can be relative the framadate_root_dir or an absolute URL
+# in which case the logo will be downloaded during the installation
+framadate_logo_url: images/logo-framadate.png
+
+# Should framadate trust the webserver authentication
+framadate_proxy_auth: False
+
+...

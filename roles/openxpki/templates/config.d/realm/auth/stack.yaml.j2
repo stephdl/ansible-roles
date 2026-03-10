@@ -1,0 +1,9 @@
+User:
+  description: I18N_OPENXPKI_CONFIG_AUTH_STACK_DESCRIPTION_USER
+  handler:
+{% for map in item.0.auth.role_map | sort(attribute='priority') %}
+    - LDAP Auth {{ map.role }}
+{% endfor %}
+
+_System:
+  handler: System

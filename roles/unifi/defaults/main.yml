@@ -1,0 +1,22 @@
+---
+
+unifi_root_dir: /opt/unifi
+unifi_version: 6.5.53
+unifi_archive_url: https://www.ubnt.com/downloads/unifi/{{ unifi_version }}/UniFi.unix.zip
+unifi_archive_sha1: 17fc9cf63ffc24d38d2a9723ae6437e1161675db
+unifi_manage_upgrade: True
+unifi_http_port: 8080
+unifi_https_port: 8443
+unifi_portal_http_port: 8880
+unifi_portal_https_port: 8843
+unifi_http_ports:
+  - "{{ unifi_http_port }}"
+  - "{{ unifi_https_port }}"
+  - "{{ unifi_portal_http_port }}"
+  - "{{ unifi_portal_https_port }}"
+unifi_stun_ports:
+  - 3478
+unifi_http_src_ip: []
+unifi_stun_src_ip: []
+# Max memory, in MB
+unifi_mem_limit: 2048

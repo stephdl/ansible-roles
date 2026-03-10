@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable MongoDB daemon
+  service: name=mongod state=started enabled=yes
+  tags: mongo
+

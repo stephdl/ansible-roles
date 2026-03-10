@@ -1,0 +1,4 @@
+---
+
+- name: restart appsmith-server
+  service: name=appsmith-server state=restarted

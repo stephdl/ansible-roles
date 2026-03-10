@@ -1,0 +1,5 @@
+---
+
+- name: restart pgadmin4
+  service: name=pgadmin4_{{ pga_id }} state=restarted
+  when: not pgadmin4_started.changed

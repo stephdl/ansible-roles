@@ -1,0 +1,9 @@
+---
+
+- name: Create user
+  user:
+    name: "{{ pim_user }}"
+    system: True
+    home: "{{ pim_root_dir }}"
+    shell: /sbin/nologin
+  tags: pim

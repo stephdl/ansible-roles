@@ -1,0 +1,12 @@
+---
+
+- name: Relaxe SELinux restrictions for Zabbix Agent
+  selinux_permissive: name=zabbix_agent_t permissive=True
+  tags: zabbix
+
+- name: Allow Zabbix to use sudo
+  seboolean: name={{ item }} state=True persistent=True
+  loop:
+    - zabbix_run_sudo
+  when: ansible_distribution != 'CentOS' or ansible_distribution_version | default(0) is version('7.6', '>=') # This bool is only available for CentOS 7.6.1810 or newer
+  tags: zabbix

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+# 2 locks are needed. The first one ensure we don't run
+# The pre-backup script twice. It's an atomic lock.
+# Then we need a second lock which will last until the post-backup ran
+# This one doesn't need to be atomic (as we already checked this)
+PRELOCKFILE="/var/lock/pre-bkp.lock"
+exec 200>$PRELOCKFILE
+flock -n 200 || ( echo "Couldn't aquire pre-backup lock" && exit 1 )
+PID=$$
+echo $PID 1>&200
+
+if [ -e /var/lock/bkp.lock ]; then
+  # Consider the lock to be stale if it's older than 8 hours
+  if [ "$(( $(date +"%s") - $(stat -c "%Y" /var/lock/bkp.lock) ))" -gt "28800" ]; then
+    rm /var/lock/bkp.lock
+  else
+    echo "Another backup is running"
+    exit 1
+  fi
+fi
+touch /var/lock/bkp.lock
+if [ -d "/etc/backup/pre.d" ]; then
+  for H in $(find /etc/backup/pre.d -type f -o -type l | sort); do
+    if [ -x $H ]; then
+      echo "Running hook $H"
+      $H "$@"
+      echo "Finished hook $H"
+    else
+      echo "Skiping hook $H as it's not executable"
+    fi
+  done
+fi

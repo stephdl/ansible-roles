@@ -1,0 +1,33 @@
+{% if cs_trusted_countries | length > 0 %}
+name: trusted_countries_ip_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip" && Alert.Source.Cn in ["{{ cs_trusted_countries | join('","') }}"]
+decisions:
+ - type: ban
+   duration: {{ cs_ban_trusted_duration }}
+on_success: break
+---
+name: trusted_countries_range_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Range" && Alert.Source.Cn in ["{{ cs_trusted_countries | join('","') }}"]
+decisions:
+ - type: ban
+   duration: {{ cs_ban_trusted_duration }}
+on_success: break
+---
+{% endif %}
+name: default_ip_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+ - type: ban
+   duration: {{ cs_ban_duration }}
+on_success: break
+---
+name: default_range_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+ - type: ban
+   duration: {{ cs_ban_duration }}
+on_success: break

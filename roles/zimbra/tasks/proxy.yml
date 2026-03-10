@@ -1,0 +1,32 @@
+---
+
+- name: Handle Zimbra proxy ports
+  iptables_raw:
+    name: zcs_proxy_ports
+    state: present
+    rules: "{% if zcs_http_src_ip | length > 0 %}-A INPUT -m state --state NEW -p tcp -m multiport --dports 80,443 -s {{ zcs_http_src_ip | join(',') }} -j ACCEPT\n{% endif %}
+            {% if zcs_clients_src_ip | length > 0 %}-A INPUT -m state --state NEW -p tcp -m multiport --dports 110,995,143,993 -s {{ zcs_clients_src_ip | join(',') }} -j ACCEPT\n{% endif %}
+            {% if zcs_admin_src_ip | length > 0 %}-A INPUT -m state --state NEW -p tcp -m multiport --dports 9071 -s {{ zcs_admin_src_ip | join(',') }} -j ACCEPT{% endif %}"
+  when: iptables_manage | default(True)
+  tags: zcs
+
+- name: Enable proxy for the admin interface
+  command: /opt/zimbra/bin/zmprov ms {{ inventory_hostname }} zimbraReverseProxyAdminEnabled TRUE
+  changed_when: False
+  become_user: zimbra
+  tags: zcs
+
+- name: Build a list of vhosts to be used for Let's Encrypt cert
+  shell: |
+    for DOMAIN in $(/opt/zimbra/bin/zmprov getAllDomains); do
+      /opt/zimbra/bin/zmprov getDomain $DOMAIN zimbraVirtualHostname | perl -ne 'm/^zimbraVirtualHostname: (.*)/ && print "$1\n"'
+    done
+  become_user: zimbra
+  register: zcs_vhosts
+  changed_when: False
+  when: zcs_letsencrypt == True
+  tags: zcs
+- set_fact: zcs_vhosts={{ zcs_vhosts.stdout_lines }}
+  when: zcs_vhosts.stdout_lines is defined
+  tags: zcs
+

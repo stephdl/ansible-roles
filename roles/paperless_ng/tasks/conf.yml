@@ -1,0 +1,44 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest={{ paperless_root_dir }}/app/{{ item }} group={{ paperless_user }} mode=640
+  loop:
+    - paperless.conf
+    - gunicorn.conf.py
+  notify: restart paperless
+  tags: ged
+
+- when: paperless_install_mode != 'none'
+  block:
+    - name: Migrate database
+      django_manage:
+        command: migrate
+        app_path: "{{ paperless_root_dir }}/app/src"
+        virtualenv: "{{ paperless_root_dir }}/venv"
+      notify: restart paperless
+      become_user: "{{ paperless_user }}"
+
+    - name: Collect static files
+      django_manage:
+        command: collectstatic
+        app_path: "{{ paperless_root_dir }}/app/src"
+        virtualenv: "{{ paperless_root_dir }}/venv"
+
+    - name: Set correct permissions
+      file: path={{ paperless_root_dir }}/media recurse=True owner={{ paperless_user }} group={{ paperless_user }}
+
+  tags: ged
+
+- when: paperless_install_mode == 'install'
+  block:
+    - name: Create admin user
+      django_manage:
+        command: createsuperuser --noinput --username admin --email admin@{{ ansible_domain }}
+        app_path: "{{ paperless_root_dir }}/app/src"
+        virtualenv: "{{ paperless_root_dir }}/venv"
+      environment:
+        DJANGO_SUPERUSER_PASSWORD: '{{ paperless_admin_pass }}'
+      failed_when: False
+  become_user: "{{ paperless_user }}"
+  tags: ged
+

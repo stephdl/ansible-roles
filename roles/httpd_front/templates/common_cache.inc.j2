@@ -1,0 +1,15 @@
+CacheLock on
+CacheLockPath /tmp/mod_cache-lock
+CacheLockMaxAge 5
+CacheRoot /var/cache/httpd/proxy
+CacheEnable disk /
+CacheDirLevels 2
+CacheDirLength 1
+CacheIgnoreHeaders Set-Cookie
+CacheMaxFileSize {{ httpd_cache_max_file_size | default('1000000') }}
+CacheMinFileSize 1
+CacheIgnoreNoLastMod On
+CacheIgnoreQueryString Off
+CacheLastModifiedFactor 0.1
+CacheDefaultExpire {{ httpd_cache_default_expire | default('3600') }}
+CacheMaxExpire {{ httpd_cache_max_expire | default('86400') }}

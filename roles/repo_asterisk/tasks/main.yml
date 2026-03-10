@@ -1,0 +1,37 @@
+---
+
+- name: Configure Tucny Asterisk repository
+  yum_repository:
+    file: asterisk
+    name: asterisk
+    description: Asterisk {{ ast_version }} Packages @ tucny.com
+    baseurl: https://ast.tucny.com/repo/asterisk-{{ ast_version }}/el$releasever/$basearch/
+    gpgcheck: 1
+    gpgkey: https://ast.tucny.com/repo/RPM-GPG-KEY-dtucny
+  tags: repo
+
+- name: Configure Tucny common repo for Asterisk
+  yum_repository:
+    file: asterisk
+    name: asterisk-common
+    description: Asterisk Asterisk Common Requirement Packages @ tucny.com
+    baseurl: https://ast.tucny.com/repo/asterisk-common/el$releasever/$basearch/
+    gpgcheck: 1
+    gpgkey: https://ast.tucny.com/repo/RPM-GPG-KEY-dtucny
+  tags: repo
+
+  # asterisk core sounds aren't available yet for el8, so also configure el7 repo
+  # on el8 for now
+- name: Configure Tucny common repo for Asterisk el7
+  yum_repository:
+    file: asterisk
+    name: asterisk-common-el7
+    description: Asterisk Asterisk Common Requirement Packages @ tucny.com
+    baseurl: https://ast.tucny.com/repo/asterisk-common/el7/$basearch/
+    includepkgs:
+      - asterisk-sounds-core*
+      - asterisk-moh-opsound*
+    gpgcheck: 1
+    gpgkey: https://ast.tucny.com/repo/RPM-GPG-KEY-dtucny
+    state: "{{ ansible_distribution_major_version is version('8', '==') | ternary('present','absent') }}"
+  tags: repo

@@ -1,0 +1,93 @@
+---
+
+- name: Build config for OpenVPN tunnels
+  set_fact: ovpn_daemons_conf={{ ovpn_daemons_conf | default([]) + [ovpn_daemon_defaults | combine(item)] }}
+  loop: "{{ ovpn_daemons }}"
+  tags: ovpn
+- set_fact: ovpn_daemons={{ ovpn_daemons_conf | default([]) }}
+  tags: ovpn
+
+- name: Install OpenVPN
+  package:
+    name:
+      - openvpn
+  tags: ovpn
+
+- name: Deploy OpenVPN service template
+  template: src=openvpn@.service.j2 dest=/etc/systemd/system/openvpn@.service
+  register: ovpn_service_template
+  notify: restart all openvpn
+  tags: ovpn
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: ovpn_service_template.changed
+  tags: ovpn
+
+- name: Deploy daemons configuration
+  template: src=openvpn.conf.j2 dest=/etc/openvpn/{{ item.name }}.conf mode=640
+  loop: "{{ ovpn_daemons }}"
+  when: item.enabled
+  register: ovpn_daemons_mod
+  notify: restart openvpn
+  tags: ovpn
+
+- name: Create DH params
+  command: openssl dhparam /etc/openvpn/{{ item.iname}}.dh 2048
+  args:
+    creates: /etc/openvpn/{{ item.name }}.dh
+  loop: "{{ ovpn_daemons }}"
+  when:
+    - item.type == 'server'
+    - item.enabled
+    - item.auth == 'cert'
+  tags: ovpn
+
+- name: Build a list of UDP ports
+  set_fact: ovpn_udp_ports={{ ovpn_daemons | selectattr('enabled','equalto', True) | selectattr('proto','equalto','udp') | selectattr('type','equalto','server') | map(attribute='port') | list }}
+  tags: ovpn
+
+- name: Build a list of TCP ports
+  set_fact: ovpn_tcp_ports={{ ovpn_daemons | selectattr('enabled','equalto', True) | selectattr('proto','equalto','tcp') | selectattr('type','equalto','server') | map(attribute='port') | list }}
+  tags: ovpn
+
+- name: Handle OpenVPN UDP ports
+  iptables_raw:
+    name: ovpn_udp_ports
+    state: "{{ (ovpn_udp_ports | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p udp -m multiport --dports {{ ovpn_udp_ports | join(',') }} -s {{ ovpn_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: ovpn
+
+- name: Handle OpenVPN TCP ports
+  iptables_raw:
+    name: ovpn_tcp_ports
+    state: "{{ (ovpn_tcp_ports | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p tcp -m multiport --dports {{ ovpn_tcp_ports | join(',') }} -s {{ ovpn_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: ovpn
+
+- name: Handle daemons status
+  service: name=openvpn@{{ item.name }} state={{ (item.enabled) | ternary('started','stopped') }} enabled={{ (item.enabled) | ternary(True,False) }}
+  loop: "{{ ovpn_daemons }}"
+  tags: ovpn
+
+- name: List managed daemons ID
+  set_fact: ovpn_managed_id={{ ovpn_daemons | map(attribute='name') | list }}
+  tags: ovpn
+
+- name: List existing conf
+  shell: find /etc/openvpn -maxdepth 1 -mindepth 1 -type f -name \*.conf -exec basename "{}" \; | sed s/\.conf//
+  register: ovpn_existing_conf
+  changed_when: False
+  tags: ovpn
+
+- name: Disable unmanaged services
+  service: name=openvpn@{{ item }} state=stopped enabled=False
+  loop: "{{ ovpn_existing_conf.stdout_lines | difference(ovpn_managed_id) }}"
+  tags: ovpn
+
+- name: Remove unmanaged conf
+  file: path=/etc/openvpn/{{ item }}.conf state=absent
+  loop: "{{ ovpn_existing_conf.stdout_lines | difference(ovpn_managed_id) }}"
+  tags: ovpn

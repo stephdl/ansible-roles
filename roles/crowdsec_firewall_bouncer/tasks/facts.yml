@@ -1,0 +1,73 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: cs
+
+- name: Check if API key is available
+  stat: path=/etc/crowdsec/meta/bouncer_fw_api_key
+  register: cs_fw_lapi_key_file
+  tags: cs
+
+- when: cs_fw_lapi_key is not defined and (not cs_fw_lapi_key_file.stat.exists or cs_fw_lapi_key_file.stat.size == 0)
+  block:
+    - name: Register the bouncer
+      shell: |
+        cscli bouncers list -o raw | grep -q -P '^{{ inventory_hostname }}-firewall' && cscli bouncers delete {{ inventory_hostname }}-firewall
+        cscli bouncers add {{ inventory_hostname }}-firewall -o raw
+      register: cs_bouncer_add
+      failed_when: cs_bouncer_add.rc not in [0,1]
+      changed_when: cs_bouncer_add.rc == 0
+      delegate_to: "{{ cs_lapi_server | default(inventory_hostname) }}"
+
+    - name: Record the API key for later use
+      copy: content={{ cs_bouncer_add.stdout }} dest=/etc/crowdsec/meta/bouncer_fw_api_key mode=600
+
+  tags: cs
+
+- when: cs_fw_lapi_key is not defined
+  block:
+    - name: Read the API key
+      slurp: src=/etc/crowdsec/meta/bouncer_fw_api_key
+      register: cs_fw_lapi_generated_key
+    - set_fact: cs_fw_lapi_key={{ cs_fw_lapi_generated_key.content | b64decode | trim }}
+  tags: cs
+
+- name: Set initial facts
+  block:
+    - set_fact: cs_fw_current_version=''
+    - set_fact: cs_fw_install_mode='none'
+  tags: cs
+
+- name: Check if the bouncer is installed
+  stat: path=/usr/local/bin/cs-firewall-bouncer
+  register: cs_fw_bin
+  tags: cs
+
+- when: cs_fw_bin.stat.exists
+  block:
+    - name: Detect installed version
+      shell: |
+        cs-firewall-bouncer -c /dev/null 2>&1 | perl -ne 'm/cs-firewall-bouncer v(\d+(\.\d+)*)/ && print $1'
+      register: cs_fw_current_version
+      changed_when: False
+
+    - set_fact: cs_fw_current_version={{ cs_fw_current_version.stdout }}
+  tags: cs
+
+- name: Set install mode
+  set_fact: cs_fw_install_mode='install'
+  when: not cs_fw_bin.stat.exists
+  tags: cs
+
+- name: Set upgrade mode
+  set_fact: cs_fw_install_mode='upgrade'
+  when:
+    - cs_fw_bin.stat.exists
+    - cs_fw_current_version != cs_fw_version
+  tags: cs
+

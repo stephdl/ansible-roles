@@ -1,0 +1,27 @@
+---
+
+- set_fact: install_mode='none'
+- set_fact: current_version=''
+
+- name: Check if app is installed
+  stat: path={{ root_dir }}/meta/{{ version_file | default('ansible_version') }}
+  register: version_file_stat
+
+- name: Check installed version
+  slurp: src={{ root_dir }}/meta/{{ version_file | default('ansible_version') }}
+  register: current_version
+  when: version_file_stat.stat.exists
+
+- set_fact: current_version={{ current_version.content | b64decode | trim }}
+  when: version_file_stat.stat.exists
+
+- name: Set install mode to install
+  set_fact: install_mode='install'
+  when: not version_file_stat.stat.exists
+
+- name: Set install mode to upgrade
+  set_fact: install_mode='upgrade'
+  when:
+    - version_file_stat.stat.exists
+    - current_version | string != version | string
+    - manage_upgrade | default(True)

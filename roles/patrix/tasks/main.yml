@@ -1,0 +1,9 @@
+---
+
+- include: install_{{ ansible_os_family }}.yml
+
+- name: Deploy patrix config for root user
+  template: src=patrixrc.j2 dest=/root/.patrixrc mode='600'
+  tags: patrix
+
+...

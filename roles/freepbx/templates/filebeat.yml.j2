@@ -1,0 +1,9 @@
+- type: log
+  enabled: True
+  paths:
+    - /var/log/asterisk/full
+    - /var/log/asterisk/*.log
+    - /var/lib/asterisk/.pm2/pm2.log
+  exclude_files:
+    - '\.[xg]z$'
+    - '\.\d+$'

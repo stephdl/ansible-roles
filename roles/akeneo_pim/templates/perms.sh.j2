@@ -1,0 +1,11 @@
+#!/bin/bash
+
+restorecon -R {{ pim_root_dir }}
+chown root:root {{ pim_root_dir }}
+chmod 700 {{ pim_root_dir }}
+setfacl -R -k -b {{ pim_root_dir }}
+setfacl -m u:{{ pim_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:x {{ pim_root_dir }}
+find {{ pim_root_dir }}/app -type f -exec chmod 644 "{}" \;
+find {{ pim_root_dir }}/app -type d -exec chmod 755 "{}" \;
+chown -R {{ pim_user }}:{{ pim_user }} {{ pim_root_dir }}/app
+

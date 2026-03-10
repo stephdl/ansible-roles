@@ -1,0 +1,82 @@
+---
+
+# Detect if already installed, and if an upgrade is needed
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ graylog_root_dir }}"
+    - version: "{{ graylog_version }}"
+  tags: graylog
+- set_fact: graylog_install_mode={{ (install_mode == 'upgrade' and not graylog_manage_upgrade) | ternary('none',install_mode) }}
+  tags: graylog
+- set_fact: graylog_current_version={{ current_version | default('') }}
+  tags: graylog
+
+# Try to read mongo admin pass
+- name: Check if mongo pass file exists
+  stat: path=/root/.mongo.pw
+  register: graylog_mongo_pw
+  tags: graylog
+- when: graylog_mongo_pw.stat.exists and mongo_admin_pass is not defined
+  block:
+    - slurp: src=/root/.mongo.pw
+      register: graylog_mongo_admin_pass
+    - set_fact: mongo_admin_pass={{ graylog_mongo_admin_pass.content | b64decode | trim }}
+  tags: graylog
+- fail: msg='mongo_admin_pass must be provided'
+  when: not graylog_mongo_pw.stat.exists and mongo_admin_pass is not defined
+  tags: graylog
+
+- name: Remove randomly generated admin password
+  file: path={{ graylog_root_dir }}/meta/admin_pass state=absent
+  when: graylog_admin_pass is defined
+  tags: graylog
+
+- name: Remove randomly generated password secret
+  file: path={{ graylog_root_dir }}/meta/pass_secret state=absent
+  when: graylog_pass_secret is defined
+  tags: graylog
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ graylog_root_dir }}/meta/pass_secret"
+  when: graylog_pass_secret is not defined
+  tags: graylog
+- set_fact: graylog_pass_secret={{ rand_pass }}
+  when: graylog_pass_secret is not defined
+  tags: graylog
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ graylog_root_dir }}/meta/admin_pass"
+  when: graylog_admin_pass is not defined
+  tags: graylog
+- set_fact: graylog_admin_pass={{ rand_pass }}
+  when: graylog_admin_pass is not defined
+  tags: graylog
+
+# If only one mongo url is given and graylog_mongo_pass is not defined,
+# parse the password from the url, or generate one
+- debug:
+    msg: |
+      graylog_mongo_url is '{{ graylog_mongo_url }}'
+      parsed pass is "{{ graylog_mongo_url[0] | urlsplit('password') }}"
+  tags: graylog
+
+- name: Parse password from the first mongo URL
+  set_fact: graylog_mongo_pass={{ graylog_mongo_url[0] | urlsplit('password') | urldecode }}
+  when:
+    - graylog_mongo_url | length == 1
+    - graylog_mongo_pass is not defined
+    - graylog_mongo_url[0] | urlsplit('password') is string
+  tags: mongo
+
+# Create a random password for mongo
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ graylog_root_dir }}/meta/mongo_pass"
+    - set_fact: graylog_mongo_pass={{ rand_pass }}
+  when:
+    - graylog_mongo_url | length == 1
+    - graylog_mongo_pass is not defined
+  tags: graylog

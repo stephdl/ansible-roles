@@ -1,0 +1,6 @@
+---
+
+- name: Create crowdsec user
+  user: name={{ cs_user }} system=True shell=/sbin/nologin
+  when: cs_user != 'root'
+  tags: cs

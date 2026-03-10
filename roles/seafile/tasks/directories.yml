@@ -1,0 +1,39 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(seafile_user) }} group={{ item.group | default(seafile_user) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ seafile_root_dir }}/tmp"
+      mode: 700
+      owner: root
+      group: root
+    - dir: "{{ seafile_root_dir }}/meta"
+      mode: 700
+      owner: root
+      group: root
+    - dir: "{{ seafile_root_dir }}/archives"
+      mode: 700
+      owner: root
+      group: root
+    - dir: "{{ seafile_root_dir }}"
+    - dir: "{{ seafile_root_dir }}/fuse"
+    - dir: "{{ seafile_root_dir }}/seafile-server"
+    - dir: "{{ seafile_root_dir }}/conf"
+    - dir: "{{ seafile_root_dir }}/ccnet"
+      mode: 770
+    - dir: "{{ seafile_root_dir }}/logs"
+    - dir: "{{ seafile_root_dir }}/pids"
+    - dir: "{{ seafile_data_dir }}"
+      mode: 770
+    - dir: "{{ seafile_data_dir }}/thumbnails"
+    - dir: "{{ seafile_data_dir }}/seahub"
+    - dir: "{{ seafile_data_dir }}/seahub/custom"
+    - dir: "{{ seafile_data_dir }}/seahub/cache"
+    - dir: "{{ seafile_data_dir }}/seahub/avatars"
+    - dir: "{{ seafile_data_dir }}/pro"
+    - dir: "{{ seafile_root_dir }}/backup"
+      mode: 700
+      owner: root
+      group: root
+  ignore_errors: True # So we can run when the fuse mount point is active
+  tags: seafile

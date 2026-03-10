@@ -1,0 +1,182 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - nodejs
+      - java-11-openjdk
+      - java-11-openjdk-devel
+      - mongodb-org-tools
+      - make
+      - gcc-c++
+  tags: appsmith
+
+- name: Detect exact JRE version
+  command: rpm -q java-11-openjdk
+  args:
+    warn: False
+  changed_when: False
+  register: appsmith_jre11_version
+  tags: appsmith
+
+- name: Select JRE 11 as default version
+  alternatives:
+    name: "{{ item.name }}"
+    link: "{{ item.link }}"
+    path: "{{ item.path }}"
+  loop:
+    - name: java
+      link: /usr/bin/java
+      path: /usr/lib/jvm/{{ appsmith_jre11_version.stdout | trim }}/bin/java
+    - name: javac
+      link: /usr/bin/javac
+      path: /usr/lib/jvm/{{ appsmith_jre11_version.stdout | trim }}/bin/javac
+    - name: jre_openjdk
+      link: /usr/lib/jvm/jre-openjdk
+      path: /usr/lib/jvm/{{ appsmith_jre11_version.stdout | trim }}
+    - name: java_sdk_openjdk
+      link: /usr/lib/jvm/java-openjdk
+      path: /usr/lib/jvm/{{ appsmith_jre11_version.stdout | trim }}
+  tags: appsmith
+
+- name: Stop the service during upgrade
+  service: name=appsmith-server state=stopped
+  when: appsmith_install_mode == 'upgrade'
+  tags: appsmith
+
+- name: Install N
+  npm:
+    name: n
+    global: yes
+    state: present
+  tags: appsmith
+
+- name: Install node specific version
+  command: n "{{ appsmith_node_version }}"
+  tags: appsmith
+
+- name: Move old NodeJS
+  command: mv /usr/bin/node /usr/bin/node-10
+  ignore_errors: yes
+  tags: appsmith
+
+- name: Move new NodeJS as default
+  file:
+    src: /usr/local/bin/node
+    dest: /usr/bin/node
+    state: link
+  tags: appsmith
+
+- when: appsmith_install_mode != 'none'
+  block:
+
+    - name: Download appsmith
+      get_url:
+        url: "{{ appsmith_archive_url }}"
+        dest: "{{ appsmith_root_dir }}/tmp"
+        checksum: sha1:{{ appsmith_archive_sha1 }}
+
+
+    - name: Extract appsmith archive
+      unarchive:
+        src: "{{ appsmith_root_dir }}/tmp/appsmith-{{ appsmith_version }}.tar.gz"
+        dest: "{{ appsmith_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move sources
+      synchronize:
+        src: "{{ appsmith_root_dir }}/tmp/appsmith-{{ appsmith_version }}/"
+        dest: "{{ appsmith_root_dir }}/src/"
+        compress: False
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Compile the server
+      command: /opt/maven/apache-maven/bin/mvn -DskipTests clean package
+      args:
+        chdir: "{{ appsmith_root_dir }}/src/app/server"
+
+    - name: Remove previous server version
+      shell: find {{ appsmith_root_dir }}/server -name \*.jar -exec rm -f "{}" \;
+
+    - name: Copy server jar
+      copy: src={{ appsmith_root_dir }}/src/app/server/appsmith-server/target/server-1.0-SNAPSHOT.jar dest={{ appsmith_root_dir }}/server/ remote_src=True
+      notify: restart appsmith-server
+
+    - name: List plugins
+      shell: find {{ appsmith_root_dir }}/src/app/server/appsmith-*/*/target -maxdepth 1 -name \*.jar \! -name original\*
+      register: appsmith_plugins_jar
+
+    - name: Install plugins jar
+      copy: src={{ item }} dest={{ appsmith_root_dir }}/server/plugins/ remote_src=True
+      loop: "{{ appsmith_plugins_jar.stdout_lines }}"
+
+    - name: Install yarn
+      npm:
+        name: yarn
+        path: "{{ appsmith_root_dir }}/src/app/client"
+
+    - name: Install NodeJS dependencies
+      command: ./node_modules/yarn/bin/yarn install
+      args:
+        chdir: "{{ appsmith_root_dir }}/src/app/client"
+      environment: 
+        http_proxy: ""
+        https_proxy: ""
+        all_proxy: ""
+
+    - name: Build the client
+      command: ./node_modules/.bin/craco --max-old-space-size=3072 build --config craco.build.config.js
+      args:
+        chdir: "{{ appsmith_root_dir }}/src/app/client"
+
+    - name: Remove Old Client
+      file:
+        path: "{{ appsmith_root_dir }}/client"
+        state: absent
+
+    - name: Copy the client
+      copy:
+        src: "{{ appsmith_root_dir }}/src/app/client/build/"
+        dest: "{{ appsmith_root_dir }}/client"
+        remote_src: True
+
+  # Note : the client will be deployed in {{ appsmith_root_dir }}/client
+  # with a ExecStartPre hook of the server, which will take care of replacing
+  # placeholders with current settings. So no need to do it here
+
+  become_user: "{{ appsmith_user }}"
+  tags: appsmith
+
+- name: Deploy systemd unit
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - appsmith-server.service
+  register: appsmith_units
+  notify: restart appsmith-server
+  tags: appsmith
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: appsmith_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: appsmith
+
+- name: Install pre-start script
+  template: src=pre-start.sh.j2 dest={{ appsmith_root_dir }}/bin/pre-start mode=755
+  notify: restart appsmith-server
+  tags: appsmith
+
+- name: Install ssh configuration
+  template:
+    src: ssh_config.j2
+    dest: "{{ appsmith_root_dir }}/.ssh/config"
+    mode: 600
+    owner: "{{ appsmith_user }}"
+  tags: appsmith
+
+- name: Install pre/post backup hoooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/appsmith mode=700
+  loop:
+    - pre
+    - post
+  tags: appsmith

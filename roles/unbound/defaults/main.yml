@@ -1,0 +1,18 @@
+---
+
+unbound_port: 53
+unbound_src_ip: []
+unbound_forward_zones: []
+# unbound_forward_zones:
+#   - name: domain.local
+#     forwarders:
+#       - ns1.domain.com
+#       - ns1.domain.com
+
+unbound_local_zones: []
+# unbound_localzones:
+#   - name: 3.29.10.in-addr.arpa.
+#     entries:
+#       - name: 1
+#         type: PTR
+#         value: mx.domain.net

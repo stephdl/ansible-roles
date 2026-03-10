@@ -1,0 +1,45 @@
+---
+
+# Version of papermerge to deploy
+papermerge_version: 2.0.1
+# URL of the tarball
+papermerge_archive_url: https://github.com/ciur/papermerge/archive/v{{ papermerge_version }}.tar.gz
+# Expected sha1 of the archive, to check the download was OK
+papermerge_archive_sha1: 1dc4e144c299fa133ca135420b851a4730fc82d6
+
+# Papermerge uses 2 ports. for gunicorn and will only listen on the loopback
+# The other for nginx and is the one which will be accessible over the network
+# The port defined here is for nginx. Gunicorn will use this port +1
+papermerge_port: 8010
+# List of IP (or CIDR networks) for which access to the nginx port will be allowed
+papermerge_src_ip: []
+
+# Should ansible manage papermerge upgrades or just initial install
+papermerge_manage_upgrade: True
+
+  # Parameter for the postgres database
+papermerge_db_server: "{{ pg_server | default('localhost') }}"
+papermerge_db_port: 5432
+papermerge_db_user: papermerge
+papermerge_db_name: papermerge
+# If papermerge_db_pass is not defined, a random one will be created
+#papermerge_db_pass: S3cr3t.
+
+# Unix user under which papermerge will run
+papermerge_user: papermerge
+# Top dir where papermerge will be installed
+papermerge_root_dir: /opt/papermerge
+
+# Default lang for the OCR
+papermerge_ocr_default_lang: fra
+
+# Django secret key. A random one will be created if not set
+# papermerge_secret_key: abc123
+
+# Import dir is where papermerge will look for files and consume them
+papermerge_import_dir: "{{ papermerge_root_dir }}/input"
+
+# IMAP settings for fetching document by email
+# papermerge_imap_host: mail.example.org
+# papermerge_imap_user: 
+# papermerge_imap_pass: 

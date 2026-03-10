@@ -1,0 +1,94 @@
+---
+
+- name: Install backup tools
+  yum: name=rsync
+  when: ansible_os_family == 'RedHat'
+
+- name: Install backup tools
+  apt: name=rsync
+  when: ansible_os_family == 'Debian'
+
+- name: Create a local backup user account
+  user: name=lbkp comment="Local backup account" system=yes shell={{ backup_shell }}
+  tags: backup
+
+- name: Deploy sudo configuration
+  template: src=sudo.j2 dest=/etc/sudoers.d/backup mode=400
+  tags: backup
+
+- name: Deploy SSH keys for the backup account
+  authorized_key:
+    user: lbkp
+    key: "{{ backup_ssh_keys | join(\"\n\") }}"
+    key_options: "{{ backup_ssh_keys_options | join(',') }}"
+    exclusive: yes
+  when: backup_src_ip is not defined or backup_src_ip | length < 1
+  tags: backup
+
+- name: Deploy SSH keys for the backup account (with source IP restriction)
+  authorized_key:
+    user: lbkp
+    key: "{{ backup_ssh_keys | join(\"\n\") }}"
+    key_options: "from=\"{{ backup_src_ip | join(',') }}\",{{ backup_ssh_keys_options | join(',') }}"
+    exclusive: yes
+  when:
+    - backup_src_ip is defined
+    - backup_src_ip | length > 0
+  tags: backup
+
+- name: Create pre and post backup hook dir
+  file: path={{ item }} state=directory mode=750
+  with_items:
+    - /etc/backup/pre.d
+    - /etc/backup/post.d
+  tags: backup
+
+- name: Deploy default pre/post backup hooks
+  copy:
+    content: "{{ item.content }}"
+    dest: /etc/backup/{{ item.type }}.d/default
+    mode: 0755
+  loop:
+    - type: pre
+      content: "{{ backup_pre_script }}"
+    - type: post
+      content: "{{ backup_post_script }}"
+  tags: backup
+
+- name: Copy pre-backup script
+  copy: src={{ item }} dest=/usr/local/bin/{{ item }} mode=750 group=lbkp
+  with_items:
+    - pre-backup
+    - post-backup
+  tags: backup
+
+- name: Deploy rpm dump list script
+  copy: src=dump-rpms-list dest=/etc/backup/pre.d/dump-rpms-list mode=755
+  when: ansible_os_family == 'RedHat'
+  tags: backup
+
+- name: Create megaraid dump dir
+  file: path=/home/lbkp/megaraid state=directory
+  tags: backup
+
+- name: Deploy MegaCli backup scripts
+  copy: src={{ item.script }} dest=/etc/backup/{{ item.type }}.d/{{ item.script }} mode=750
+  with_items:
+    - script: dump-megaraid-cfg
+      type: pre
+    - script: rm-megaraid-cfg
+      type: post
+  when: lsi_controllers | default([]) | length > 0
+  tags: backup
+
+- name: Excludes for proxmox backup client
+  copy:
+    dest: /.pxarexclude
+    content: |
+      var/log/lastlog
+  when:
+    - ansible_virtualization_role == 'guest'
+    - ansible_virtualization_type == 'lxc' or ansible_virtualization_type == 'systemd-nspawn'
+  tags: backup
+
+...

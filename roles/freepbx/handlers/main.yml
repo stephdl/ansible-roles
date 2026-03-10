@@ -1,0 +1,16 @@
+---
+
+- name: reload freepbx
+  service: name=freepbx state=reloaded
+
+- name: restart freepbx
+  service: name=freepbx state=restarted
+
+- name: fpbx chown
+  command: /usr/local/bin/fwconsole chown
+
+- name: restart systemd-modules-load
+  service: name=systemd-modules-load state=restarted
+
+- name: restart vsftpd
+  service: name=vsftpd state=restarted

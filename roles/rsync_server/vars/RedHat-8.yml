@@ -1,0 +1,6 @@
+---
+
+rsync_packages:
+  - rsync
+  - rsync-daemon
+  - python3-libsemanage

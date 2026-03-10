@@ -1,0 +1,16 @@
+---
+
+samba_common_packages:
+  - samba
+  - samba-client
+  - sssd-winbind-idmap
+  - openldap-clients
+  - policycoreutils-python-utils
+  - tdb-tools
+
+samba_dc_packages:
+  - samba-dc
+  - ldb-tools
+  - krb5-workstation
+  - python3-markdown
+  - patch

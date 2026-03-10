@@ -1,0 +1,30 @@
+---
+
+- name: Deploy appsmith server conf
+  template: src={{ item }}.j2 dest={{ appsmith_root_dir }}/etc/{{ item }} group={{ appsmith_user }} mode=640
+  loop:
+    - env
+  notify: restart appsmith-server
+  tags: appsmith
+
+- name: Deploy nginx conf
+  template: src=nginx.conf.j2 dest=/etc/nginx/ansible_conf.d/appsmith.conf
+  notify: reload nginx
+  tags: appsmith
+
+- name: Create the mongodb user
+  mongodb_user:
+    database: "{{ appsmith_mongo_url | urlsplit('path') | regex_replace('^\\/', '') }}"
+    name: "{{ appsmith_mongo_user }}"
+    password: "{{ appsmith_mongo_pass }}"
+    login_database: admin
+    login_host: "{{ appsmith_mongo_url | urlsplit('hostname') }}"
+    login_port: "{{ appsmith_mongo_url | urlsplit('port') | ternary(appsmith_mongo_url | urlsplit('port'),omit) }}"
+    login_user: mongoadmin
+    login_password: "{{ mongo_admin_pass }}"
+    roles:
+      - readWrite
+  when:
+    - appsmith_mongo_pass is defined
+    - appsmith_mongo_pass != False
+  tags: appsmith

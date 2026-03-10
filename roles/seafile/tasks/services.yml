@@ -1,0 +1,17 @@
+---
+
+- name: Start and enable services
+  service: name={{ item }} state=started enabled=True
+  loop:
+    - seafile
+    - seahub
+  when: seafile_install_mode != 'upgrade' # We need to run upgrade script manually
+  tags: seafile
+
+- name: Start and enable timers
+  systemd: name={{ item }}.timer state=started enabled=True
+  loop:
+    - seafile-clean-db
+    - seafile-gc
+  tags: seafile
+

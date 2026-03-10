@@ -1,0 +1,38 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: rsync
+
+- name: Install packages
+  package: name={{ rsync_packages }}
+  tags: rsync
+
+- name: Handle rsyncd port
+  iptables_raw:
+    name: rsync_port
+    state: "{{ (rsync_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ rsync_port }} -s {{ rsync_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,rsync]
+
+- name: Create rsyncd.d directory
+  file: path=/etc/rsyncd.conf.d state=directory
+  tags: rsync
+
+- name: Deploy rsyncd conf
+  template: src=rsyncd.conf.j2 dest=/etc/rsyncd.conf
+  tags: rsync
+
+- name: Allow rsync full access in SELinux
+  seboolean: name=rsync_full_access state=True persistent=True
+  when: ansible_selinux.status == 'enabled'
+  tags: rsync
+
+- name: Start and enable rsync daemon
+  systemd: name=rsyncd.socket state=started enabled=True
+  tags: rsync

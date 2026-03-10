@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: repo_nodejs
+  - role: mysql_server
+    when: etherpad_db_server in ['localhost','127.0.0.1']

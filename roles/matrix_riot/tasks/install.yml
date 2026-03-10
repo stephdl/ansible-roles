@@ -1,0 +1,28 @@
+---
+
+- name: Download Riot
+  get_url:
+    url: "https://github.com/vector-im/riot-web/releases/download/v{{ riot_version }}/riot-v{{ riot_version }}.tar.gz"
+    dest: "{{ riot_root_dir }}/tmp/"
+    checksum: "sha1:{{ riot_archive_sha1 }}"
+  when: riot_install_mode != 'none'
+  tags: matrix
+
+- name: Extract riot archive
+  unarchive:
+    src: "{{ riot_root_dir }}/tmp/riot-v{{ riot_version }}.tar.gz"
+    dest: "{{ riot_root_dir }}/tmp/"
+    remote_src: True
+  when: riot_install_mode != 'none'
+  tags: matrix
+
+- name: Move the content of riot to the correct top directory
+  synchronize:
+    src: "{{ riot_root_dir }}/tmp/riot-v{{ riot_version }}/"
+    dest: "{{ riot_root_dir }}/web/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: riot_install_mode != 'none'
+  tags: matrix
+

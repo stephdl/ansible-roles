@@ -1,0 +1,12 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: install.yml
+- include: conf.yml
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+- include: services.yml
+- include: write_version.yml
+- include: cleanup.yml

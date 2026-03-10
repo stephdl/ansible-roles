@@ -1,0 +1,11 @@
+[Unit]
+Description=PVE Hook daemon
+After=syslog.target network.target pveproxy.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pve-hookd --hookdir /etc/hooks
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

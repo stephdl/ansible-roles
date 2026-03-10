@@ -1,0 +1,40 @@
+---
+
+- name: Create the archive dir
+  file: path={{ pim_root_dir }}/archives/{{ pim_current_version }} state=directory
+  tags: pim
+
+- name: Stop jobs and event API services
+  service: name={{ item }} state=stopped
+  loop:
+    - akeneo-pim_{{ pim_id }}-jobs
+    - akeneo-pim_{{ pim_id }}-events-api
+  tags: pim
+
+- name: Disable cron jobs
+  file: path=/etc/cron.d/akeneopim_{{ pim_id }} state=absent
+  tags: pim
+
+- name: Archive current version
+  synchronize:
+    src: "{{ pim_root_dir }}/app"
+    dest: "{{ pim_root_dir }}/archives/{{ pim_current_version }}/"
+    compress: False
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  tags: pim
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ pim_db_name }}"
+    target: "{{ pim_root_dir }}/archives/{{ pim_current_version }}/{{ pim_db_name }}.sql.xz"
+    login_host: "{{ pim_db_server }}"
+    login_port: "{{ pim_db_port }}"
+    login_user: "{{ pim_db_user }}"
+    login_password: "{{ pim_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: pim

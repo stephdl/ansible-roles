@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: sssd_ad_auth
+    when: ad_auth | default(False)

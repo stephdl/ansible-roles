@@ -1,0 +1,14 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: pma_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: archive_post.yml
+  when: pma_install_mode == 'upgrade'
+- include: cleanup.yml
+- include: write_version.yml
+

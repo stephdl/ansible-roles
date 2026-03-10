@@ -1,0 +1,37 @@
+; {{ ansible_managed }}
+
+[dokuwiki_{{ dokuwiki_id }}]
+
+listen.owner = root
+listen.group = {{ httpd_user | default('apache') }}
+listen.mode = 0660
+listen = /run/php-fpm/dokuwiki_{{ dokuwiki_id }}.sock
+user = {{ dokuwiki_php_user }}
+group = {{ dokuwiki_php_user }}
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 60m
+
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = 256M
+php_admin_value[session.save_path] = {{ dokuwiki_root_dir }}/sessions
+php_admin_value[upload_tmp_dir] = {{ dokuwiki_root_dir }}/tmp
+php_admin_value[sys_temp_dir] = {{ dokuwiki_root_dir }}/tmp
+php_admin_value[post_max_size] = 50M
+php_admin_value[upload_max_filesize] = 50M
+php_admin_value[disable_functions] = system, show_source, symlink, exec, dl, shell_exec, passthru, phpinfo, escapeshellarg, escapeshellcmd
+php_admin_value[open_basedir] = {{ dokuwiki_root_dir }}
+php_admin_value[max_execution_time] = 300
+php_admin_value[max_input_time] = 60
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = on
+php_admin_flag[file_uploads] = on
+php_admin_flag[session.cookie_httponly] = on

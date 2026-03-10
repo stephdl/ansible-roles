@@ -1,0 +1,52 @@
+---
+
+- name: Create the archive dir
+  file:
+    path: "{{ metabase_root_dir }}/archives/{{ metabase_current_version }}"
+    state: directory
+  tags: metabase
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ metabase_root_dir }}/{{ item }}"
+    dest: "{{ metabase_root_dir }}/archives/{{ metabase_current_version }}"
+    recursive: True
+    delete: True
+  loop:
+    - app
+    - plugins
+    - data
+    - etc
+  delegate_to: "{{ inventory_hostname }}"
+  tags: metabase
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ metabase_db_name }}"
+    target: "{{ metabase_root_dir }}/archives/{{ metabase_current_version }}/{{ metabase_db_name }}.sql.xz"
+    login_host: "{{ metabase_db_server }}"
+    login_port: "{{ metabase_db_port }}"
+    login_user: "{{ metabase_db_user }}"
+    login_password: "{{ metabase_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  when: metabase_db_engine == 'mysql'
+  tags: metabase
+
+- name: Dump the database
+  shell: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ metabase_db_server }}
+    --port={{ metabase_db_port }}
+    --username={{ metabase_db_user }} {{ metabase_db_name }} |
+    zstd -10 -c > {{ metabase_root_dir }}/archives/{{ metabase_current_version }}/{{ metabase_db_name }}.sql.zst
+  environment:
+    - PGPASSWORD: "{{ metabase_db_pass }}"
+  when: metabase_db_engine == 'postgres'
+  tags: metabase
+

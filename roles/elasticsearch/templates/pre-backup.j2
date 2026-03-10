@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/es
+mount -o bind,ro {{ es_backup_dir }} /home/lbkp/es
+curl -X PUT http://localhost:{{ es_port }}/_snapshot/lbkp/lbkp?wait_for_completion=true

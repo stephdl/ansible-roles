@@ -1,0 +1,23 @@
+---
+
+- name: Create archive directory
+  file: path={{ nd_root_dir }}/archives/{{ nd_current_version }} state=directory mode=700
+  tags: navidrome
+
+- name: Archive previous version
+  copy: src={{ nd_root_dir }}/bin/navidrome dest={{ nd_root_dir }}/archives/{{ nd_current_version }}/ remote_src=True
+  tags: navidrome
+
+- name: Stop navidrome during upgrade
+  service: name=navidrome state=stopped
+  tags: navidrome
+
+- name: Archive the database and the configuration
+  copy: src={{ nd_root_dir }}/{{ item }} dest={{ nd_root_dir }}/archives/{{ nd_current_version }}/ remote_src=True
+  loop:
+    - data/navidrome.db
+    - etc/navidrome.toml
+  tags: navidrome
+
+
+

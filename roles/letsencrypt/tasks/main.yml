@@ -1,0 +1,167 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: web,ssl
+
+- name: Install dehydrated client
+  package: name={{ letsencrypt_packages }}
+  tags: web,ssl
+
+- name: Detect openssl version
+  shell: openssl version | perl -ne 'm/OpenSSL (\d+[^\s\-]+)/ && print "$1\n"'
+  register: letsencrypt_openssl_version
+  changed_when: False
+  tags: web,ssl
+
+- name: Create needed directories
+  file: path={{ item }} state=directory
+  with_items:
+    - /etc/dehydrated
+    - /var/lib/dehydrated/certificates
+    - /var/lib/dehydrated/challenges
+  tags: web,ssl
+
+- name: Install dehydrated
+  get_url:
+    url: "{{ item.url }}"
+    dest: "{{ item.dest }}"
+    mode: 755
+    force: True
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  with_items:
+    - url: https://raw.githubusercontent.com/dehydrated-io/dehydrated/master/dehydrated
+      dest: /usr/local/bin/dehydrated
+    - url: https://git.fws.fr/fws/dehydrated/raw/branch/master/dehydrated_hooks
+      dest: /usr/local/bin/dehydrated_hooks
+  when: ansible_os_family == 'Debian'
+  tags: web,ssl
+
+- name: Install lexicon
+  pip: name=dns-lexicon state=latest
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  when: ansible_os_family == 'Debian'
+  tags: web,ssl
+
+- name: Create hook directories
+  file: path=/etc/dehydrated/hooks_{{ item }}.d state=directory
+  loop:
+    - clean_challenge
+    - deploy_cert
+    - deploy_challenge
+    - unchanged_cert
+    - invalid_challenge
+    - request_failure
+    - generate_csr
+    - startup_hook
+    - exit_hook
+  tags: web,ssl
+
+- name: Create per cert configuration dir
+  file: path=/etc/dehydrated/certificates state=directory
+  tags: web,ssl
+
+- name: Deploy default hooks
+  copy: content={{ letsencrypt_hooks[item] }} dest=/etc/dehydrated/hooks_{{ item }}.d/00-default mode=755
+  loop:
+    - clean_challenge
+    - deploy_cert
+    - deploy_challenge
+    - unchanged_cert
+    - invalid_challenge
+    - request_failure
+    - generate_csr
+    - startup_hook
+    - exit_hook
+  tags: web,ssl
+
+- name: Remove obsolete gandi_live backend # merged with gandi now
+  file: path=/usr/lib/python2.7/site-packages/lexicon/providers/{{ item }} state=absent
+  loop:
+    - gandi_live.py
+    - gandi_live.pyc
+  tags: web,ssl
+
+- name: Deploy lexicon hooks
+  template: src=dns-lexicon-{{ item }}.j2 dest=/etc/dehydrated/hooks_{{ item }}.d/dns-lexicon mode=755
+  with_items:
+    - deploy_challenge
+    - clean_challenge
+  when:
+    - letsencrypt_challenge == 'dns'
+    - letsencrypt_dns_provider is defined
+    - letsencrypt_dns_auth_token is defined
+  tags: web,ssl
+
+- name: Remove lexicon hooks
+  file: path=/etc/dehydrated/hooks_{{ item }}.d/dns-lexicon state=absent
+  with_items:
+    - deploy_challenge
+    - clean_challenge
+  when: letsencrypt_challenge != 'dns' or letsencrypt_dns_provider is not defined or letsencrypt_dns_auth_token is not defined
+  tags: web,ssl
+
+- name: Deploy dehydrated configuration
+  template: src={{ item.src }} dest={{ item.dest }} mode={{ item.mode | default('644') }}
+  with_items:
+    - src: config.j2
+      dest: /etc/dehydrated/config
+      mode: 600
+    - src: domains.txt.j2
+      dest: /etc/dehydrated/domains.txt
+    - src: cron.j2
+      dest: /etc/cron.daily/dehydrated
+      mode: 755
+  notify: renew dehydrated
+  tags: web,ssl
+
+- name: Deploy per certificate config
+  template: src=cert_config.j2 dest=/etc/dehydrated/certificates/{{ item.common_name }} mode=600
+  loop: "{{ letsencrypt_certs }}"
+  notify: renew dehydrated
+  tags: web,ssl
+
+- name: Create httpd conf dir
+  file: path=/etc/httpd/ansible_conf.d state=directory
+  when: ansible_os_family == 'RedHat'
+  tags: web,ssl
+
+- name: Deploy dehydrated config for apache
+  copy: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - src: httpd_dehydrated.conf
+      dest: /etc/httpd/ansible_conf.d/10-dehydrated.conf
+    - src: common_letsencrypt.inc
+      dest: /etc/httpd/ansible_conf.d/common_letsencrypt.inc
+  register: letsencrypt_httpd_conf
+  when: ansible_os_family == 'RedHat'
+  tags: web,ssl
+
+- name: Check if Apache httpd is installed
+  stat: path=/lib/systemd/system/httpd.service
+  register: letsencrypt_httpd
+  when: ansible_os_family == 'RedHat'
+  tags: web,ssl
+
+- name: Reload httpd config
+  command: /bin/systemctl condreload httpd
+  when:
+    - letsencrypt_httpd_conf.changed
+    - letsencrypt_httpd.stat.exists
+    - ansible_os_family == 'RedHat'
+  tags: web,ssl
+
+- name: Register on Let's Encrypt
+  command: dehydrated --register --accept-terms
+  changed_when: False
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  tags: web,ssl
+
+...

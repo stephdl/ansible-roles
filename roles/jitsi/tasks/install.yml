@@ -1,0 +1,184 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - java-1.8.0-openjdk
+      - java-1.8.0-openjdk-devel
+      - git
+      - nodejs        # needed to build meet
+      - libXScrnSaver # needed for jigasi
+      - python3       # needed for confmapper
+      - make
+  tags: jitsi
+
+  # If you use an Let's Encrypt cert, it might not be there yet. In this case, create a link
+  # to the default prosody cert so the service can be started. The cert will be obtained after that and
+  # will override the links
+- name: Link cert to the default one
+  file: path={{ jitsi_cert_path }} src=/etc/prosody/certs/localhost.crt state=link
+  when: not jitsi_cert_file.stat.exists
+  tags: jitsi
+
+- name: Link key to the default one
+  file: path={{ jitsi_key_path }} src=/etc/prosody/certs/localhost.key state=link
+  when: not jitsi_key_file.stat.exists
+  tags: jitsi
+
+  # This file used to contain proxy settings for maven
+  # now this is handled in a maven general dir, so remove it from here
+- name: Remove local maven configuration
+  file: path={{ jitsi_root_dir }}/.m2/settings.xml state=absent
+  tags: jitsi
+
+  # Now, for every component, we will clone or update the repo.
+  # If the repo changed since the last run, we rebuild and restart the corresponding component
+- name: Clone jicofo repo
+  git:
+    repo: "{{ jitsi_jicofo_git_url }}"
+    dest: "{{ jitsi_root_dir }}/src/jicofo"
+    force: True
+  become_user: "{{ jitsi_user }}"
+  register: jitsi_jicofo_git
+  tags: jitsi
+
+- name: Install or update jicofo
+  block:
+    - name: Build jicofo
+      command: /opt/maven/apache-maven/bin/mvn package -DskipTests -Dassembly.skipAssembly=false
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/jicofo"
+      become_user: "{{ jitsi_user }}"
+
+    - name: Extract jicofo archive
+      unarchive:
+        src: "{{ jitsi_root_dir }}/src/jicofo/target/jicofo-1.1-SNAPSHOT-archive.zip"
+        dest: "{{ jitsi_root_dir }}/tmp/"
+        remote_src: True
+
+    - name: Move jicofo to its final directory
+      synchronize:
+        src: "{{ jitsi_root_dir }}/tmp/jicofo-1.1-SNAPSHOT/"
+        dest: "{{ jitsi_root_dir }}/jicofo/"
+        recursive: True
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      notify: restart jitsi-jicofo
+  when: (jitsi_jicofo_git.changed and jitsi_manage_upgrade) or not jitsi_jicofo_script.stat.exists
+  tags: jitsi
+
+- name: Clone jigasi repo
+  git:
+    repo: "{{ jitsi_jigasi_git_url }}"
+    dest: "{{ jitsi_root_dir }}/src/jigasi"
+    force: True
+  become_user: "{{ jitsi_user }}"
+  register: jitsi_jigasi_git
+  tags: jitsi
+
+- name: Install or update jigasi
+  block:
+    - name: Build jigasi
+      command: /opt/maven/apache-maven/bin/mvn package -DskipTests -Dassembly.skipAssembly=false
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/jigasi"
+      become_user: "{{ jitsi_user }}"
+
+    - name: Extract jigasi archive
+      unarchive:
+        src: "{{ jitsi_root_dir }}/src/jigasi/target/jigasi-linux-x64-1.1-SNAPSHOT.zip"
+        dest: "{{ jitsi_root_dir }}/tmp/"
+        remote_src: True
+
+    - name: Link libunix-java lib
+      file: src=libunix-0.5.1.so dest={{ jitsi_root_dir }}/tmp/jigasi-linux-x64-1.1-SNAPSHOT/lib/libunix-java.so state=link
+
+    - name: Move jigasi to its final directory
+      synchronize:
+        src: "{{ jitsi_root_dir }}/tmp/jigasi-linux-x64-1.1-SNAPSHOT/"
+        dest: "{{ jitsi_root_dir }}/jigasi/"
+        recursive: True
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      notify: restart jitsi-jigasi
+  when: (jitsi_jigasi_git.changed and jitsi_manage_upgrade) or not jitsi_jigasi_script.stat.exists
+  tags: jitsi
+
+- name: Deploy systemd unit
+  template: src={{ item }}.service.j2 dest=/etc/systemd/system/{{ item }}.service
+  loop:
+    - jitsi-jicofo
+    - jitsi-jigasi
+    - jitsi-confmapper
+  register: jitsi_units
+  notify:
+    - restart jitsi-jicofo
+    - restart jitsi-jigasi
+    - restart jitsi-confmapper
+  tags: jitsi
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: jitsi_units.results | selectattr('changed', 'equalto', True) | list | length > 0
+  tags: jitsi
+
+- name: Clone jitsi meet
+  git:
+    repo: "{{ jitsi_meet_git_url }}"
+    dest: "{{ jitsi_root_dir }}/src/meet"
+    force: True
+  register: jitsi_meet_git
+  become_user: "{{ jitsi_user }}"
+  tags: jitsi
+
+- name: Install or update jitsi meet
+  block:
+    - name: Install jitsi meet node dependencies
+      npm: path={{ jitsi_root_dir }}/src/meet
+      become_user: "{{ jitsi_user }}"
+
+    - name: Build jitsi meet
+      command: make
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/meet"
+      become_user: "{{ jitsi_user }}"
+
+    - name: Deploy new jitsi meet version
+      shell: |
+        rm -rf {{ jitsi_root_dir }}/meet/*
+        mkdir -p {{ jitsi_root_dir }}/meet/css
+        cp -r *.js *.html connection_optimization favicon.ico fonts images libs static sounds LICENSE lang *.json {{ jitsi_root_dir }}/meet/
+        cp css/all.css {{ jitsi_root_dir }}/meet/css/
+      args:
+        chdir: "{{ jitsi_root_dir }}/src/meet"
+  when: (jitsi_meet_git.changed and jitsi_manage_upgrade) or not jitsi_meet_index.stat.exists
+  tags: jitsi
+
+- name: Update languages
+  include_tasks: update_lang.yml
+  loop: "{{ jitsi_meet_custom_lang.keys() | list }}"
+  tags: jitsi
+
+- name: Install dehydrated hook
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/jitsi.sh mode=755
+  tags: jitsi
+
+- name: Install the conference mapping daemon
+  get_url:
+    url: https://raw.githubusercontent.com/gronke/jitsi-conferencemapper-api/master/daemon.py
+    dest: "{{ jitsi_root_dir }}/confmapper/daemon.py"
+    mode: 0755
+  notify: restart jitsi-confmapper
+  tags: jitsi
+
+- name: Ensure prosody module dir exists
+  file: path=/opt/prosody/modules/ state=directory
+  tags: jitsi
+
+- name: Install byass_pwd module for prosody
+  template: src=mod_jibri_bypass_pwd.lua.j2 dest=/opt/prosody/modules/mod_jibri_bypass_pwd.lua
+  notify: reload prosody
+  tags: jitsi
+

@@ -1,0 +1,7 @@
+[general]
+online_api  = {{ pve_online_api_key }}
+wan_bridge = {{ pve_wan_bridge }}
+{% if pve_vlan_bridge is defined %}
+vlan_bridge = {{ pve_vlan_bridge }}
+{% endif %}
+migrate_flush_arp = {{ (pve_migrate_flush_arp) | ternary('yes','no') }}

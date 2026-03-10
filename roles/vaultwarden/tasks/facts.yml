@@ -1,0 +1,74 @@
+---
+
+- name: Set initial install modes
+  block:
+    - set_fact: vaultwarden_install_mode='none'
+    - set_fact: vaultwarden_current_version=''
+    - set_fact: vaultwarden_web_install_mode='none'
+    - set_fact: vaultwarden_web_current_version=''
+  tags: vaultwarden
+
+- name: Check if we need to migrate from bitwarden_rs
+  block:
+    - stat: path=/etc/systemd/system/bitwarden_rs.service
+      register: vaultwarden_bitwarden_unit
+    - set_fact: vaultwarden_migrate_from_bitwarden={{ vaultwarden_bitwarden_unit.stat.exists }}
+  tags: vaultwarden
+
+- name: Check if server is installed
+  stat: path={{ vaultwarden_root_dir }}/meta/ansible_version
+  register: vaultwarden_version_file
+  tags: vaultwarden
+
+- when: vaultwarden_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ vaultwarden_root_dir }}/meta/ansible_version
+      register: vaultwarden_current_version
+    - set_fact: vaultwarden_current_version={{ vaultwarden_current_version.content | b64decode | trim }}
+    - set_fact: vaultwarden_install_mode='upgrade'
+      when: vaultwarden_current_version != vaultwarden_version
+  tags: vaultwarden
+
+- when: not vaultwarden_version_file.stat.exists
+  block:
+    - set_fact: vaultwarden_install_mode='install'
+  tags: vaultwarden
+
+- name: Check if web vault is installed
+  stat: path={{ vaultwarden_root_dir }}/meta/ansible_web_version
+  register: vaultwarden_web_version_file
+  tags: vaultwarden
+
+- when: vaultwarden_web_version_file.stat.exists
+  block:
+    - name: Check installed version
+      slurp: src={{ vaultwarden_root_dir }}/meta/ansible_web_version
+      register: vaultwarden_web_current_version
+    - set_fact: vaultwarden_web_current_version={{ vaultwarden_web_current_version.content | b64decode | trim }}
+    - set_fact: vaultwarden_web_install_mode='upgrade'
+      when: vaultwarden_web_current_version != vaultwarden_web_version
+  tags: vaultwarden
+
+- when: not vaultwarden_web_version_file.stat.exists
+  block:
+    - set_fact: vaultwarden_web_install_mode='install'
+  tags: vaultwarden
+
+- when: vaultwarden_admin_token is not defined
+  name: Generate a random admin token
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ vaultwarden_root_dir }}/meta/ansible_admin_token"
+    - set_fact: vaultwarden_admin_token={{ rand_pass }}
+  tags: vaultwarden
+
+- when: vaultwarden_db_pass is not defined
+  tags: vaultwarden
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ vaultwarden_root_dir }}/meta/ansible_dbpass"
+    - set_fact: vaultwarden_db_pass={{ rand_pass }}
+

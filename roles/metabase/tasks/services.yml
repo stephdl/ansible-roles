@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable the service
+  service: name=metabase state=started enabled=True
+  tags: metabase

@@ -1,0 +1,26 @@
+[Unit]
+Description=Graylog to Crowdsec syslog daemon
+After=syslog.target
+Before=crowdsec.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/g2cs --port={{ g2cs_port }} --logdir={{ g2cs_log_dir }}
+User=g2cs
+Group=g2cs
+Restart=always
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=g2cs
+
+# Allow binding on privileged ports
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+
+[Install]
+WantedBy=multi-user.target
+

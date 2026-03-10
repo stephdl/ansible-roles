@@ -1,0 +1,37 @@
+type:
+  certsign: signer-key
+  datasafe: vault-key
+  scep: scep-key
+
+token:
+  default:
+    backend: OpenXPKI::Crypto::Backend::OpenSSL
+    key: {{ pki_root_dir }}/etc/ssl/[% PKI_REALM %]/[% ALIAS %].pem
+    engine: OpenSSL
+    engine_section: ''
+    engine_usage: ''
+    key_store: OPENXPKI
+    shell: /usr/bin/openssl
+    wrapper: ''
+    randfile: {{ pki_root_dir }}/data/rand
+    secret: default
+
+  signer-key:
+    inherit: default
+
+  vault-key:
+    inherit: default
+
+  scep-key:
+    inherit: default
+    backend: OpenXPKI::Crypto::Tool::SCEP
+    shell: /usr/bin/openca-scep
+
+secret:
+  default:
+    label: Default secret group of this realm
+    export: 0
+    method: literal
+    value: '{{ pki_secret }}'
+    cache: daemon
+

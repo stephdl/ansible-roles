@@ -1,0 +1,15 @@
+---
+
+- name: Remove sample config file
+  file: path={{ riot_root_dir }}/web/config.sample.json state=absent
+  tags: matrix
+
+- name: Deploy configuration
+  template: src=config.json.j2 dest={{ riot_root_dir }}/web/config.json
+  tags: matrix
+
+- name: Deploy httpd configuration
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/10-riot_{{ riot_id }}.conf
+  notify: reload httpd
+  tags: matrix
+

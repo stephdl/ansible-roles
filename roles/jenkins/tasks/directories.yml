@@ -1,0 +1,15 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ jenkins_root_dir }}"
+      mode: 700
+    - dir: "{{ jenkins_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ jenkins_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ jenkins_root_dir }}/archives"
+      mode: 700
+  tags: jenkins
+

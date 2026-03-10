@@ -1,0 +1,7 @@
+server={{ fusinv_uri | join(',') | quote }}
+user={{ fusinv_user | quote }}
+password={{ fusinv_pass | quote }}
+no-p2p
+no-httpd
+httpd-ip="127.0.0.1"
+no-task={{ fusinv_disabled_tasks | join(',') | quote }}

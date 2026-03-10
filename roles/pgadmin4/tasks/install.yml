@@ -1,0 +1,83 @@
+---
+
+- name: Install packages
+  yum: name={{ pgadmin4_packages }}
+  tags: pgadmin4
+
+- name: Install global python tools
+  pip: name=pexpect
+  tags: pgadmin4
+
+- name: Stop pgAdmin4
+  service: name=pgadmin4_{{ pga_id }} state=stopped
+  when: pga_venv_27.stat.exists
+  tags: pgadmin4
+
+- name: Remove the venv
+  file: path={{ pga_root_dir }}/{{ item }} state=absent
+  loop:
+    - lib
+    - lib64
+    - include
+    - bin
+  when: pga_venv_27.stat.exists
+  tags: pgadmin4
+
+- name: Wipe the venv on upgrade
+  file: path={{ pga_root_dir }}/{{ item }} state=absent
+  loop:
+    - lib
+    - lib64
+    - include
+    - bin
+    - venv
+  when: pga_install_mode != 'none'
+  tags: pgadmin4
+
+- name: Create the venv dir
+  file: path={{ pga_root_dir }}/venv state=directory
+  tags: pgadmin4
+
+- name: Create the virtualenv
+  pip:
+    name:
+      - pip
+      - virtualenv
+      - gunicorn
+      - futures
+      - psycopg2
+      - werkzeug
+      - ldap3
+    virtualenv: "{{ pga_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  notify: restart pgadmin4
+  tags: pgadmin4
+
+- name: Install pgadmin4
+  pip:
+    name: "{{ pga_pip_url }}"
+    virtualenv: "{{ pga_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  register: pga_pip
+  notify: restart pgadmin4
+  tags: pgadmin4
+
+- name: Deploy systemd unit
+  template: src=pgadmin4.service.j2 dest=/etc/systemd/system/pgadmin4_{{ pga_id }}.service
+  register: pga_systemd_unit
+  notify: restart pgadmin4
+  tags: pgadmin4
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: pga_systemd_unit.changed
+  tags: pgadmin4
+
+- name: Install backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/pgadmin4_{{ pga_id }} mode=755
+  loop:
+    - pre
+    - post
+  tags: pgadmin4

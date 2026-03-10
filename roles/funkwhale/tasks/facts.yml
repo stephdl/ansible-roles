@@ -1,0 +1,42 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: funkwhale
+
+- fail: msg="pg_admin_pass must be set"
+  when: pg_admin_pass is not defined
+  tags: funkwhale
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ funkwhale_root_dir }}"
+    - version: "{{ funkwhale_version }}"
+  tags: funkwhale
+- block:
+    - set_fact: funkwhale_install_mode={{ (install_mode == 'upgrade' and not funkwhale_manage_upgrade) | ternary('none',install_mode) }}
+    - set_fact: funkwhale_current_version={{ current_version | default('') }}
+  tags: funkwhale
+
+  # Create a random pass for the DB if needed
+- when: funkwhale_db_pass is not defined
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ funkwhale_root_dir }}/meta/ansible_dbpass"
+    - set_fact: funkwhale_db_pass={{ rand_pass }}
+  tags: funkwhale
+
+  # Create a random django secret key
+- when: funkwhale_secret_key is not defined
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ funkwhale_root_dir }}/meta/ansible_django_key"
+    - set_fact: funkwhale_secret_key={{ rand_pass }}
+  tags: funkwhale
+

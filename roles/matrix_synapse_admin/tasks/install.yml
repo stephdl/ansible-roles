@@ -1,0 +1,24 @@
+---
+
+- when: synadm_install_mode != 'none'
+  block:
+    - name: Download Synapse Admin
+      get_url:
+        url: "{{ synadm_archive_url }}"
+        dest: "{{ synadm_root_dir }}/tmp/"
+        checksum: "sha1:{{ synadm_archive_sha1 }}"
+    
+    - name: Extract archive
+      unarchive:
+        src: "{{ synadm_root_dir }}/tmp/synapse-admin-{{ synadm_version }}.tar.gz"
+        dest: "{{ synadm_root_dir }}/tmp/"
+        remote_src: True
+    
+    - name: Move the content to the final top directory
+      synchronize:
+        src: "{{ synadm_root_dir }}/tmp/synapse-admin-{{ synadm_version }}/"
+        dest: "{{ synadm_root_dir }}/web/"
+        recursive: True
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+  tags: matrix

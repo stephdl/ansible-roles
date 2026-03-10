@@ -1,0 +1,49 @@
+---
+
+- name: Generate an RSA private key
+  command: openssl genrsa -out {{ seafile_root_dir }}/ccnet/mykey.peer 2048
+  args:
+    creates: "{{ seafile_root_dir }}/ccnet/mykey.peer"
+  tags: seafile
+
+- name: Deploy seafile configuration
+  template: src={{ item }}.j2 dest={{ seafile_root_dir }}/conf/{{ item }} group={{ seafile_group }} mode=640
+  with_items:
+    - ccnet.conf
+    - seafdav.conf
+    - seafile.conf
+    - seahub_settings.py
+    - gunicorn.conf.py
+  notify:
+    - restart seafile
+    - restart seahub
+  tags: seafile
+
+- name: Deploy seafile pro configuration
+  template: src={{ item }}.j2 dest={{ seafile_root_dir }}/conf/{{ item }} group={{ seafile_group }} mode=640
+  with_items:
+    - seafevents.conf
+  when: seafile_license is defined
+  notify:
+    - restart seafile
+    - restart seahub
+  tags: seafile
+
+- name: Deploy ccnet ini file
+  copy:
+    content: |
+      {{ seafile_data_dir }}
+    dest: "{{ seafile_root_dir }}/ccnet/seafile.ini"
+  notify:
+    - restart seafile
+    - restart seahub
+  tags: seafile
+
+- name: Deploy initial admin info
+  template: src=admin.txt.j2 dest={{ seafile_root_dir }}/conf/admin.txt group={{ seafile_group }} mode=640
+  when: seafile_install_mode == 'install'
+  tags: seafile
+
+- name: Deploy logrotate configuration
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/seafile
+  tags: seafile

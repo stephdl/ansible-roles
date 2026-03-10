@@ -1,0 +1,55 @@
+---
+
+# Version to deploy
+appsmith_version: 1.7.8
+# URL of the source archive
+appsmith_archive_url: https://github.com/appsmithorg/appsmith/archive/v{{ appsmith_version }}.tar.gz
+# sha1sum of the archive
+appsmith_archive_sha1: 67afc6178b2dea86071b728544c6733cb04bede4
+
+# Version to node.js
+appsmith_node_version: 16.14.0
+# Root directory where appsmith will be installed
+appsmith_root_dir: /opt/appsmith
+# Should ansible handle upgrades (True) or only initial install (False)
+appsmith_manage_upgrade: True
+
+# User account under which appsmith will run
+appsmith_user: appsmith
+
+# appsmith needs a redis server and a mongodb one
+appsmith_redis_url: redis://localhost:6379
+# A random one will be created and stored in the meta directory if not defined here
+appsmith_mongo_user: appsmith
+# appsmith_mongo_pass: S3cr3t.
+# Note: if appsmith_mongo_pass is defined, it'll be used with appsmith_mongo_user to connect, even if not indicated in appsmith_mongo_url
+# Else, anonymous connection is made. By default, if you do not set appsmith_mongo_pass, a random one will be created
+# If you insist on using anonymous connections, you should set appsmith_mongo_pass to False
+appsmith_mongo_url: mongodb://localhost/appsmith?retryWrites=true
+
+# appsmith server component
+appsmith_server_port: 8088
+# List of IP/CIDR having access to appsmith_server_port
+appsmith_server_src_ip: []
+
+# Email settings
+appsmith_email_from: noreply@{{ ansible_domain }}
+appsmith_email_server: localhost
+appsmith_email_port: 25
+appsmith_email_tls: "{{ (appsmith_email_port == 587) | ternary(True,False) }}"
+# appsmith_email_user: account
+# appsmith_email_pass: S3Cr3T4m@1l
+
+# Encryption settings. If not defined, random values will be created and used
+# appsmith_encryption_pass: p@ssw0rd
+# appsmith_encryption_salt: Salt
+
+# Public URL used to access appsmith
+appsmith_public_url: http://{{ inventory_hostname }}
+
+# User signup can be disabled
+appsmith_user_signup: True
+# If signup is enabled, you can restrict which domains are allowed to signup (an empty list means no restriction)
+appsmith_signup_whitelist: []
+# If signup is disabled, you can set a list of whitelisted email which will be allowed
+appsmith_admin_emails: []

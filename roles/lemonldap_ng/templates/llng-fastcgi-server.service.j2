@@ -1,0 +1,25 @@
+[Unit]
+Description=FastCGI server for Lemonldap::NG websso system
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/llng-fastcgi-server
+PIDFile=/run/llng-fastcgi-server/llng-fastcgi-server.pid
+User=apache
+Group=apache
+ExecStart=/usr/libexec/lemonldap-ng/sbin/llng-fastcgi-server \
+             --foreground
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit={{ llng_fcgi_workers * 250 }}M
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+

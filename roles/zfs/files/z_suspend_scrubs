@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+# Suspend any running pool scrubs
+for ZPOOL in $(zpool list -H -o name); do
+  if [ $(zpool status $ZPOOL | grep -c 'scrub in progress') -ge 1 ]; then
+    echo scrub running for pool $ZPOOL, suspending it
+    zpool scrub -p $ZPOOL
+  fi
+done

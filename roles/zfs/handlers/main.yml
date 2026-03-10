@@ -1,0 +1,8 @@
+---
+
+- name: restart syncoid
+  systemd: name=syncoid-{{ item.id }}.timer state=restarted
+  loop: "{{ zfs_repl }}"
+
+- name: restart sanoid
+  systemd: name=sanoid.timer state=restarted

@@ -1,0 +1,31 @@
+---
+zabbix_agent_port: 10050
+# List of servers allowed to connect to the agent (passive checks)
+zabbix_agent_servers:
+  - 51.91.175.34
+# List of IP allowed to access TCP port 10050
+zabbix_agent_src_ip: "{{ zabbix_agent_servers }}"
+# List of servers the agent will push active checks to
+zabbix_agent_server_active: []
+
+zabbix_agent_base_conf:
+  PidFile: /var/run/zabbix/zabbix_agentd.pid
+  LogType: system
+  Server: "{{ zabbix_agent_servers | join(',') }}"
+  ListenPort: "{{ zabbix_agent_port }}"
+  ServerActive: "{{ zabbix_agent_server_active | join(',') }}"
+  HostnameItem: 'system.hostname'
+  Timeout: 29 # just a bit less than the proxies' Timeout
+  Include: '/etc/zabbix/zabbix_agentd.conf.d/*.conf'
+  TLSPSKFile: '/etc/zabbix/zabbix_agentd.psk'
+  TLSPSKIdentity: "{{ inventory_hostname }}-agent"
+  TLSConnect: psk
+  TLSAccept: 'unencrypted,psk'
+  StartAgents: 5
+zabbix_agent_extra_conf: {}
+zabbix_agent_conf: "{{ zabbix_agent_base_conf | combine(zabbix_agent_extra_conf, recursive=True) }}"
+
+# If update is set to False, the role will only ensure packages are installed
+# If set to True, it will update components to their latest version
+zabbix_agent_update: False
+...

@@ -1,0 +1,12 @@
+{% if mysql_mariadb_version != 'default' %}
+[mariadb]
+baseurl = http://yum.mariadb.org/{{ mysql_mariadb_version }}/centos$releasever-amd64
+gpgcheck = 1
+gpgkey = https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+name = MariaDB
+{% if ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('8', '>=') %}
+# Workaround a bug in dnf which would make the default module mask
+# packages from the MariaDB repo. See https://jira.mariadb.org/browse/MDEV-20673
+module_hotfixes = true
+{% endif %}
+{% endif %}

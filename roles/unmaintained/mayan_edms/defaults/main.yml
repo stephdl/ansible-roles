@@ -1,0 +1,115 @@
+---
+
+mayan_version: 4.0.11
+mayan_root_dir: /opt/mayan-edms
+mayan_user: mayan-edms
+# Should ansible handle upgrades ? If false, only initial install will be done
+mayan_manage_upgrade: True
+
+# Can be mysql or postgresql
+mayan_db_engine: postgresql
+mayan_db_server: "{{ mysql_server | default('localhost') }}"
+mayan_db_port: "{{ (mayan_db_engine == 'mysql') | ternary('3306','5432') }}"
+mayan_db_user: mayanedms
+mayan_db_name: mayanedms
+# A random pass will be created if not defined
+# mayan_db_pass: S3cr3t.
+
+# URL of the redis server to use
+mayan_redis_url: redis://{% if redis_pass is defined %}:{{ redis_pass }}{% endif %}127.0.0.1:6379
+# ID of the redis DB mayan will use
+mayan_redis_db: 0
+
+# URL of the amqp broker
+mayan_amqp_url: amqp://127.0.0.1:5672/
+
+# Number of web workers
+mayan_web_workers: 3
+
+# Port and list of allowed IP
+mayan_port: 8000
+mayan_src_ip: []
+
+# From email address
+mayan_from_mail: mayan-edsm@{{ ansible_domain }}
+
+# Main language for document
+mayan_doc_lang: fra
+
+# LDAP Auth
+# Most of these settings will try to detect system auth config
+# and use them. But you can override if you want
+#
+# This is to turn on of off LDAP auth
+mayan_ldap_auth: "{{ (ad_auth | default(False) or ldap_auth | default(False)) | ternary(True,False) }}"
+# URI of your LDAP server, eg ldap://ldap.example.org:389
+mayan_ldap_uri: "{{ ad_auth | default(False) | ternary('ldap://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower,ldap_uri) }}"
+# SHould Start TLS be used ?
+mayan_ldap_start_tls: True
+# Base of your LDAP tree. Eg DC=example,DC=org
+mayan_ldap_base: "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), ldap_base) }}"
+# If your directory only allow authenticated searches, you can define it here
+# mayan_ldap_bind_dn:
+# mayan_ldap_bind_pass:
+#
+# If set, will restrict user search in these OU. Default is to search from the base
+# Eg
+# mayan_ldap_user_ou:
+#   - OU=People,DC=example,DC=org
+#   - OU=Presta,DC=example,DC=org
+mayan_ldap_user_ou: []
+# Filter to search for users
+mayan_ldap_user_filter: "{{ ad_auth | default(False) | ternary('(sAMAccountName=%(user)s)','(uid=%(user)s)') }}"
+# Mapping of LDAP attributes into Django attributes
+mayan_ldap_user_attr_map:
+  username: "{{ ad_auth | default(False) | ternary('sAMAccountName','uid') }}"
+  first_name: givenName
+  last_name: sn
+  email: mail
+
+# Same for groups
+mayan_ldap_group_ou: []
+# How are group represented in your directory.
+# See https://django-auth-ldap.readthedocs.io/en/latest/groups.html for a list of valid values
+mayan_ldap_group_type: "{{ ad_auth | default(False) | ternary('NestedActiveDirectoryGroupType','PosixGroupType') }}"
+# LDAP filter to search for groups
+mayan_ldap_group_filter: "{{ ad_auth | default(False) | ternary('(objectClass=group)','(objectClass=posixGroup)') }}"
+
+# Define user flags based on group membership, for example :
+#
+# mayan_ldap_flags_by_group:
+#   is_active:
+#     - CN=Users,DC=example,DC=org
+#   is_staff:
+#     - CN=IT,OU=Groups,DC=example,DC=org
+#   is_superuser:
+#     - CN=Role_Infra_Admin,OU=Roles,DC=example,DC=org
+#     - CN=Domain Admins,OU=Groups,DC=example,DC=org
+mayan_ldap_flags_by_group: {}
+
+
+# If defined, will either require user to be part of one of those groups,
+# or forbid access to membres of those groups
+# mayan_ldap_require_group:
+#   - CN=Admins,OU=Groups,DC=example,DC=org
+#   - CN=Board,OU=Groups,DC=example,DC=org
+#
+# mayan_ldap_deny_group:
+#   - CN=Guests,OU=Groups,DC=example,DC=org
+
+# Useful to debug LDAP related issues
+mayan_ldap_debug: False
+
+# Custom settings to set in the auth.py module
+# Eg
+# mayan_auth_custom_conf: |
+# AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+#     'is_active': 'CN=Role_EDMS,OU=Roles,DC=example,DC=org',
+#     'is_staff': 'CN=Role_Staff,OU=Roles,DC=example,DC=org',
+#     'is_superuser': 'CN=Role_Infra_Admin,OU=Roles,DC=example,DC=org',
+# }
+
+# This is a list of indexes to expose as FUSE filesystem in {{ mayan_root_dir }}/fuse
+# when running the pre-backup hook
+mayan_index_as_fuse:
+  - creation_date

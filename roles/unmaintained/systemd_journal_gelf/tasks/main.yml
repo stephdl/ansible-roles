@@ -1,0 +1,48 @@
+---
+
+- include_tasks: install_{{ ansible_os_family }}.yml
+  tags: logs
+
+- name: Download systemd-journal-gelf
+  get_url:
+    url: https://git.fws.fr/dani/systemd-journal-gelf/raw/branch/master/systemd-journal-gelf
+    dest: /usr/local/bin/systemd-journal-gelf
+    mode: 0755
+    force: True
+  notify: restart systemd-journal-gelf
+  tags: logs
+
+- name: Create systemd-journal-gelf user account
+  user:
+    name: systemd-journal-gelf
+    comment: Gelf HTTP uploader account
+    system: True
+    shell: /sbin/nologin
+    home: /var/lib/systemd-journal-gelf
+  tags: logs
+
+- name: Ensure state directory exists
+  file: path=/var/lib/systemd-journal-gelf state=directory owner=systemd-journal-gelf mode=700
+  tags: logs
+
+- name: Install systemd service unit
+  get_url:
+    url: https://git.fws.fr/dani/systemd-journal-gelf/raw/branch/master/systemd-journal-gelf.service
+    dest: /etc/systemd/system/systemd-journal-gelf.service
+  notify: restart systemd-journal-gelf
+  register: j2gelf_unit
+  tags: logs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: j2gelf_unit.changed
+  tags: logs
+
+- name: Deploy systemd-journal-gelf config
+  template: src=journal-gelf.yml.j2 dest=/etc/systemd/journal-gelf.yml owner=systemd-journal-gelf mode=600
+  notify: restart systemd-journal-gelf
+  tags: logs
+
+- name: Handle systemd-journal-gelf service
+  service: name=systemd-journal-gelf state=started enabled=True
+  tags: logs

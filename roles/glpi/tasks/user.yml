@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: "{{ glpi_php_user }}"
+    - comment: "PHP FPM for glpi {{ glpi_id }}"
+  tags: glpi
+

@@ -1,0 +1,6 @@
+---
+
+ntp_ntpd_service: ntpd
+ntp_chrony_service: chronyd
+ntp_chrony_conf: /etc/chrony.conf
+ntp_chrony_keyfile: /etc/chrony.keys

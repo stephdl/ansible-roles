@@ -1,0 +1,12 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ mvn_root_dir }}"
+    - dir: "{{ mvn_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ mvn_root_dir }}/tmp"
+      mode: 700
+    - dir : "{{ mvn_root_dir }}/apache-maven"
+  tags: mvn

@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+{% for client in wh_clients %}
+{% for app in client.apps %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+echo Starting archiving {{ client.name }} - {{ app.name }}
+sh /opt/wh/{{ client.name }}/apps/{{ app.name }}/bin/backup.sh
+echo Archive for {{ client.name }} - {{ app.name }} created
+
+{% endfor %}
+{% endfor %}

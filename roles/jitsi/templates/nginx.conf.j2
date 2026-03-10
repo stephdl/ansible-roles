@@ -1,0 +1,73 @@
+server {
+  listen 80;
+  listen 443 ssl http2;
+  server_name {{ jitsi_domain }};
+
+  ssl_certificate_key {{ jitsi_key_path }};
+  ssl_certificate     {{ jitsi_cert_path }};
+
+  include /etc/nginx/ansible_conf.d/perf.inc;
+  include /etc/nginx/ansible_conf.d/force_ssl.inc;
+  include /etc/nginx/ansible_conf.d/acme.inc;
+
+  if ($request_method !~ ^(GET|POST|HEAD)$ ) {
+    return 405;
+  }
+
+  add_header Strict-Transport-Security "$hsts_header";
+
+  root {{ jitsi_root_dir }}/meet;
+  index index.html;
+
+  # conferenceMapper endpoint
+  location ~ ^/(phoneNumberList|conferenceMapper) {
+    proxy_pass http://localhost:{{ jitsi_confmapper_port }};
+    proxy_socket_keepalive on;
+    # TODO : rate limit these endpoints to prevent room listing
+  }
+
+  # BOSH endpoint
+  location /http-bind {
+    proxy_socket_keepalive on;
+    proxy_pass http://localhost:5280/http-bind;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Host $http_host;
+  }
+
+  # Websocket endpoint
+  location /xmpp-websocket {
+    proxy_pass http://localhost:5280/xmpp-websocket?$args;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    tcp_nodelay on;
+  }
+{% if jitsi_auth == 'sso' %}
+
+  # SSO endpoint
+  location /login {
+    proxy_pass http://127.0.0.1:8888;
+    proxy_set_header mail $http_mail;
+    proxy_set_header displayName $http_displayname;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Host $http_host;
+
+    # jicofo doesn't add the Content-Type for the redirection page
+    add_header Content-Type 'text/html';
+  }
+{% endif %}
+
+  location / {
+    ssi on;
+    limit_req zone=limit_req_std burst=100 nodelay;
+    limit_conn limit_conn_std 80;
+    try_files $uri /index.html;
+  }
+
+{% for ip in jitsi_web_src_ip %}
+  allow {{ ip }};
+{% endfor %}
+  deny all;
+}

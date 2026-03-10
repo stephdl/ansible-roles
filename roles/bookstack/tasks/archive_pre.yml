@@ -1,0 +1,31 @@
+---
+
+- name: Create the archive dir
+  file: path={{ bookstack_root_dir }}/archives/{{ bookstack_current_version }} state=directory
+  tags: bookstack
+
+- name: Archive current version
+  synchronize:
+    src: "{{ bookstack_root_dir }}/app"
+    dest: "{{ bookstack_root_dir }}/archives/{{ bookstack_current_version }}/"
+    compress: False
+    delete: True
+    rsync_opts:
+      - '--exclude=/storage/'
+  delegate_to: "{{ inventory_hostname }}"
+  tags: bookstack
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ bookstack_db_name }}"
+    target: "{{ bookstack_root_dir }}/archives/{{ bookstack_current_version }}/{{ bookstack_db_name }}.sql.xz"
+    login_host: "{{ bookstack_db_server }}"
+    login_user: "{{ bookstack_db_user }}"
+    login_password: "{{ bookstack_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: bookstack
+

@@ -1,0 +1,17 @@
+---
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(ompit) }}
+  with_items:
+    - dir: /var/lib/zabbix/.matrix_zabbix
+      owner: zabbix
+      group: zabbix
+      mode: 700
+    - dir: /var/lib/zabbix/sessions
+      owner: apache
+      group: apache
+      mode: 700
+  tags: zabbix
+
+  #- name: Ensure proper permission on the web config dir
+  #  file: path=/etc/zabbix/web/ state=directory mode=750 group={{ zabbix_server_php_user }}
+  #  tags: zabbix

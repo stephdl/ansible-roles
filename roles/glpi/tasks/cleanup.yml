@@ -1,0 +1,20 @@
+---
+
+- name: Remove plugins archives
+  file:
+    path: "{{ glpi_root_dir }}/tmp/{{ glpi_plugins[item].url | urlsplit('path') | basename }}"
+    state: absent
+  with_items: "{{ glpi_plugins_to_install }}"
+  when: glpi_plugins[item] is defined
+  tags: glpi
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  with_items:
+    - "{{ glpi_root_dir }}/tmp/glpi"
+    - "{{ glpi_root_dir }}/tmp/glpi-{{ glpi_version }}.tgz"
+    - "{{ glpi_root_dir }}/db_dumps"
+    - /etc/backup/pre.d/glpi_{{ glpi_id }}_dump_db
+    - /etc/backup/post.d/glpi_{{ glpi_id }}_rm_dump
+  tags: glpi
+

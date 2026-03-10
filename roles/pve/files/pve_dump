@@ -1,0 +1,4 @@
+#!/bin/sh
+
+tar cJf /home/lbkp/pve/pve-cluster.txz -C /var/lib pve-cluster
+tar cJf /home/lbkp/pve/pve-firewall.txz -C /var/lib pve-firewall

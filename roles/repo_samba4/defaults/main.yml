@@ -1,0 +1,3 @@
+---
+# Select a branch from https://samba.tranquil.it/centos7/ or https://samba.tranquil.it/centos7/
+samba_major_version: samba-{{ (ansible_distribution_major_version is version('8','<')) | ternary('4.12.15','4.14.10') }}

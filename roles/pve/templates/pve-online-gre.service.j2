@@ -1,0 +1,12 @@
+[Unit]
+Description=Setup GRE tunnels with other PVE nodes
+After=pve-guests.service
+Requires=pve-cluster.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/pve-online --update-gre
+
+[Install]
+WantedBy=multi-user.target

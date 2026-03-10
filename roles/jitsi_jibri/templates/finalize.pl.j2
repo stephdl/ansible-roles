@@ -1,0 +1,83 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+
+use JSON;
+use YAML::Tiny;
+use Getopt::Long;
+use Email::MIME;
+use Email::Sender::Simple qw(sendmail);
+use File::Basename;
+use utf8;
+
+my $conf = {};
+my $opt = {
+  config => '{{ jitsi_root_dir }}/etc/jibri/finalize.yml'
+};
+
+GetOptions(
+  "config=s" => \$opt->{config}
+);
+
+sub send_mail {
+  my ($subject, $dest, $body) = @_;
+  my $mail = Email::MIME->create(
+    header_str => [
+      From    => $conf->{from},
+      To      => $dest,
+      Subject => $subject
+    ],
+    attributes => {
+      charset  => 'utf-8',
+      encoding => 'base64'
+    },
+    body_str => $body
+  );
+  sendmail($mail);
+}
+
+# Read config file
+if (-e $opt->{config}){
+  my $yaml = YAML::Tiny->read( $opt->{config} )
+    or die "Config file " . $opt->{config} . " is invalid\n";
+  if ( not $yaml->[0] ) {
+    die "Config file " . $opt->{config} . " is invalid\n";
+  }
+  $conf = $yaml->[0];
+}
+
+$conf->{notify} ||= [];
+my $recording = $ARGV[0];
+
+my $metadata = {};
+if (-e "$recording/metadata.json"){
+  open(my $jst, "$recording/metadata.json") or die "$!";
+  local $/;
+  $metadata = from_json(<$jst>);
+}
+
+my $video = undef;
+opendir ( DIR, $recording ) || die "Error in opening dir $recording\n";
+while( (my $filename = readdir(DIR))) {
+  if ($filename =~ m/\.mp4$/){
+    $video = basename($filename);
+    last;
+  }
+}
+closedir(DIR);
+
+foreach my $participant (@{$metadata->{participants}}){
+  push @{$conf->{notify}}, $participant->{user}->{id};
+}
+
+if (defined $video){
+  foreach my $dest (@{$conf->{notify}}){
+    send_mail(
+      "Enregistrement Jitsi Meet",
+      $dest,
+      "L'enregistrement vidéo est disponible à l'adresse $conf->{base_url}/" .
+      basename($recording) . "/$video\n"
+    );
+  }
+}

@@ -1,0 +1,34 @@
+fields:
+  source: {{ inventory_hostname }}
+fields_under_root: True
+logging.files:
+  rotateeverybytes: 5242880
+  keepfiles: 2
+journalbeat.inputs:
+  - paths: []
+    seek: cursor
+    cursor_seek_fallback: tail
+output.{{ filebeat_output_type }}:
+  hosts:
+{% for host in filebeat_output_hosts %}
+    - {{ host }}
+{% endfor %}
+{% if filebeat_output_ssl is defined %}
+  ssl:
+{% if filebeat_output_ssl.enabled is defined %}
+    enabled: {{ filebeat_output_ssl.enabled }}
+{% endif %}
+{% if filebeat_output_ssl.cert_authorities is defined %}
+    certificate_authorities:
+{% for ca in filebeat_output_ssl.cert_authorities %}
+      - {{ ca }}
+{% endfor %}
+{% endif %}
+{% if filebeat_output_ssl.client_cert is defined and filebeat_output_ssl.client_key is defined %}
+    certificate: {{ filebeat_output_ssl.client_cert }}
+    key: {{ filebeat_output_ssl.client_key }}
+{% endif %}
+{% if filebeat_output_ssl.client_key_passphrase is defined %}
+    key_passphrase: {{ filebeat_output_ssl.client_key_passphrase | quote }}
+{% endif %}
+{% endif %}

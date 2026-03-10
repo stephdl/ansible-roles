@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+
+daemonize no
+pidfile /var/run/redis/redis.pid
+port {{ redis_port }}
+tcp-backlog 511
+bind {{ redis_ip | join(' ') }}
+timeout {{ redis_timeout }}
+tcp-keepalive {{ redis_tcp_keepalive }}
+loglevel notice
+logfile ""
+databases {{ redis_databases }}
+save 900 1
+save 300 10
+save 60 10000
+stop-writes-on-bgsave-error yes
+dbfilename dump.rdb
+dir /var/lib/redis/
+{% if redis_pass is defined %}
+requirepass {{ redis_pass }}
+{% endif %}

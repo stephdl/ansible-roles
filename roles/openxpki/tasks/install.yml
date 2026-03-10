@@ -1,0 +1,284 @@
+---
+
+- name: Install dependencies
+  yum: name={{ pki_packages }}
+  tags: pki
+
+- name: Download OpenXPKI
+  get_url:
+    url: "{{ pki_archive_url }}"
+    dest: "{{ pki_root_dir }}/src"
+    checksum: "sha1:{{ pki_archive_sha1 }}"
+  register: pki_download
+  tags: pki
+
+- name: Download OpenXPKI config
+  get_url:
+    url: "{{ pki_config_archive_url }}"
+    dest: "{{ pki_root_dir }}/src"
+    checksum: "sha1:{{ pki_config_archive_sha1 }}"
+  register: pki_config_download
+  tags: pki
+
+- name: Extract OpenXPKI
+  unarchive:
+    src: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}.tar.gz"
+    dest: "{{ pki_root_dir }}/src"
+    remote_src: True
+  when: pki_download.changed
+  tags: pki
+
+- name: Extract OpenXPKI config
+  unarchive:
+    src: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}.tar.gz"
+    dest: "{{ pki_root_dir }}/src"
+    remote_src: True
+  when: pki_config_download.changed
+  tags: pki
+
+  # This is needed or make will fail
+- name: Write version in source dir
+  copy: content={{ pki_version }} dest={{ pki_root_dir }}/src/openxpki-{{ pki_version }}/VERSION
+  tags: pki
+
+- name: Stop openxpki during upgrade
+  service: name=openxpki state=stopped
+  when: pki_install_mode == 'upgrade'
+  tags: pki
+
+  # With this, we ensure we update all perl modules each time we update OpenXPKI
+- name: Wipe local lib dir
+  file: path={{ pki_root_dir }}/lib/perl5 state=absent
+  when: pki_install_mode == 'upgrade'
+  tags: pki
+
+- when: pki_install_mode != 'none'
+  block:
+    - name: Install perl module without tests
+      cpanm:
+        name: "{{ item }}"
+        locallib: "{{ pki_root_dir }}"
+        notest: True
+      with_items:
+        - Git::PurePerl
+        - Connector    # This module tries to fetch web content without checking proxy from env
+        - Net::Server  # 2 tests are failing on el8 t/SSL_test.t and t/SSLEAY_test.t
+
+    - name: Install OpenXPKI dependencies
+      cpanm:
+        locallib: "{{ pki_root_dir }}"
+        installdeps: True
+        from_path: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/server"
+      environment:
+        PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+        PATH: "{{ pki_root_dir }}/bin:{{ ansible_env.PATH }}"
+
+    - name: Install additional perl modules
+      cpanm:
+        name: "{{ item }}"
+        locallib: "{{ pki_root_dir }}"
+      with_items:
+        - Devel::CheckLib  # Needed to build BDB::mysql >= 4.047
+        - DBD::mysql
+        - Log::Log4perl::Appender::Screen # Log::Log4perl::Appender::Journald is broken on systemd > 209
+        - Data::Dump       # Needed for the external ldap auth script
+        - String::Escape   # Needed for the external ldap auth script
+        - TINITA/YAML-1.30.tar.gz
+
+    - name: Build OpenXPKI
+      cpanm:
+        locallib: "{{ pki_root_dir }}"
+        from_path: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/server"
+        notest: True
+      environment:
+        PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+        PATH: "{{ pki_root_dir }}/bin:{{ ansible_env.PATH }}"
+
+    - name: Install OpenXPKI
+      command: make install
+      args:
+        chdir: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/server"
+      notify: restart openxpki
+
+      # This is needed so the build-pot.pl script finds msg labels in config
+      # during the make scan step in next task
+    - name: Copy default conf in server source directory
+      synchronize:
+        src: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/"
+        dest: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/config/"
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Scan, build and install translations
+      shell: make scan && make && make install LOCALE_DIR={{ pki_root_dir }}/locale
+      args:
+        chdir: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/i18n"
+
+    - name: Install the web UI
+      synchronize:
+        src: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/server/{{ item }}"
+        dest: "{{ pki_root_dir }}/web/"
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      with_items:
+        - cgi-bin
+        - htdocs
+
+  tags: pki
+
+- name: Install OpenXPKI CGI::Session driver
+  copy:
+    src: "{{ pki_root_dir }}/src/openxpki-{{ pki_version }}/core/server/CGI_Session_Driver/openxpki.pm"
+    dest: "{{ pki_root_dir }}/lib/perl5/CGI/Session/Driver/openxpki.pm"
+    remote_src: True
+  tags: pki
+
+
+- name: Fix relative URL in the index page
+  command: sed -i -e 's|/openxpki/|{{ pki_web_alias }}|g' {{ pki_root_dir }}/web/htdocs/default.html
+  changed_when: False
+  tags: pki
+
+- name: Install wrapper scripts
+  template: src=bin/{{ item }}.j2 dest=/usr/local/bin/{{ item }} mode=755
+  with_items:
+    - openxpkiadm
+    - openxpkicmd
+  tags: pki
+
+- name: Deploy cron scripts
+  template: src=bin/{{ item }}.j2 dest={{ pki_root_dir }}/bin/{{ item }} mode=755
+  with_items:
+    - crl_update
+    - notify_expiry
+  tags: pki
+
+- name: Setup cronjobs
+  cron:
+    name: "{{ item.script }}"
+    cron_file: openxpki
+    user: "{{ pki_user }}"
+    job: /bin/systemd-cat {{ pki_root_dir }}/bin/{{ item.script }}
+    special_time: "{{ item.freq }}"
+  with_items:
+    - script: crl_update
+      freq: hourly
+    - script: notify_expiry
+      freq: weekly
+  tags: pki
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ pki_db_name }}"
+    - db_user: "{{ pki_db_user }}"
+    - db_server: "{{ pki_db_server }}"
+    - db_pass: "{{ pki_db_pass }}"
+  tags: pki
+
+- name: Inject MySQL schema
+  mysql_db:
+    name: "{{ pki_db_name }}"
+    state: import
+    target: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/schema-mysql.sql"
+    login_host: "{{ pki_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when:
+    - pki_install_mode == 'install'
+    - db_created.changed
+  tags: pki
+
+- name: Copy additional sql scripts
+  copy: src={{ item }} dest={{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/{{ item }}
+  loop:
+    - session_table.sql
+    - upgrade_to_v3.sql
+  tags: pki
+
+- name: Create session table
+  mysql_db:
+    name: "{{ pki_db_name }}"
+    state: import
+    target: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/session_table.sql"
+    login_host: "{{ pki_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when:
+    - pki_install_mode != 'none'
+  tags: pki
+
+- name: Create user for session table
+  mysql_user:
+    name: "{{ pki_db_session_user }}"
+    password: "{{ pki_db_session_pass }}"
+    priv: "{{ pki_db_name }}.frontend_session:SELECT,INSERT,UPDATE,DELETE"
+    append_privs: "{{ append_privs | default(False) }}"
+    host: "{{ ( pki_db_server == 'localhost' ) | ternary('localhost', item ) }}"
+    login_host: "{{ pki_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    state: present
+  with_items: "{{ ansible_all_ipv4_addresses }}"
+  tags: pki
+
+- name: Upgrade database from v2 to v3
+  mysql_db:
+    name: "{{ pki_db_name }}"
+    state: import
+    target: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/upgrade_to_v3.sql"
+    login_host: "{{ pki_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when:
+    - pki_install_mode == 'upgrade'
+    - pki_current_version is match('^2')
+  tags: pki
+
+- name: Copy DB upgrades scripts
+  copy: src=upgrade_to_v{{ item }}.sql dest={{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/
+  loop:
+    - '3.4'
+    - '3.8'
+    - '3.14'
+  tags: pki
+
+- name: Apply db upgrades
+  mysql_db:
+    name: "{{ pki_db_name }}"
+    state: import
+    target: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/contrib/sql/upgrade_to_v{{ item }}.sql"
+    login_host: "{{ pki_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  loop:
+    - '3.4'
+    - '3.8'
+    - '3.14'
+  when:
+    - pki_install_mode == 'upgrade'
+    - pki_current_version is version(item, '<')
+  tags: pki
+
+- name: Deploy systemd unit
+  template: src=openxpki.service.j2 dest=/etc/systemd/system/openxpki.service
+  register: pki_unit
+  tags: pki
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pki_unit.changed
+  tags: pki
+
+- name: Deploy authentication script helpers
+  copy: src={{ item }} dest={{ pki_root_dir }}/bin/{{ item }} mode=755
+  with_items:
+    - openxpki-auth-ldap
+  tags: pki
+
+- name: Install pre and post backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/openxpki mode=750
+  loop:
+    - pre
+    - post
+  tags: pki

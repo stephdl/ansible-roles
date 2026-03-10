@@ -1,0 +1,13 @@
+---
+wapt_ports:
+  - 8080
+  - 80
+
+wapt_src_ip: []
+
+wapt_db_server: "{{ pg_server | default('localhost') }}"
+wapt_db_name: wapt
+wapt_db_user: wapt
+# A random password is generated unless defined here
+# wapt_db_pass: SeCret
+

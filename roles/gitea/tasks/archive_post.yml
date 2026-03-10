@@ -1,0 +1,6 @@
+---
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ gitea_root_dir }}"
+    - version: "{{ gitea_current_version }}"
+  tags: gitea

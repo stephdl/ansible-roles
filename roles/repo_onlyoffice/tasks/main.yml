@@ -1,0 +1,9 @@
+---
+
+- name: Setup OnlyOffice repository
+  yum_repository:
+    name: onlyoffice
+    description: Only Office Repository
+    baseurl: http://download.onlyoffice.com/repo/centos/main/noarch/
+    gpgcheck: True
+    gpgkey: https://raw.githubusercontent.com/ONLYOFFICE/repo/master/centos/RPM-GPG-KEY-ONLYOFFICE

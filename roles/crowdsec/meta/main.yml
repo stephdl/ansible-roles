@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: mysql_server
+    when: cs_db_server in ['localhost','127.0.0.1']

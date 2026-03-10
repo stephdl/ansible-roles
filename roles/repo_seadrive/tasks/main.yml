@@ -1,0 +1,9 @@
+---
+
+- name: Configure Seadrive repository
+  yum_repository:
+    name: seadrive
+    description: Seadrive seafile client
+    baseurl: http://linux-clients.seafile.com/seadrive-rpm/centos$releasever
+    gpgcheck: False
+  tags: repo,seadrive

@@ -1,0 +1,32 @@
+{
+  "title" : "{{ etherpad_title }}",
+  "skinName" : "{{ etherpad_theme }}",
+  "port" : {{ etherpad_port }},
+  "showSettingsInAdminPage" : false,
+  "dbType" : "mysql",
+  "dbSettings" : {
+    "user" : "{{ etherpad_db_user }}",
+    "host" : "{{ etherpad_db_server }}",
+    "port" : {{ etherpad_db_port }},
+    "password" : "{{ etherpad_db_pass }}",
+    "database" : "{{ etherpad_db_name }}",
+    "charset" : "utf8mb4"
+  },
+  "defaultPadText" : "",
+  "socketTransportProtocols" : ["websocket", "xhr-polling", "jsonp-polling", "htmlfile"],
+  "allowUnknownFileEnds" : false,
+  "trustProxy" : true,
+  "users": {
+    "admin": {
+      "password" : "{{ etherpad_admin_pass }}",
+      "is_admin" : true
+    }
+  },
+  "ep_delete_after_delay": {
+    "delay" : 2592000,
+    "loop" : true,
+    "loopDelay" : 3600,
+    "deleteAtStart" : true,
+    "text" : ""
+  }
+}

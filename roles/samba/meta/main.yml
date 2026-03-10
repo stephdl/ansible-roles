@@ -1,0 +1,9 @@
+---
+dependencies:
+  - role: repo_samba4
+  - role: repo_base
+  - role: mkdir
+  - role: rsync_server
+    when:
+      - samba_role == 'dc'
+      - inventory_hostname == samba_primary_dc

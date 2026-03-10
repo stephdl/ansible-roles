@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+{% if pg_remove_dump_after_backup %}
+rm -f /home/lbkp/pgsql/*.sql*
+{% endif %}
+rm -f /home/lbkp/pgsql/*.conf

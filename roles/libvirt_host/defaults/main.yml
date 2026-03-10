@@ -1,0 +1,7 @@
+---
+libvirt_group: 'libvirt'
+libvirt_listen_tcp: False
+libvirt_listen_tls: False
+libvirt_qemu_save_format: 'lzop'
+libvirt_parallel_suspend: '2'
+...

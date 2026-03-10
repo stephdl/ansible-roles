@@ -1,0 +1,7 @@
+---
+
+- name: Ensure cyrus is enabled
+  set_fact: prosody_modules_enabled={{ prosody_modules_enabled + ['auth_cyrus'] }}
+  when: prosody_auth_provider == 'cyrus' and 'auth_cyrus' not in prosody_modules_enabled
+  tags: prosody
+

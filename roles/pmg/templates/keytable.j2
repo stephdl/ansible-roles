@@ -1,0 +1,3 @@
+{% for domain in pmg_dkim_sign %}
+{{ (domain.domain == '*') | ternary('default',domain.domain) }} {{ (domain.domain == '*') | ternary('%',domain.domain) }}:{{ domain.selector | default('default') }}:/etc/opendkim/keys/{{ (domain.domain == '*') | ternary('default',domain.domain) }}/{{ domain.selector | default('default') }}.private
+{% endfor %}

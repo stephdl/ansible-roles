@@ -1,0 +1,39 @@
+{
+    "default_hs_url": "{{ element_default_home_server | default('https://' + synapse_server_name) | default('https://matrix.org') }}",
+    "default_is_url": "{{ element_default_identity_server }}",
+    "brand": "Element",
+    "integrations_ui_url": "https://scalar.vector.im/",
+    "integrations_rest_url": "https://scalar.vector.im/api",
+    "integrations_widgets_urls": [
+        "https://scalar.vector.im/_matrix/integrations/v1",
+        "https://scalar.vector.im/api",
+        "https://scalar-staging.vector.im/_matrix/integrations/v1",
+        "https://scalar-staging.vector.im/api",
+        "https://scalar-staging.element.im/scalar/api"
+    ],
+    "bug_report_endpoint_url": "https://element.im/bugreports/submit",
+    "showLabsSettings": true,
+    "roomDirectory": {
+        "servers": [
+            "matrix.org"
+        ]
+    },
+    "welcomeUserId": "@riot-bot:matrix.org",
+    "piwik": {
+    },
+{% if element_jitsi_server is defined %}
+   "jitsi": {
+        "preferredDomain": "{{ element_jitsi_server }}"
+    },
+{% endif %}
+   "settingDefaults": {
+      "UIFeature.feedback": false,
+      "UIFeature.thirdPartyId": false,
+{% if synapse_auth is defined and 'internal' not in synapse_auth and synapse_auth != 'internal' %}
+      "UIFeature.passwordReset": false,
+      "UIFeature.deactivate": false,
+{% endif %}
+      "UIFeature.registration": {{ (synapse_enable_registration | default(False)) | ternary('true', 'false') }}
+   },
+   "happyJson": true
+}

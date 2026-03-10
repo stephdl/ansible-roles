@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ mvn_root_dir }}/tmp/apache-maven-{{ mvn_version }}-bin.tar.gz"
+    - "{{ mvn_root_dir }}/tmp/apache-maven-{{ mvn_version }}"
+  tags: mvn

@@ -1,0 +1,56 @@
+---
+
+# Version to deploy
+metabase_version: 0.43.0
+# URL to fetch the jar
+metabase_jar_url: https://downloads.metabase.com/v{{ metabase_version }}/metabase.jar
+# Expected sha1 of the jar
+metabase_jar_sha256: 7eaa9002c33f9a9c4aad179519b384ee12157693d0e0293a5175bcfd51ad5a00
+# Should ansible handle upgrades ? If set to false, only the initial install (and the config) will be handled
+metabase_manage_upgrade: True
+
+# User account under which metabase will run
+# Will be created
+metabase_user: metabase
+# Path under which metabase will be installed
+metabase_root_dir: /opt/metabase
+
+# Port on which metabase will listen
+metabase_port: 3002
+# List of IP or CIDR allowed to reach metabase_port
+metabase_src_ip: []
+
+# application database
+# Can be either mysql or postgres
+metabase_db_engine: mysql
+metabase_db_server: "{{ (metabase_db_engine == 'mysql') | ternary(mysql_server, pg_server) | default('localhost') }}"
+metabase_db_port: "{{ (metabase_db_engine == 'mysql') | ternary('3306', '5432') }}"
+metabase_db_name: metabase
+metabase_db_user: metabase
+# A random pass will be generated and stored in the meta dir if not defined
+# metabase_db_pass: S3cr3t.
+
+# Email of the admins
+metabase_admin_email: "{{ system_admin_email }}"
+# From email for emails sent by metabase
+metabase_from_email: metabase-noreply@{{ ansible_domain }}
+# Settings for sending emails
+metabase_smtp_server: localhost
+metabase_smtp_port: 25
+# metabase_smtp_user: metabase@example.org
+# metabase_smtp_pass: S3cr3t.
+metabase_smtp_starttls: False
+
+# Encryption key to protect credentials stored in the DB
+# If not set, a random one will be created and store in the mata directory
+# metabase_encryption_key: SuperS3cr3t.
+
+# Default language for notifications
+metabase_lang: fr
+
+# Public URL to reach metabase.
+# Will most likely need to be adjusted, because you'll put it behind a reverse proxy don't you ?
+metabase_public_url: http://{{ inventory_hostname }}:{{ metabase_port }}/
+
+# Enable or disable big queries cache in metabase DB
+metabase_enable_cache: True

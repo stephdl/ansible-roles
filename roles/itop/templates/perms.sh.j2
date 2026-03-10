@@ -1,0 +1,20 @@
+#!/bin/sh
+
+restorecon -R {{ itop_root_dir }}
+chown -R root:root {{ itop_root_dir }}/web/
+find {{ itop_root_dir }}/web/ -type d -exec chmod 755 "{}" \;
+find {{ itop_root_dir }}/web/ -type f -exec chmod 644 "{}" \;
+{% for dir in ['data', 'conf', 'log', 'env-production', 'env-production-build', 'extensions'] %}
+chmod 700 {{ itop_root_dir }}/web/{{ dir }}
+setfacl -k -b -R {{ itop_root_dir }}/web/{{ dir }}
+chown -R {{ itop_php_user }}:{{ itop_php_user }} {{ itop_root_dir }}/web/{{ dir }}
+{% if dir == 'conf' %}
+find {{ itop_root_dir }}/web/{{ dir }} -type d -exec chmod 750 "{}" \;
+find {{ itop_root_dir }}/web/{{ dir }} -type f -exec chown root:{{ itop_php_user }} "{}" \; -exec chmod 640 "{}" \;
+{% else %}
+find {{ itop_root_dir }}/web/{{ dir }} -type d -exec chmod 750 "{}" \;
+find {{ itop_root_dir }}/web/{{ dir }} -type f -exec chmod 640 "{}" \;
+setfacl -R -m u:{{ httpd_user | default('apache') }}:rX,d:u:{{ httpd_user | default('apache') }}:rX {{ itop_root_dir }}/web/{{ dir }}
+{% endif %}
+{% endfor %}
+find {{ itop_root_dir }}/web/ -type f -name .htaccess -exec chown root:root "{}" \; -exec chmod 644 "{}" \;

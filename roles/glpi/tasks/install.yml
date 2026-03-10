@@ -1,0 +1,142 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - unzip
+      - tar
+      - bzip2
+      - acl
+      - mariadb
+  tags: glpi
+
+- name: Download glpi
+  get_url:
+    url: "{{ glpi_zip_url }}"
+    dest: "{{ glpi_root_dir }}/tmp/"
+    checksum: "sha1:{{ glpi_zip_sha1 }}"
+  when: glpi_install_mode != "none"
+  tags: glpi
+
+- name: Extract glpi archive
+  unarchive:
+    src: "{{ glpi_root_dir }}/tmp/glpi-{{ glpi_version }}.tgz"
+    dest: "{{ glpi_root_dir }}/tmp/"
+    remote_src: yes
+  when: glpi_install_mode != "none"
+  tags: glpi
+
+- name: Move the content of glpi to the correct top directory
+  synchronize:
+    src: "{{ glpi_root_dir }}/tmp/glpi/"
+    dest: "{{ glpi_root_dir }}/web/"
+    recursive: True
+    delete: True
+    rsync_opts:
+      - '--exclude=/install/install.php'
+      - '--exclude=/files/'
+      - '--exclude=/config/glpicrypt.key'
+  delegate_to: "{{ inventory_hostname }}"
+  when: glpi_install_mode != "none"
+  tags: glpi
+
+- name: Remove unwanted files and directories
+  file: path={{ glpi_root_dir }}/web/{{ item }} state=absent
+  with_items:
+    - files
+    - install/install.php
+  tags: glpi
+
+- name: Build a list of installed plugins
+  shell: find {{ glpi_root_dir }}/web/plugins -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: glpi_installed_plugins
+  changed_when: False
+  tags: glpi
+
+- name: Download plugins
+  get_url:
+    url: "{{ glpi_plugins[item].url }}"
+    dest: "{{ glpi_root_dir }}/tmp/"
+    checksum: "sha1:{{ glpi_plugins[item].sha1 }}"
+  when:
+    - item not in glpi_installed_plugins.stdout_lines
+    - glpi_plugins[item] is defined
+  with_items: "{{ glpi_plugins_to_install }}"
+  tags: glpi
+
+- name: Extract plugins
+  unarchive:
+    src: "{{ glpi_root_dir }}/tmp/{{ glpi_plugins[item].url | urlsplit('path') | basename }}"
+    dest: "{{ glpi_root_dir }}/web/plugins/"
+    remote_src: yes
+  when:
+    - item not in glpi_installed_plugins.stdout_lines
+    - glpi_plugins[item] is defined
+  with_items: "{{ glpi_plugins_to_install }}"
+  tags: glpi
+
+# Some plugins have the directory name not matching the plugin name
+# Eg, glpi-dashboard-1.0.2 instead of dashboard. So it's removed as if it was an unmanaged plugin
+# If the prop rename_from is defined for the plugin, rename the dir
+- name: Rename plugin dir
+  command: mv {{ glpi_root_dir }}/web/plugins/{{ glpi_plugins[item].rename_from }} {{ glpi_root_dir }}/web/plugins/{{ item }}
+  args:
+    creates: "{{ glpi_root_dir }}/web/plugins/{{ item }}"
+  when: glpi_plugins[item].rename_from is defined
+  loop: "{{ glpi_plugins_to_install }}"
+  tags: glpi
+
+- name: Build a list of installed plugins
+  shell: find {{ glpi_root_dir }}/web/plugins -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: glpi_installed_plugins
+  changed_when: False
+  tags: glpi
+
+- name: Remove unmanaged plugins
+  file: path={{ glpi_root_dir }}/web/plugins/{{ item }} state=absent
+  with_items: "{{ glpi_installed_plugins.stdout_lines }}"
+  when: item not in glpi_plugins_to_install
+  tags: glpi
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ glpi_mysql_db }}"
+    - db_user: "{{ glpi_mysql_user }}"
+    - db_server: "{{ glpi_mysql_server }}"
+    - db_pass: "{{ glpi_mysql_pass }}"
+  tags: glpi
+
+- set_fact: glpi_db_created={{ db_created }}
+  tags: glpi
+
+- name: Deploy cron task
+  cron:
+    name: glpi_{{ glpi_id }}
+    cron_file: glpi_{{ glpi_id }}
+    user: "{{ glpi_php_user }}"
+    job: "/bin/php{{ (glpi_php_version == '54') | ternary('',glpi_php_version) }} {{ glpi_root_dir }}/web/front/cron.php"
+    minute: "*/5"
+  tags: glpi
+
+- name: Deploy backup scripts
+  template: src={{ item }}_backup.j2 dest=/etc/backup/{{ item }}.d/glpi_{{ glpi_id }} mode=750
+  loop:
+    - pre
+    - post
+  tags: glpi
+
+- name: Download the logo
+  get_url:
+    url: "{{ glpi_logo }}"
+    dest: "{{ glpi_root_dir }}/web/pics/fd_logo.png"
+    force: True
+  when: glpi_logo is defined
+  tags: glpi
+
+- name: Download the login page logo
+  get_url:
+    url: "{{ glpi_login_logo }}"
+    dest: "{{ glpi_root_dir }}/web/pics/login_logo_glpi.png"
+    force: True
+  when: glpi_login_logo is defined
+  tags: glpi

@@ -1,0 +1,14 @@
+---
+- import_tasks: ../includes/create_selfsigned_cert.yml
+  vars:
+    - cert_path: /etc/nginx/ssl/cert.pem
+    - cert_key_path: /etc/nginx/ssl/key.pem
+    - cert_user: nginx
+  tags: web
+
+- name: Create DH param
+  command: openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
+  args:
+    creates: /etc/nginx/ssl/dhparam.pem
+  tags: web
+

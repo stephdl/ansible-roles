@@ -1,0 +1,116 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - freeradius
+      - freeradius-utils
+      - perl-LWP-Protocol-https  # For the check script to be able to fetch CRL on https URL
+      - perl-Mail-Sendmail
+  tags: radius
+
+- name: Create configuration directories
+  file: path=/etc/radius/{{ item }} state=directory group=radiusd mode=750
+  with_items:
+    - certs
+    - modules
+  tags: radius
+
+- name: Create radiusd unit snippet dir
+  file: path=/etc/systemd/system/radiusd.service.d/ state=directory
+  tags: radius
+
+- name: Remove obsolete systemd unit override
+  file: path=/etc/systemd/system/radiusd.service state=absent
+  register: rad_old_unit
+  tags: radius
+
+- name: Overwrite radiusd unit file
+  copy:
+    content: |
+      [Service]
+      ExecStartPre=
+      ExecStartPre=-/bin/chown -R radiusd.radiusd /var/run/radiusd
+      ExecStartPre=/usr/sbin/radiusd -C -d /etc/radius
+      ExecStart=
+      ExecStart=/usr/sbin/radiusd -d /etc/radius
+    dest: /etc/systemd/system/radiusd.service.d/99-ansible.conf
+  register: rad_unit
+  notify: restart radiusd
+  tags: radius
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: rad_unit.changed or rad_old_unit.changed
+  tags: radius
+
+- name: Install client certificate checker script
+  copy: src=rad_check_client_cert dest=/usr/local/bin/rad_check_client_cert mode=755
+  tags: radius
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/radius/{{ item }} group=radiusd mode=640
+  with_items:
+    - radiusd.conf
+    - clients.conf
+    - modules/eap.conf
+    - sites.conf
+  notify: restart radiusd
+  tags: radius
+
+- name: Create DH param
+  shell: /usr/bin/openssl dhparam -out /etc/radius/certs/dh.pem 2048
+  args:
+    creates: /etc/radius/certs/dh.pem
+  notify: restart radiusd
+  tags: radius
+
+- name: Deploy certificates
+  copy: content={{ item.content }} dest=/etc/radius/certs/{{ item.dest }} group=radiusd mode={{ item.mode | default(omit) }}
+  with_items:
+    - content: "{{ rad_tls_ca }}"
+      dest: ca.pem
+    - content: "{{ rad_tls_cert }}"
+      dest: cert.pem
+    - content: "{{ rad_tls_key }}"
+      dest: key.pem
+      mode: 640
+  notify: restart radiusd
+  no_log: True
+  tags: radius
+
+- name: Deploy CRL
+  copy: content={{ rad_tls_crl }} dest=/etc/radiusd/certs/crl.pem
+  when:
+    - rad_tls_crl is defined
+    - rad_tls_crl is not search('^https?://')
+  tags: radius
+
+- name: Deploy tmpfile fragment
+  template: src=tmpfiles.conf dest=/etc/tmpfiles.d/radiusd.conf
+  register: rad_tmpfiles
+  tags: radius
+
+- name: Create tmpfiles
+  command: systemd-tmpfiles --create
+  when: rad_tmpfiles.changed
+  tags: radius
+
+- name: Handle radius ports
+  iptables_raw:
+    name: radius_ports
+    state: "{{ (rad_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p udp -m multiport --dports {{ rad_ports | join(',') }} -s {{ rad_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,radius]
+
+# This is needed to allow the verification script to send email notification
+# when the CRL is too old
+- name: Configure SELinux
+  seboolean: name=nis_enabled state=True persistent=True
+  when: ansible_selinux.status == 'enabled'
+  tags: radius
+
+- name: Start and enable the service
+  service: name=radiusd state=started enabled=True
+  tags: radius

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if rabbitmq_conf == 'rabbitmq.conf' %}
+mkdir -p /home/lbkp/rabbitmq/
+/usr/sbin/rabbitmqctl export_definitions --format json definitions.json
+mv /var/lib/rabbitmq/definitions.json /home/lbkp/rabbitmq/
+{% else %}
+# RabbitMQ version too old to support export_definitions
+{% endif %}

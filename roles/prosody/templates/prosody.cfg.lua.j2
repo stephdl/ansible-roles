@@ -1,0 +1,73 @@
+-- {{ ansible_managed }}
+
+plugin_paths = { "/opt/prosody/modules" }
+
+admins = {
+{% for user in prosody_admin_users %}
+  "{{ user }}",
+{% endfor %}
+}
+modules_enabled = {
+{% for module in prosody_modules_enabled %}
+  "{{ module }}";
+{% endfor %}
+}
+modules_disabled = {
+{% for module in prosody_modules_disabled %}
+  "{{ module }}";
+{% endfor %}
+}
+
+allow_registration = {{ prosody_allow_registration | ternary('true','false') }}
+c2s_require_encryption = true
+s2s_require_encryption = true
+s2s_secure_auth = false
+
+c2s_ports = {
+{% for port in prosody_c2s_ports %}
+  {{ port }},
+{% endfor %}
+}
+s2s_port = {
+{% for port in prosody_s2s_ports %}
+  {{ port }},
+{% endfor %}
+}
+http_port = {
+{% for port in prosody_http_ports %}
+  {{ port }},
+{% endfor %}
+}
+component_ports = {
+{% for port in prosody_component_ports %}
+  {{ port }},
+{% endfor %}
+}
+component_interface = "0.0.0.0"
+
+authentication = "{{ prosody_auth_provider }}"
+
+{% if prosody_auth_provider == 'ldap' %}
+ldap_base = "{{ prosody_ldap_base }}"
+ldap_server = "{{ prosody_ldap_servers | join(' ') }}"
+{% if prosody_ldap_bind_dn is defined and prosody_ldap_bind_pass is defined %}
+ldap_rootdn = "{{ prosody_ldap_bind_dn }}"
+ldap_password = "{{ prosody_ldap_bind_pass }}"
+{% endif %}
+ldap_filter = "{{ prosody_ldap_filter }}"
+ldap_scope = "subtree"
+ldap_tls = {{ prosody_ldap_starttls | ternary('true','false') }}
+{% endif %}
+
+log = {
+  info = "*console";
+  error = "*console";
+}
+
+certificates = "/etc/pki/prosody/";
+pidfile = "/run/prosody/prosody.pid";
+daemonize = false;
+
+VirtualHost "localhost"
+
+Include "ansible_conf.d/*.cfg.lua"

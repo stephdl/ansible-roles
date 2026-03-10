@@ -1,0 +1,33 @@
+{% if letsencrypt_ca is defined %}
+CA={{ letsencrypt_ca }}
+{% endif %}
+IP_VERSION=4
+BASEDIR=/var/lib/dehydrated/certificates
+DOMAINS_TXT=/etc/dehydrated/domains.txt
+DOMAINS_D=/etc/dehydrated/certificates
+WELLKNOWN=/var/lib/dehydrated/challenges
+KEYSIZE="{{ letsencrypt_key_size | default('4096') }}"
+HOOK=/usr/{{ (ansible_os_family == 'Debian') | ternary('local/','') }}bin/dehydrated_hooks
+RENEW_DAYS="{{ letsencrypt_renew_days | default('30') }}"
+PRIVATE_KEY_RENEW="yes"
+{% if letsencrypt_preferred_chain is not defined %}
+PREFERRED_CHAIN="{{ letsencrypt_openssl_version.stdout is version('1.1', '>=') | ternary('ISRG Root X1','issuer= /C=US/O=Internet Security Research Group/CN=ISRG Root X1') }}"
+{% elif letsencrypt_preferred_chain != 'default' %}
+PREFERRED_CHAIN={{ letsencrypt_preferred_chain | quote }}
+{% endif %}
+{% if letsencrypt_key_algo | default('rsa') in ['rsa', 'prime256v1', 'secp384r1' ] %}
+KEY_ALGO={{ letsencrypt_key_algo | default('rsa') }}
+{% endif %}
+{% if system_admin_email is defined %}
+CONTACT_EMAIL={{ system_admin_email }}
+{% endif %}
+{% if letsencrypt_challenge == 'dns' and letsencrypt_dns_provider is defined and letsencrypt_dns_auth_token is defined %}
+CHALLENGETYPE=dns-01
+export DNS_PROVIDER="{{ letsencrypt_dns_provider }}"
+export LEXICON_{{ letsencrypt_dns_provider | upper }}_TOKEN="{{ letsencrypt_dns_auth_token }}"
+{% endif %}
+{% if system_proxy is defined and system_proxy != '' %}
+{% for proto in ['http','https','HTTP','HTTPS'] %}
+export {{ proto }}_proxy={{ system_proxy }}
+{% endfor %}
+{% endif %}

@@ -1,0 +1,15 @@
+[Unit]
+Description=iTop {{ itop_id }} background tasks
+
+[Service]
+Type=oneshot
+ExecStart=/bin/php{{ itop_php_version }} \
+            -d memory_limit=512M \
+            -d session.save_path={{ itop_root_dir }}/sessions \
+            {{ itop_root_dir }}/web/webservices/cron.php \
+            --param_file={{ itop_root_dir }}/etc/cron.params \
+            --verbose=1
+User={{ itop_php_user }}
+Group={{ itop_php_user }}
+
+

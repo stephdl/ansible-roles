@@ -1,0 +1,58 @@
+; {{ ansible_managed }}
+
+{% for client in wh_clients | default([]) %}
+
+{% for app in client.apps | default([]) %}
+
+{% set app = wh_default_app | combine(app, recursive=True) %}
+
+{% if app.php.enabled and app.php.version | string == wh_php_version | string %}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  Begin pool {{ client.name }}-{{ app.name }}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[{{ client.name }}-{{ app.name }}]
+listen.owner = root
+listen.group = {{ httpd_group }}
+listen.mode = 0660
+listen = /run/php-fpm/php{{ wh_php_version }}-{{ client.name }}-{{ app.name }}.sock
+user = {{ client.run_as | default('wh-' + client.name) }}
+group = {{ client.run_as | default('wh-' + client.name) }}
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 5m
+
+php_flag[display_errors] = {{ app.php.display_error | ternary('on','off') }}
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = /opt/wh/{{ client.name }}/apps/{{ app.name }}/logs/php_error.log
+php_admin_value[memory_limit] = {{ app.php.memory_limit }}
+php_admin_value[session.save_path] = /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp
+php_admin_value[upload_tmp_dir] = /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp
+php_admin_value[sys_temp_dir] = /opt/wh/{{ client.name }}/apps/{{ app.name }}/tmp
+php_admin_value[post_max_size] = {{ app.php.upload_max_filesize }}
+php_admin_value[upload_max_filesize] = {{ app.php.upload_max_filesize }}
+php_admin_value[disable_functions] = {{ app.php.disabled_functions | difference(app.php.enabled_functions) | join(', ') }}
+php_admin_value[open_basedir] = /opt/wh/{{ client.name }}/apps
+php_admin_value[max_execution_time] = {{ app.php.max_execution_time }}
+php_admin_value[max_input_time] = {{ app.php.max_execution_time }}
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = {{ app.php.allow_url_fopen | ternary('on','off') }}
+php_admin_flag[file_uploads] = {{ app.php.file_uploads | ternary('on','off') }}
+php_admin_flag[session.cookie_httponly] = on
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  End pool {{ client.name }}-{{ app.name }}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{% endif %}
+
+{% endfor %}
+
+{% endfor %}

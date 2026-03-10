@@ -1,0 +1,7 @@
+---
+repo_remi_release_uri: "http://rpms.remirepo.net/enterprise/remi-release-{{ ansible_distribution_major_version }}.rpm"
+repo_postgres: True
+# Only available for CentOS >= 8
+# if True, will switch to the CentOS Stream repo
+repo_centos_stream: False
+...

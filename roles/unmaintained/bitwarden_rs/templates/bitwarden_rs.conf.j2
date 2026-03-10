@@ -1,0 +1,28 @@
+IP_HEADER=X-Forwarded-For
+SIGNUPS_VERIFY=true
+SIGNUPS_ALLOWED={{ bitwarden_registration | ternary('true','false') }}
+{% if bitwarden_domains_whitelist | length > 0 %}
+SIGNUPS_DOMAINS_WHITELIST={{ bitwarden_domains_whitelist | join(',') }}
+{% endif %}
+ADMIN_TOKEN={{ bitwarden_admin_token }}
+DISABLE_ADMIN_TOKEN={{ bitwarden_disable_admin_token | ternary('true','false') }}
+DOMAIN={{ bitwarden_public_url }}
+ROCKET_ENV=prod
+ROCKET_ADDRESS=0.0.0.0
+ROCKET_PORT={{ bitwarden_http_port }}
+WEBSOCKET_ENABLED=true
+WEBSOCKET_PORT={{ bitwarden_ws_port }}
+SMTP_HOST=localhost
+SMTP_PORT=25
+SMTP_SSL=false
+SMTP_FROM=bitwarden-rs-noreply@{{ ansible_domain }}
+{% if bitwarden_db_engine == 'mysql' %}
+DATABASE_URL=mysql://{{ bitwarden_db_user }}:{{ bitwarden_db_pass | urlencode | regex_replace('/','%2F') }}@{{ bitwarden_db_server }}:{{ bitwarden_db_port }}/{{ bitwarden_db_name }}
+ENABLE_DB_WAL=false
+{% else %}
+DATABASE_URL=data/db.sqlite3
+{% endif %}
+{% if bitwarden_yubico_client_id is defined and bitwarden_yubico_secret_key is defined %}
+YUBICO_CLIENT_ID={{ bitwarden_yubico_client_id }}
+YUBICO_SECRET_KEY={{ bitwarden_yubico_secret_key }}
+{% endif %}

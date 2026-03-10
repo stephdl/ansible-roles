@@ -1,0 +1,38 @@
+---
+
+wh_default_client:
+  ssh_keys: []
+wh_default_app:
+  allow_ip: []
+  deny_ip: []
+  aliases: []
+  maintenance: False
+  php:
+    enabled: True
+    version: 73
+    memory_limit: 256M
+    display_error: False
+    file_uploads: True
+    upload_max_filesize: 10M
+    disabled_functions:
+      - system
+      - show_source
+      - symlink
+      - exec
+      - dl
+      - shell_exec
+      - passthru
+      - phpinfo
+      - escapeshellarg
+      - escapeshellcmd
+    enabled_functions: []
+    allow_url_fopen: False
+    max_execution_time: 900
+  cache: enabled
+  force_https: True
+  letsencrypt_cert: False
+  database:
+    enabled: True
+    engine: mysql
+    collation: utf8mb4_unicode_ci
+    encoding: utf8mb4

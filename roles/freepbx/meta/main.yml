@@ -1,0 +1,9 @@
+---
+
+dependencies:
+  - role: repo_asterisk
+  - role: repo_elrepo
+  - role: repo_nodejs
+  - role: httpd_php
+  - role: mysql_server
+    when: fpbx_db_server == 'localhost' or fpbx_server == '127.0.0.1'

@@ -1,0 +1,15 @@
+module ufdb 1.2;
+
+require {
+        type initrc_tmp_t;
+        type initrc_t;
+        type tmp_t;
+        type squid_t;
+        class sock_file write;
+        class unix_stream_socket connectto;
+}
+
+#============= squid_t ==============
+allow squid_t initrc_t:unix_stream_socket connectto;
+allow squid_t initrc_tmp_t:sock_file write;
+allow squid_t tmp_t:sock_file write;

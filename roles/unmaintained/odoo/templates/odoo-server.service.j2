@@ -1,0 +1,17 @@
+[Unit]
+Description=Odoo Server
+After=network.service
+
+[Service]
+Type=simple
+User={{ odoo_user }}
+Group={{ odoo_user }}
+ExecStart={{ odoo_root_dir }}/bin/python3 {{ odoo_root_dir }}/app/setup/odoo -c {{ odoo_root_dir }}/etc/odoo-server.conf --proxy-mode --no-database-list --without-demo=ALL --data-dir={{ odoo_root_dir }}/data
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

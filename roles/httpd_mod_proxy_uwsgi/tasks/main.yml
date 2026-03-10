@@ -1,0 +1,7 @@
+---
+
+- name: Install mod_proxy_uwsgi
+  yum: name=mod_proxy_uwsgi
+
+- name: Load mod_perl module
+  copy: src=04-proxy_uwsgi.conf dest=/etc/httpd/ansible_conf.modules.d/04-proxy_uwsgi.conf

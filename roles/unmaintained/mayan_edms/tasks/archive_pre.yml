@@ -1,0 +1,56 @@
+---
+
+- name: Create the archive dir
+  file: path={{ mayan_root_dir }}/archives/{{ mayan_current_version }} state=directory
+  tags: mayan
+
+- name: Stop sevices during upgrade
+  service: name={{ item }} state=stopped
+  loop:
+    - mayan-edms-web
+    - mayan-edms-worker-fast
+    - mayan-edms-worker-medium
+    - mayan-edms-worker-slow
+    - mayan-edms-beat
+  tags: mayan
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ mayan_root_dir }}/{{ item }}"
+    dest: "{{ mayan_root_dir }}/archives/{{ mayan_current_version }}/"
+    recursive: True
+    delete: True
+  loop:
+    - venv
+    - config
+  delegate_to: "{{ inventory_hostname }}"
+  tags: mayan
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ mayan_db_name }}"
+    target: "{{ root_dir }}/archives/{{ mayan_current_version }}/{{ mayan_db_name }}.sql.gz"
+    login_host: "{{ mayan_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  when: mayan_db_engine == 'mysql'
+  tags: mayan
+
+- name: Dump the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ mayan_db_server | quote }}
+    --port={{ mayan_db_port | quote }}
+    --username=sqladmin {{ mayan_db_name | quote }}
+    --file="{{ mayan_root_dir }}/archives/{{ mayan_current_version }}/{{ mayan_db_name }}.sql"
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  when: mayan_db_engine == 'postgresql'
+  tags: mayan
+
+

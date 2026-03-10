@@ -1,0 +1,30 @@
+---
+
+- name: Set install mode
+  set_fact: mvn_install_mode='none'
+  tags: mvn
+
+- name: Check if version file exists
+  stat: path={{ mvn_root_dir }}/meta/ansible_version
+  register: mvn_version_file
+  tags: mvn
+
+- name: Detect installed version
+  block:
+    - slurp: src={{ mvn_root_dir }}/meta/ansible_version
+      register: mvn_current_version
+    - set_fact: mvn_current_version={{ mvn_current_version.content | b64decode | trim }}
+  when: mvn_version_file.stat.exists
+  tags: mvn
+
+- name: Set install mode
+  set_fact: mvn_install_mode='install'
+  when: not mvn_version_file.stat.exists
+  tags: mvn
+
+- name: Set upgrade mode
+  set_fact: mvn_install_mode='upgrade'
+  when:
+    - mvn_version_file.stat.exists
+    - mvn_current_version != mvn_version
+  tags: mvn

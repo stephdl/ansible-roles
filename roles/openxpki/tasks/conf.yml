@@ -1,0 +1,118 @@
+---
+
+- name: Deploy JS config
+  template: src=localconfig.js.j2 dest={{ pki_root_dir }}/web/htdocs/localconfig.js
+  tags: pki
+
+- name: Check if notification is a link or a dir
+  stat: path={{ pki_root_dir }}/etc/notification
+  register: pki_notif_config
+  tags: pki
+
+- name: Remove notification dir from the config
+  file: path={{ pki_root_dir }}/etc/notification state=absent
+  when:
+    - pki_notif_config.stat.isdir is defined
+    - pki_notif_config.stat.isdir
+  tags: pki
+
+- name: Copy default configuration
+  synchronize:
+    src: "{{ pki_root_dir }}/src/openxpki-config-{{ pki_config_version }}/"
+    dest: "{{ pki_root_dir }}/etc/"
+    compress: False
+    rsync_opts:
+      - '--exclude=config.d/realm/democa'
+  delegate_to: "{{ inventory_hostname }}"
+  when: pki_install_mode != 'none' # or pki_patches.changed
+  tags: pki
+
+- name: Create realm config directories
+  file: path={{ pki_root_dir }}/etc/config.d/realm/{{ item.name }} state=directory
+  with_items: "{{ pki_realms }}"
+  register: pki_new_realms
+  tags: pki
+
+- name: Populate realm config
+  synchronize:
+    src: "{{ pki_root_dir }}/etc/config.d/realm.tpl/"
+    dest: "{{ pki_root_dir }}/etc/config.d/realm/{{ item.item.name }}/"
+    compress: False
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: item.changed or pki_install_mode != 'none'
+  with_items: "{{ pki_new_realms.results }}"
+  tags: pki
+
+- name: Create per realm links to the scep script handler
+  file: src=scep.fcgi dest={{ pki_root_dir }}/web/cgi-bin/scep_{{ item.name }}.fcgi state=link
+  when: item.scep.enabled
+  with_items: "{{ pki_realms }}"
+  tags: pki
+
+- name: Remove scep for realms who has disabled it
+  file: path={{ pki_root_dir }}/web/cgi-bin/scep_{{ item.name }}.fcgi state=absent
+  when: not item.scep.enabled
+  with_items: "{{ pki_realms }}"
+  tags: pki
+
+- name: Deploy system configuration
+  template: src={{ item }}.j2 dest={{ pki_root_dir }}/etc/{{ item }}
+  with_items:
+    - config.d/system/crypto.yaml
+    - config.d/system/database.yaml
+    - config.d/system/realms.yaml
+    - config.d/system/server.yaml
+    - config.d/system/watchdog.yaml
+    - notification/email/_footer.txt
+    - notification/email/_footer.html
+  notify: restart openxpki
+  tags: pki
+
+- name: Deploy realm configuration
+  template: src=config.d/realm/{{ item.1 }}.j2 dest={{ pki_root_dir }}/etc/config.d/realm/{{ item.0.name }}/{{ item.1 }}
+  with_nested:
+    - "{{ pki_realms }}"
+    - - crypto.yaml
+      - nice.yaml
+      - notification/smtp.yaml
+      - publishing.yaml
+      - profile/default.yaml
+      - profile/signer.yaml
+      - profile/tls_client.yaml
+      - profile/tls_server.yaml
+      - profile/user_auth_enc.yaml
+      - auth/stack.yaml
+      - auth/handler.yaml
+      - workflow/global/validator/password_quality.yaml
+      - scep/scep-server.yaml
+  notify: restart openxpki
+  tags: pki
+
+- name: Deploy per realm scep configuration
+  template: src=scep/default.conf.j2 dest={{ pki_root_dir }}/etc/scep/{{ item.name }}.conf
+  with_items: "{{ pki_realms }}"
+  notify: restart openxpki fcgi
+  tags: pki
+
+- name: Deploy general configuration
+  template: src={{ item }}.j2 dest={{ pki_root_dir }}/etc/{{ item }}
+  with_items:
+    - log.conf
+    - openssl.cnf
+    - scep/log.conf
+  tags: pki
+
+- name: Deploy webui configuration
+  template: src={{ item }}.j2 dest={{ pki_root_dir }}/etc/{{ item }}
+  with_items:
+    - webui/default.conf
+    - webui/log.conf
+  notify: restart openxpki fcgi
+  tags: pki
+
+- name: Deploy httpd config
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/10-openxpki.conf
+  notify: reload httpd
+  tags: pki
+

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump --user={{ gitea_db_user | quote }} \
+                   --password={{ gitea_db_pass | quote }} \
+                   --host={{ gitea_db_server }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ gitea_db_name }} | \
+               zstd -c > {{ gitea_root_dir }}/backup/{{ gitea_db_name }}.sql.zst

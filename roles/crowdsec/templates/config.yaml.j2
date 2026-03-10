@@ -1,0 +1,65 @@
+common:
+  daemonize: true
+  pid_dir: /var/run/
+  log_media: stdout
+  log_level: info
+  working_dir: .
+
+config_paths:
+  config_dir: /etc/crowdsec/
+  data_dir: {{ cs_root_dir }}/data/
+  simulation_path: /etc/crowdsec/simulation.yaml
+  hub_dir: /etc/crowdsec/hub/
+  index_path: /etc/crowdsec/hub/.index.json
+
+crowdsec_service:
+{% if cs_acquis is defined %}
+  acquisition_path: /etc/crowdsec/acquis.yaml
+{% else %}
+  acquisition_dir: /etc/crowdsec/acquis/
+{% endif %}
+  parser_routines: 1
+
+cscli:
+  output: human
+  hub_branch: master
+
+db_config:
+  log_level: info
+{% if cs_db_engine == 'mysql' %}
+  type: mysql
+  user: {{ cs_db_user }}
+  password: {{ cs_db_pass | quote }}
+  db_name: {{ cs_db_name }}
+  host: {{ cs_db_server }}
+  port: {{ cs_db_port }}
+{% else %}
+  type: sqlite
+  db_path: {{ cs_root_dir }}/data/crowdsec.db
+{% endif %}
+  flush:
+    max_items: 100000
+    max_age: 730d
+
+api:
+  client:
+    insecure_skip_verify: false
+    credentials_path: /etc/crowdsec/local_api_credentials.yaml
+
+{% if cs_lapi_enabled %}
+  server:
+    log_level: info
+    listen_uri: 0.0.0.0:{{ cs_lapi_port }}
+    profiles_path: /etc/crowdsec/profiles.yaml
+{% if cs_capi_enabled %}
+    online_client: 
+      credentials_path: /etc/crowdsec/online_api_credentials.yaml
+{% endif %}
+{% endif %}
+
+prometheus:
+  enabled: true
+  level: full
+  listen_addr: {{ (cs_prometheus_src_ip | length > 0) | ternary(ansible_all_ipv4_addresses[0],'127.0.0.1') }}
+  listen_port: {{ cs_prometheus_port }}
+

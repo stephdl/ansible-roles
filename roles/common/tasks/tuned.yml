@@ -1,0 +1,35 @@
+---
+
+- name: Install tuned service
+  yum: name=tuned state=present
+
+- name: Enabling tuned
+  service: name=tuned state=started enabled=yes
+
+- name: Check actual tuned profile
+  shell: "tuned-adm active | awk -F': ' '{print $2}'"
+  register: tuned_profile
+  changed_when: False
+  ignore_errors: True
+
+- name: Applying custom tuned profile
+  command: tuned-adm profile {{ system_tuned_profile }}
+  when:
+    - system_tuned_profile is defined
+    - tuned_profile.stdout != system_tuned_profile
+
+- name: Applying virtual guest tuned profile
+  command: tuned-adm profile virtual-guest
+  when:
+    - ansible_virtualization_role == "guest"
+    - tuned_profile.stdout != "virtual-guest"
+    - system_tuned_profile is not defined
+
+- name: Applying virtual host tuned profile
+  command: tuned-adm profile virtual-host
+  when:
+    - ansible_virtualization_role == "host"
+    - tuned_profile.stdout != "virtual-host"
+    - system_tuned_profile is not defined
+
+...

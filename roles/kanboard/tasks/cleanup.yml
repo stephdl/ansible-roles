@@ -1,0 +1,14 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  with_items:
+    - "{{ kanboard_root_dir }}/tmp/kanboard-{{ kanboard_version }}/"
+    - "{{ kanboard_root_dir }}/tmp/kanboard-v{{ kanboard_version }}.zip"
+    - "{{ kanboard_root_dir }}/web/data"
+  tags: kanboard
+
+- name: Remove plugins archives
+  file: path={{ kanboard_root_dir }}/tmp/{{ kanboard_plugins[item].name }}-{{ kanboard_plugins[item].version }}.zip state=absent
+  with_items: "{{ kanboard_plugins.keys() | list }}"
+  tags: kanboard

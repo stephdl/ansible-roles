@@ -1,0 +1,25 @@
+---
+
+- name: Allow tomcat to bind on diagrams' port
+  seport: ports={{ diagrams_port }},{{ diagrams_port + 1 }} proto=tcp setype=http_port_t state=present
+  tags: diagrams
+
+- name: Set SELinux context
+  sefcontext:
+    target: "{{ item.target }}"
+    setype: "{{ item.type }}"
+    state: present
+  loop:
+    - target: "{{ diagrams_root_dir }}/webapps(/.*)?"
+      type: tomcat_var_lib_t
+    - target: "{{ diagrams_root_dir }}/(work|tmp)(/.*)?"
+      type: tomcat_cache_t
+    - target: "{{ diagrams_root_dir }}/logs(/.*)?"
+      type: tomcat_log_t
+  register: diagrams_sefcontext
+  tags: diagrams
+
+- name: Restore file contexts
+  command: restorecon -R {{ diagrams_root_dir }}
+  when: diagrams_sefcontext.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: diagrams

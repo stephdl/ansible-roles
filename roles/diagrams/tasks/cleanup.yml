@@ -1,0 +1,7 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ diagrams_root_dir }}/tmp/draw.war"
+  tags: diagrams

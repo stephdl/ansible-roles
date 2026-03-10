@@ -1,0 +1,7 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ documize_root_dir }}/archives/{{ documize_current_version }}"
+  tags: documize

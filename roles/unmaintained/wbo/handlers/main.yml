@@ -1,0 +1,4 @@
+---
+
+- name: restart wbo
+  service: name=wbo-{{ wbo_id }} state=restarted

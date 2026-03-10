@@ -1,0 +1,5 @@
+{% if item.config is defined and item.config is mapping %}
+{% for key in item.config.keys() | list %}
+{{ key }}={{ item.config[key] }}
+{% endfor %}
+{% endif %}

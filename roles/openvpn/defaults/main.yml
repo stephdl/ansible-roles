@@ -1,0 +1,45 @@
+---
+
+ovpn_daemons: []
+# ovpn_daemons:
+#   - name: fws
+#     type: client|server
+#     remote: 10.11.12.13 udp 1195 # Only for client
+#     # Remote can also be a list
+#     remote:
+#       - 12.13.14.15 udp 1194
+#       - 17.18.19.20 tcp 443
+#     src_ip: [ 0.0.0.0/0 ] # Only for servers
+#     auth: psk|cert
+#     secret: # Inline takey
+#     ca: # Inline CA
+#     cert: # Inline cert
+#     key: # Inline key
+#     compress: lzo
+#     routes:
+#       - net: 10.99.0.0
+#         mask: 255.255.255.0
+#     push_routes:
+#       - net: 10.29.1.0
+#         mask: 255.255.255.0
+
+ovpn_src_ip: [ 0.0.0.0/0 ]
+ovpn_daemon_defaults:
+  type: client
+  auth: psk
+  proto: udp
+  port: 1194
+  dev: tun
+  tls_auth: False
+  tls_crypt: False
+  enabled: True
+  cipher: default
+  compress: default
+  pull: True
+  topology: subnet
+  routes: []
+  push_routes: []
+  client_to_client: False
+  duplicate_dn: False
+  # rcvbuf: 524288
+  # sndbuf: 524288

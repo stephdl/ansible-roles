@@ -1,0 +1,28 @@
+entity:
+  disk@: connector:publishing.connectors.local
+
+crl:
+  crl@: connector:publishing.connectors.cdp
+
+cacert:
+  disk@: connector:publishing.connectors.cacert
+
+connectors:
+  local:
+    class: Connector::Builtin::File::Path
+    LOCATION: {{ pki_root_dir }}/data/{{ item.0.name }}
+    file: "[% ARGS.0 %].crt"
+    content: "[% pem %]"
+
+  cdp:
+    class: Connector::Builtin::File::Path
+    LOCATION: {{ pki_root_dir }}/data/{{ item.0.name }}
+    file: "crl.pem"
+    content: "[% pem %]"
+
+  cacert:
+    class: Connector::Builtin::File::Path
+    LOCATION: {{ pki_root_dir }}/data/{{ item.0.name }}
+    file: "ca.pem"
+    content: "[% pem %]"
+

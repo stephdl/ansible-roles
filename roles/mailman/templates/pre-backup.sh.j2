@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% for db in mailman_db_name.keys() | list %}
+{% if mailman_db_engine == 'postgres' %}
+{% if mailman_db_server not in ['localhost', '127.0.0.1'] %}
+PGPASSWORD={{ mailman_db_pass | quote }} \
+  /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ mailman_db_user | quote }} \
+  --host={{ mailman_db_server | quote }} \
+  --port={{ mailman_db_port }} \
+  {{ mailman_db_name[db] }} | \
+  zstd -c > {{ mailman_root_dir }}/backup/{{ mailman_db_name[db] }}.sql.zst
+{% else %}
+su - postgres -c "/usr/pgsql-14/bin/pg_dump --clear {{ mailman_db_name[db] }}" | \
+{% endif %}
+  zstd -c > {{ mailman_root_dir }}/backup/{{ mailman_db_name[db] }}.sql.zst
+{% else %}
+/usr/bin/mysqldump \
+{% if mailman_db_server not in ['localhost', '127.0.0.1'] %}
+  --user={{ mailman_db_user | quote }} \
+  --password={{ mailman_db_pass | quote }} \
+  --host={{ mailman_db_server | quote }} \
+  --port={{ mailman_db_port }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ mailman_db_name[db] }} | \
+  zstd -c > {{ mailman_root_dir }}/backup/{{ mailman_db_name[db] }}.sql.zst
+{% endif %}
+{% endfor %}

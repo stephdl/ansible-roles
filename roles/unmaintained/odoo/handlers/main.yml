@@ -1,0 +1,4 @@
+---
+
+- name: restart odoo-server
+  service: name=odoo-server state=restarted

@@ -1,0 +1,13 @@
+---
+
+- name: Configure FWS Extra repository for nginx
+  yum_repository:
+    name: fws-extra-nginx
+    description: "Firewall Services Extra"
+    baseurl: http://repo.firewall-services.com/centos-extra/$releasever/
+    gpgcheck: True
+    gpgkey: http://repo.firewall-services.com/RPM-GPG-KEY
+    priority: 50
+    includepkgs:
+      - nginx*
+  tags: repo

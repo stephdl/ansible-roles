@@ -1,0 +1,7 @@
+---
+
+- name: Start and enable the daemon
+  service: name=openxpki state=started enabled=True
+  register: pki_started
+  tags: pki
+

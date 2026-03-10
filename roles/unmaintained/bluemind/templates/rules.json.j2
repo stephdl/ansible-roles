@@ -1,0 +1,11 @@
+[
+{% for product in bm_mem_alloc_rules.keys() | list %}
+  {
+    "product":"{{ product }}",
+    "defaultHeap":"{{ bm_mem_alloc_rules[product].heap }}",
+    "defaultDirect":"{{ bm_mem_alloc_rules[product].direct }}",
+    "sparePercent":{{ bm_mem_alloc_rules[product].spare }}
+  }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+]

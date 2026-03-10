@@ -1,0 +1,31 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - unbound
+  tags: unbound
+
+- name: Fetch the root hints
+  get_url:
+    url: https://www.internic.net/domain/named.cache
+    dest: /etc/unbound/root.hints
+  tags: unbound
+
+- name: Deploy unbound configuration
+  template: src=unbound.conf.j2 dest=/etc/unbound/unbound.conf
+  notify: restart unbound
+  tags: unbound
+
+- name: Handle port in the firewall
+  iptables_raw:
+    name: unbound_ports
+    state: "{{ (unbound_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p udp -m multiport --dports {{ unbound_port }} -s {{ unbound_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p tcp -m multiport --dports {{ unbound_port }} -s {{ unbound_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [unbound,firewall]
+
+- name: Start and enable the service
+  service: name=unbound state=started enabled=True
+  tags: unbound

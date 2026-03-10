@@ -1,0 +1,5 @@
+---
+
+- name: start and enable diagrams
+  service: name=tomcat@diagrams state=started enabled=True
+  tags: diagrams

@@ -1,0 +1,67 @@
+---
+
+# List of port sshd will bind to
+sshd_ports: [ '22' ]
+
+# Will restrict ssh access to the following IP
+# 
+sshd_src_ip: []
+# sshd_src_ip:
+#  - 12.13.14.15
+#  - 192.168.17.0/24
+
+sshd_permit_root_login: no
+sshd_password_auth: yes
+
+# Control the AllowUsers, DenyUsers, AllowGroups and DenyGroups
+# sshd_allow_users:
+#   - fws
+#   - dani
+# sshd_deny_users:
+#   - dimitri
+#   - flo
+# sshd_allow_groups:
+#   - tech
+#   - support
+# sshd_deny_groups:
+#   - sales
+#   - interim
+#
+#
+
+# User configuration
+#ssh_users:
+#  - name: dani
+#    create_user: False
+#    ssh_keys:
+#      - 'ssh-rsa AAAAB3NzaC1yc2...'
+#      - 'ssh-rsa AAAAB3NzaC1yc2...'
+#    key_options:
+#      - from="192.168.3.7"
+#      - no-pty
+#    sftp_only: True
+#    chroot: /var/www/html
+#    keys_file: %h/.ssh/authorized_keys
+#    allow_forwarding: False
+#    sudo_defaults:
+#      - '!env_reset'
+#      - '!requiretty'
+#    sudo:
+#      - cmd:
+#        - /usr/local/bin/
+#        run_as: root
+#        nopasswd: False
+#
+#ssh_extra_users (can be used as ssh_users)
+#  
+#
+# Max number of conn / minute. 0 to disable rate limit
+sshd_max_conn_per_minute: 0
+
+# Authorized Keys custom command
+# sshd_authorized_keys_command: /usr/local/bin/ssh-getkeys
+# sshd_authorized_keys_command_user: ldapsshkey
+
+# Use DNS. If disabled, kerb auth won't be used (as it uses DNS)
+# You might need to disable it when you need no SSH login delay even if DNS is unavailable
+sshd_use_dns: True

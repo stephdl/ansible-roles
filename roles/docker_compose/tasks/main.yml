@@ -1,0 +1,28 @@
+---
+
+- name: Check if docker-compose is installed
+  stat: path=/usr/local/bin/docker-compose
+  register: docker_compose_bin
+  tags: docker
+
+- name: Detect docker-compose version
+  shell: docker-compose -v | perl -ne '/version (\d+(\.\d+)+),/ && print "$1\n"'
+  register: docker_compose_current_version
+  changed_when: False
+  when: docker_compose_bin.stat.exists
+  tags: docker
+
+- name: Remove docker-compose
+  file: path=/usr/local/bin/docker-compose state=absent
+  when: docker_compose_bin.stat.exists and docker_compose_current_version.stdout != docker_compose_version
+  tags: docker
+
+- name: Install docker-compose
+  get_url:
+    url:  https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 0755
+    checksum: sha256:{{ docker_compose_bin_sha256 }}
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  tags: docker

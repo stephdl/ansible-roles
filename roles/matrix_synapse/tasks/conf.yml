@@ -1,0 +1,31 @@
+---
+- name: Deploy main config file
+  template: src=homeserver.yaml.j2 dest={{ synapse_root_dir }}/etc/homeserver.yaml group={{ synapse_user }} mode=640
+  notify: restart synapse
+  tags: matrix
+
+- name: Deploy logging config file
+  template: src=logging.conf.j2 dest={{ synapse_root_dir }}/etc/logging.conf
+  notify: restart synapse
+  tags: matrix
+
+- name: Generate certificates
+  command: "{{ synapse_root_dir }}/venv/bin/python3 -m synapse.app.homeserver --generate-keys -c {{ synapse_root_dir }}/etc/homeserver.yaml"
+  args:
+    creates: "{{ synapse_root_dir }}/etc/{{ synapse_server_name }}.signing.key"
+  tags: matrix
+
+- name: List sensitive files
+  stat: path={{ synapse_root_dir }}/etc/{{ item }}
+  register: synapse_sensitive_files
+  with_items:
+    - "{{ synapse_server_name }}.tls.key"
+    - "{{ synapse_server_name }}.signing.key"
+  tags: matrix
+
+- name: Restrict permissions on sensitive files
+  file: path={{ synapse_root_dir }}/etc/{{ item.item }} mode=640 group={{ synapse_user }}
+  with_items: "{{ synapse_sensitive_files.results }}"
+  when: item.stat.exists
+  tags: matrix
+

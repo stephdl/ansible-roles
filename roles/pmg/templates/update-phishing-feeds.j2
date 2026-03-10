@@ -1,0 +1,34 @@
+#!/bin/bash -e
+
+NEED_RELOAD=0
+
+TEMP=$(mktemp -u)
+wget https://data.phishtank.com/data/online-valid.csv -O $TEMP
+OLD_SHA1=""
+if [ -e /var/lib/spamassassin/phishtank-feed.csv ]; then
+  OLD_SHA1=$(sha1sum /var/lib/spamassassin/phishtank.txt)
+fi
+NEW_SHA1=$(sha1sum $TEMP)
+
+if [ "$OLD_SHA1" != "$NEW_SHA1" ]; then
+  mv -f $TEMP /var/lib/spamassassin/phishtank.txt
+  NEED_RELOAD=1
+fi
+
+{% if pmg_use_openphish %}
+wget https://openphish.com/feed.txt -O $TEMP
+OLD_SHA1=""
+if [ -e /var/lib/spamassassin/openphish.txt ]; then
+  OLD_SHA1=$(sha1sum /var/lib/spamassassin/openphish.txt)
+fi
+NEW_SHA1=$(sha1sum $TEMP)
+
+if [ "$OLD_SHA1" != "$NEW_SHA1" ]; then
+  mv -f $TEMP /var/lib/spamassassin/openphish.txt
+  NEED_RELOAD=1
+fi
+{% endif %}
+
+if [ "$NEED_RELOAD" == "1" ]; then
+  systemctl reload pmg-smtp-filter
+fi

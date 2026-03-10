@@ -1,0 +1,42 @@
+---
+
+- include: install_{{ ansible_os_family }}.yml
+
+- name: Deploy sssd config
+  template: src=sssd.conf.j2 dest=/etc/sssd/sssd.conf owner=root group=root mode=0600
+  register: sssd_config
+  notify: restart sssd
+  tags: auth
+
+  # On el8 for example, sssd is already installed and running on a default setup
+  # so we need to restart it now, so users are available (for eg, ssh authorized_keys setup)
+  # We can't rely on the handler, because it would only run at the end of the playbook
+- name: Restart sssd if needed
+  service: name=sssd state=restarted
+  when: sssd_config.changed
+  tags: auth
+
+- name: Ensure nsswitch is using sssd
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - regexp: '^passwd:.*'
+      line: 'passwd:     files sss'
+    - regexp: '^shadow:.*'
+      line: 'shadow:     files sss'
+    - regexp: '^group:.*'
+      line: 'group:      files sss'
+  tags: auth
+
+- name: Start and enable sssd service
+  service: name=sssd state=started enabled=True
+  tags: auth
+
+- name: Start oddjobd
+  service: name=oddjobd state=started enabled=True
+  when: ansible_distribution != 'Debian' or ansible_distribution_major_version is version('9', '>=')
+  tags: auth
+
+- include: pam_{{ ansible_os_family }}.yml

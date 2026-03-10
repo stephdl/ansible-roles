@@ -1,0 +1,27 @@
+/var/log/asterisk/messages
+/var/log/asterisk/event_log
+/var/log/asterisk/queue_log
+/var/log/asterisk/full
+/var/log/asterisk/security
+/var/log/asterisk/freepbx.log
+/var/log/asterisk/freepbx_security.log
+/var/log/asterisk/ucp_err.log
+/var/log/asterisk/ucp_out.log
+/var/log/asterisk/cdr-csv/Master.csv
+{
+    missingok
+    notifempty
+    su asterisk asterisk
+    create 0640 asterisk asterisk
+    sharedscripts
+    daily
+    rotate 365
+    compress
+    compressoptions -T0
+    compresscmd /usr/bin/xz
+    compressext .xz
+    uncompresscmd /usr/bin/unxz
+    postrotate
+        /usr/sbin/asterisk -rx 'logger reload' >/dev/null 2>/dev/null || true
+    endscript
+}

@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: samba
+  - role: rsync_server
+  - role: nfs_server
+  - role: httpd_front

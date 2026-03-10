@@ -1,0 +1,27 @@
+[uwsgi]
+http-socket = 0.0.0.0:{{ mailman_web_port }}
+virtualenv = {{ mailman_root_dir }}/venv/
+
+module=mailman_web.wsgi:application
+env = DJANGO_SETTINGS_MODULE=settings
+
+# Setup default number of processes and threads per process.
+master = true
+process = 2
+threads = 2
+
+# Setup the django_q related worker processes.
+attach-daemon = mailman-web qcluster
+
+# Setup the request log.
+req-logger = file:{{ mailman_root_dir }}/log/uwsgi.log
+
+# Log qcluster commands seperately.
+logger = qcluster syslog:mailman-web
+log-route = qcluster uwsgi-daemons
+
+# Last log and it logs the rest of the stuff.
+logger = syslog:mailman-web
+
+# Static assets
+check-static = {{ mailman_root_dir }}/web

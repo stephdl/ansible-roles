@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+{% if zfs_arc_min is defined %}
+options zfs zfs_arc_min={{ zfs_arc_min is search('%$') | ternary(((zfs_arc_min | regex_replace('%$', '') | int) * ansible_memtotal_mb * 1024 * 1024 * 0.01) | int, zfs_arc_min) }}
+{% endif %}
+{% if zfs_arc_max is defined %}
+options zfs zfs_arc_max={{ zfs_arc_max is search('%$') | ternary(((zfs_arc_max | regex_replace('%$', '') | int) * ansible_memtotal_mb * 1024 * 1024 * 0.01) | int, zfs_arc_max) }}
+{% endif %}
+#options zfs zvol_threads={{ (ansible_processor_vcpus < 16) | ternary('16', (ansible_processor_vcpus > 32) | ternary('32', ansible_processor_vcpus)) }}
+{% for option in zfs_mod_params.keys() | list %}
+{% if option is match('zfs_') %}
+options zfs {{ option }}={{ zfs_mod_params[option] }}
+{% elif option is match('spl_') %}
+options spl {{ option }}={{ zfs_mod_params[option] }}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,41 @@
+---
+
+- name: Deploy Dolibarr config
+  template: src=dolibarr.conf.j2 dest={{ dolibarr_root_dir }}/web/htdocs/conf/conf.php
+  tags: dolibarr
+
+- name: Initialize Dolibarr installation (first step)
+  command: php{{ dolibarr_php_version }}-cgi step2.php action=set
+  args:
+    chdir: "{{ dolibarr_root_dir }}/web/htdocs/install/"
+    #become_user: "{{ dolibarr_php_user }}"
+  when: dolibarr_install_mode == 'install'
+  tags: dolibarr
+
+- name: Create default admin user
+  command: php{{ dolibarr_php_version }}-cgi step5.php action=set login=admin pass=admin pass_verif=admin
+  args:
+    chdir: "{{ dolibarr_root_dir }}/web/htdocs/install/"
+    #become_user: "{{ dolibarr_php_user }}"
+  when: dolibarr_install_mode == 'install'
+  tags: dolibarr
+
+- name: Upgrade Dolibarr
+  command: php{{ dolibarr_php_version }} {{ item }} {{ dolibarr_current_version }} {{ dolibarr_version }}
+  args:
+    chdir: "{{ dolibarr_root_dir }}/web/htdocs/install/"
+  become_user: "{{ dolibarr_php_user }}"
+  when: dolibarr_install_mode == 'upgrade'
+  with_items:
+    - upgrade.php
+    - upgrade2.php
+    - step5.php
+  tags: dolibarr
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: dolibarr_{{ dolibarr_id }}
+    - php_version: "{{ dolibarr_php_version }}"
+    - php_fpm_pool: "{{ dolibarr_php_fpm_pool | default('') }}"
+  tags: dolibarr
+

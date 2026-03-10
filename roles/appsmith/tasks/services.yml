@@ -1,0 +1,7 @@
+---
+
+- name: Start and enable the services
+  service: name={{ item }} state=started enabled=True
+  loop:
+    - appsmith-server
+  tags: appsmith

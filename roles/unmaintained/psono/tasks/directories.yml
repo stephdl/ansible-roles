@@ -1,0 +1,20 @@
+---
+
+- name: Create directories
+  file: path={{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - path: "{{ psono_root_dir }}/client"
+    - path: "{{ psono_root_dir }}/admin"
+    - path: "{{ psono_root_dir }}/server/app"
+    - path: "{{ psono_root_dir }}/server/venv"
+    - path: "{{ psono_root_dir }}/meta"
+      mode: 700
+    - path: "{{ psono_root_dir }}/tmp"
+      mode: 700
+    - path: "{{ psono_root_dir }}/backup"
+      mode: 700
+    - path: "{{ psono_root_dir }}/server/.psono_server"
+      owner: "{{ psono_user }}"
+      group: "{{ psono_user }}"
+      mode: 700
+  tags: psono

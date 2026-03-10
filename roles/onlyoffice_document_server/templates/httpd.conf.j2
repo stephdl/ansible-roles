@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+
+<VirtualHost *:80>
+  ServerName {{ oo_vhost }}
+  Include ansible_conf.d/common_env.inc
+
+  SetEnvIf Host "^(.*)$" THE_HOST=$1
+  RequestHeader setifempty X-Forwarded-Proto http
+  RequestHeader setifempty X-Forwarded-Host %{THE_HOST}e
+  ProxyAddHeaders Off
+
+  ProxyPassMatch (.*)(/websocket)$                            ws://localhost:8000/$1$2
+
+  RewriteEngine On
+
+  RewriteRule ^/$                                             /welcome                         [R=301,L]
+  RewriteRule ^/OfficeWeb(/apps/.*)$                          /2018-01-11-13-33/web-apps$1     [R=301,L]
+
+  ProxyPassMatch ^(/2018-01-11-13-33)?(/fonts/.*)             http://localhost:{{ oo_docserver_port }}$2
+  ProxyPassMatch ^(/2018-01-11-13-33)?(/doc/.*)               http://localhost:{{ oo_docserver_port }}$2
+  ProxyPassMatch ^(/2018-01-11-13-33)?(/.*)                   http://localhost:{{ oo_docserver_port }}$2
+  ProxyPassMatch ^(/2018-01-11-13-33)?(/spellchecker)(/.*)    http://localhost:{{ oo_spellchecker_port }}/$3
+
+  AliasMatch ^(/cache/files.*)(/.*)                                          /var/lib/onlyoffice/documentserver/App_Data$1
+  AliasMatch ^(/2018-01-11-13-33)?/(web-apps/apps/api/documents/api.js)$     /var/www/onlyoffice/documentserver/$2
+  AliasMatch ^(/2018-01-11-13-33)?/(web-apps|sdkjs|sdkjs-plugins)(/.*)$      /var/www/onlyoffice/documentserver/$2$3
+
+  <Directory /var/lib/onlyoffice/documentserver/App_Data>
+    Require all granted
+  </Directory>
+
+</VirtualHost>

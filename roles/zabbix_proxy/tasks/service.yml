@@ -1,0 +1,41 @@
+---
+
+- name: Remove custom unit
+  file: path=/etc/systemd/system/zabbix-proxy.service state=absent
+  register: zabbix_proxy_custom_unit
+  notify: restart zabbix-proxy
+  tags: zabbix
+
+- name: Create unit snippet dir
+  file: path=/etc/systemd/system/zabbix-proxy.service.d state=directory
+  tags: zabbix
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Service]
+      ExecReload=/usr/sbin/zabbix_proxy -R config_cache_reload
+      PrivateTmp=yes
+      PrivateDevices=yes
+      ProtectSystem=full
+      ProtectHome=yes
+      {% if not zabbix_proxy_uses_system_proxy %}
+      # Disable system proxy
+      {% for proto in ['http_proxy','https_proxy','HTTP_PROXY','HTTPS_PROXY'] %}
+      Environment={{ proto }}=
+      {% endfor %}
+      {% endif %}
+    dest: /etc/systemd/system/zabbix-proxy.service.d/99-ansible.conf
+  register: zabbix_proxy_snippet_unit
+  notify: restart zabbix-proxy
+  tags: zabbix
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zabbix_proxy_custom_unit.changed or zabbix_proxy_snippet_unit.changed
+  tags: zabbix
+
+- name: Start and enable the service
+  service: name=zabbix-proxy state=started enabled=True
+  register: zabbix_proxy_started
+  tags: zabbix

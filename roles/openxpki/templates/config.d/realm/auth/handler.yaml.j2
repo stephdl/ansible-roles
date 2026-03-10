@@ -1,0 +1,22 @@
+{% for map in item.0.auth.role_map | sort(attribute='priority') %}
+LDAP Auth {{ map.role }}:
+  type: Command
+  label: LDAP Authentication {{ map.role }}
+  description: Authenticate {{ map.role }} against an LDAP server
+  role: {{ map.role }}
+  command: [ '{{ pki_root_dir }}/bin/openxpki-auth-ldap', '-H', '{{ item.0.auth.ldap_uri }}', '-b', '{{ item.0.auth.ldap_base }}', '{{ item.0.auth.ldap_start_tls | ternary('--starttls','') }}', '-U', 'LOGIN', '-P', 'PASSWD', '--extra-filter={{ map.filter }}', '--user-attr={{ item.0.auth.ldap_user_attr }}'{% if item.0.auth.ldap_bind_dn is defined and item.0.auth.ldap_bind_pass is defined %}, '-D', 'BIND_DN', '-W', 'BIND_PASS'{% endif %} ]
+  env:
+    PERL5LIB: {{ pki_root_dir }}/lib/perl5
+    LOGIN: "[% username %]"
+    PASSWD: "[% password %]"
+{% if item.0.auth.ldap_bind_dn is defined and item.0.auth.ldap_bind_pass is defined %}
+    BIND_DN: {{ item.0.auth.ldap_bind_dn }}
+    BIND_PASS: '{{ item.0.auth.ldap_bind_pass }}'
+{% endif %}
+
+{% endfor %}
+
+System:
+  type: Anonymous
+  label: System
+  role: System

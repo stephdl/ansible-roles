@@ -1,0 +1,9 @@
+USER=apache
+GROUP=apache
+NPROC={{ llng_fcgi_workers }}
+SOCKET=/run/llng-fastcgi-server/llng-fastcgi.sock
+PID=/run/llng-fastcgi-server/llng-fastcgi-server.pid
+PERL_LWP_ENV_PROXY={{ llng_reload_use_proxy | ternary('1','0') }}
+PM_MAX_REQUESTS=5000
+PM_SIZECHECK_NUM_REQUESTS=100
+PM_MAX_SIZE=800000

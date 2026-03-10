@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump --user={{ matomo_db_user | quote }} \
+                   --password={{ matomo_db_pass | quote }} \
+                   --host={{ matomo_db_server | quote }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ matomo_db_name | quote }} | zstd -c > {{ matomo_root_dir }}/backup/{{ matomo_db_name }}.sql.zst

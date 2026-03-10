@@ -1,0 +1,37 @@
+---
+
+- name: Stop mxisd service
+  service: name=matrix-mxisd state=stopped
+  tags: matrix
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  tags: matrix
+
+- name: Migrate database
+  copy: src=/opt/matrix/mxisd/db/mxisd.sqlite dest={{ ma1sd_root_dir }}/db/ma1sd.sqlite owner={{ ma1sd_user }} group={{ ma1sd_user }} mode=0640 remote_src=True
+  when: not ma1sd_sqlite.stat.exists
+  tags: matrix
+
+- name: Migration signing keys
+  copy: src=/opt/matrix/mxisd/etc/signing.key dest={{ ma1sd_root_dir }}/etc/ owner={{ ma1sd_user }} group={{ ma1sd_user }} mode=0750 remote_src=True
+  when: not ma1sd_signingkey.stat.exists
+  tags: matrix
+
+- name: Remove iptables rules
+  iptables_raw:
+    name: mxisd_port
+    state: absent
+  when: iptables_manage | default(True)
+  tags: matrix
+
+- name: Remove mxisd files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/systemd/system/matrix-mxisd.service
+    - /opt/matrix/mxisd
+  tags: matrix
+
+- name: Remove mxisd user
+  user: name=mxisd state=absent
+  tags: matrix

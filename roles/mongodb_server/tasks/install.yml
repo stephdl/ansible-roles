@@ -1,0 +1,60 @@
+---
+
+- name: Remove versions from the base repo
+  yum:
+    name:
+      - mongodb
+      - mongodb-server
+    state: absent
+  tags: mongo
+
+- name: Install MongoDB server and tools
+  yum: name={{ mongo_packages }}
+  tags: mongo
+
+# We install from pip because pymongo available in repo for both EL7 and EL8 is too old
+# it doesn't support CRAM-SHA-256 for example
+- name: Install pymongo
+  pip: name=pymongo state=latest
+  tags: mongo
+
+- name: Create data dir
+  file: path={{ mongo_db_path }} state=directory
+  tags: mongo
+
+  # Do it in two times so parent dir don't have restrictive permissions
+- name: Set permissions on data dir
+  file: path={{ mongo_db_path }} state=directory owner=mongod group=mongod mode=700
+  tags: mongo
+
+- name: Deploy pre/post backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/mongo mode=750
+  loop:
+    - pre
+    - post
+  tags: mongo
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/mongod.service.d state=directory
+  tags: mongo
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Service]
+      PrivateTmp=yes
+      ProtectSystem=full
+      ProtectHome=yes
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=30
+    dest: /etc/systemd/system/mongod.service.d/ansible.conf
+  register: mongo_unit
+  notify: restart mongod
+  tags: mongo
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: mongo_unit.changed
+  tags: mongo
+

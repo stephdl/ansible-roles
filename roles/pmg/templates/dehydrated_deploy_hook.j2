@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+{% if pmg_letsencrypt_cert is defined %}
+if [ $1 == "{{ pmg_letsencrypt_cert }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ pmg_letsencrypt_cert }}/privkey.pem > /etc/pmg/pmg-tls.pem
+  cat /var/lib/dehydrated/certificates/certs/{{ pmg_letsencrypt_cert }}/fullchain.pem >> /etc/pmg/pmg-tls.pem
+  chown root:root /etc/pmg/pmg-tls.pem
+  chmod 600 /etc/pmg/pmg-tls.pem
+  /bin/systemctl reload postfix
+fi
+{% endif %}

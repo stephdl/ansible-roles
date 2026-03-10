@@ -1,0 +1,26 @@
+[Unit]
+Description=Gitea (Git with a cup of tea)
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=gitea
+Group=gitea
+WorkingDirectory={{ gitea_root_dir }}
+ExecStart={{ gitea_scl_cmd }}{{ gitea_root_dir }}/bin/gitea web -c /opt/gitea/etc/app.ini
+Environment=USER=gitea HOME={{ gitea_root_dir }} GITEA_WORK_DIR={{ gitea_root_dir }}
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=4096M
+LimitNOFILE=65535
+SyslogIdentifier=gitea
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

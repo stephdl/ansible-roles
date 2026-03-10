@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ metabase_root_dir }}/archives/{{ metabase_current_version }}.tar.zst --use-compress-program=zstd ./
+  environment:
+    ZSTD_CLEVEL: 10
+  args:
+    chdir: "{{ metabase_root_dir }}/archives/{{ metabase_current_version }}"
+    warn: False
+  tags: metabase

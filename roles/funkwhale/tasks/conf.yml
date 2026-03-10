@@ -1,0 +1,17 @@
+---
+
+- name: Deploy permissions script
+  template: src=perms.sh.j2 dest={{ funkwhale_root_dir }}/perms.sh mode=755
+  register: funkwhale_perms
+  tags: funkwhale
+
+- name: Set optimal permissions
+  command: "{{ funkwhale_root_dir }}/perms.sh"
+  when: funkwhale_install_mode != 'none' or funkwhale_perms.changed
+  tags: funkwhale
+
+- name: Deploy apache config
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/40-funkwhale_{{ funkwhale_id }}.conf
+  notify: reload httpd
+  tags: funkwhale
+

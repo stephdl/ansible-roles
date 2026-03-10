@@ -1,0 +1,7 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: install.yml
+- include: write_version.yml
+

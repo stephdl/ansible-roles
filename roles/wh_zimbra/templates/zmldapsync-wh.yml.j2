@@ -1,0 +1,58 @@
+---
+general:
+  notify:
+    from: zimbra@{{ ansible_domain }}
+    to: dani@fws.fr
+
+domains:
+{% for client in wh_clients | default([]) %}
+{% if client.mail is defined and client.mail.enabled and client.mail.enabled and client.mail.domain is defined %}
+  {{ client.mail.domain }}:
+    public_url: https://{{ client.mail.vhosts | first }}
+    admin_url: https://{{ client.mail.vhosts | first }}:9071/
+    cas:
+      enabled: True
+      server_url: https://sso-cl.fws.fr/cas
+    ldap:
+      servers:
+        - ldap://dc3.fws.fr:389
+        - ldap://dc1.fws.fr:389
+        - ldap://dc2.fws.fr:389
+      schema: ad
+      bind_dn: CN=Zimbra,OU=Apps,DC=fws,DC=fr
+      bind_pass: {{ vault_zimbra_ldap_bind_pass | quote }}
+    users:
+      base: OU={{ client.name }},OU=Clients,DC=fws,DC=fr
+      filter: "(&(objectClass=user)(mail=*))"
+    groups:
+      base: OU={{ client.name }},OU=Clients,DC=fws,DC=fr
+    zimbra:
+      create_if_missing: True
+      setup_ldap_auth: True
+{% if client.mail.domain_aliases is defined and client.mail.domain_aliases | length > 0 %}
+      domain_aliases:
+{% for alias in client.mail.domain_aliases %}
+        - {{ alias }}
+{% endfor %}
+{% endif %}
+      additional_domain_attrs:
+{% if client.mail.vhosts is defined and client.mail.vhosts | length > 0 %}
+        zimbraVirtualHostname:
+{% for vhost in client.mail.vhosts %}
+          - {{ vhost }}
+{% endfor %}
+        zimbraPublicServiceHostname: {{ client.mail.vhosts | first }}
+        zimbraAdminConsoleLoginURL: https://{{ client.mail.vhosts | first }}:9071//zimbraAdmin/public/preauth_{{ client.mail.domain }}.jsp
+        zimbraWebClientLoginURL: https://{{ client.mail.vhosts | first }}/public/preauth_{{ client.mail.domain }}.jsp
+{% else %}
+        zimbraPublicServiceHostname: zm-cl.fws.fr
+        zimbraAdminConsoleLoginURL: https://zm-cl.fws.fr:9071//zimbraAdmin/public/preauth_{{ client.mail.domain }}.jsp
+        zimbraWebClientLoginURL: https://zm-cl.fws.fr}/public/preauth_{{ client.mail.domain }}.jsp
+{% endif %}
+        zimbraPublicServicePort: 443
+        zimbraPublicServiceProtocol: https
+        zimbraAdminConsoleLogoutURL: https://sso-cl.fws.fr/cas/logout
+        zimbraWebClientLogoutURL: https://sso-cl.fws.fr/cas/logout
+
+{% endif %}
+{% endfor %}

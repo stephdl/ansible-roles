@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ n8n_root_dir }}/archives/{{ n8n_current_version }}.tar.zst --use-compress-program=zstd ./
+  environment:
+    ZST_CLEVEL: 10
+  args:
+    chdir: "{{ n8n_root_dir }}/archives/{{ n8n_current_version }}"
+    warn: False
+  tags: n8n

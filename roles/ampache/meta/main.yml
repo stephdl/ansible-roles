@@ -1,0 +1,6 @@
+---
+allow_duplicates: true
+dependencies:
+  - role: httpd_php
+  - role: repo_rpmfusion
+...

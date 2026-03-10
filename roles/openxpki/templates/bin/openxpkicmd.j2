@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export PERL5LIB={{ pki_root_dir }}/lib/perl5
+export OPENXPKI_CONF_PATH={{ pki_root_dir }}/etc/config.d
+exec {{ pki_root_dir }}/bin/openxpkicmd --socketfile={{ pki_root_dir }}/run/openxpki.socket "$@"

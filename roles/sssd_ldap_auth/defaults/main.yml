@@ -1,0 +1,17 @@
+---
+ldap_auth: true
+ldap_schema: rfc2307
+ldap_modules:
+  - pam
+  - nss
+  - sudo
+  - autofs
+ldap_user_object_class: inetOrgPerson
+ldap_base: dc=domain,dc=org
+ldap_user_base: ou=Users
+ldap_group_base: ou=Groups
+ldap_sudo_base: ou=sudoers
+ldap_autofs_base: ou=autofs
+ldap_user_shell: loginShell
+ldap_access_filter: objectClass=inetOrgPerson
+# ldap_tls_ca_cert: /etc/pki/tls/cert.pem

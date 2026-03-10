@@ -1,0 +1,8 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: mysql_server
+    when: documize_db_engine == 'mysql' and documize_db_server in ['127.0.0.1','localhost']
+  - role: postgresql_server
+    when: documize_db_engine == 'postgres' and documize_db_server in ['127.0.0.1','localhost']

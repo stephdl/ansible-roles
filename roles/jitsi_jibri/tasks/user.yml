@@ -1,0 +1,11 @@
+---
+
+- name: Create jibri user account
+  user:
+    name: "{{ jitsi_jibri_user }}"
+    home: "{{ jitsi_root_dir }}/jibri"
+    groups:
+      - tty
+      - video
+      - audio
+  tags: jitsi

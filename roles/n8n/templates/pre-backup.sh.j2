@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if n8n_db_server not in ['localhost','127.0.0.1'] %}
+  --user={{ n8n_db_user | quote }} \
+  --password={{ n8n_db_pass | quote }} \
+  --host={{ n8n_db_server | quote }} \
+  --port={{ n8n_db_port | quote }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ n8n_db_name | quote }} | zstd -c > {{ n8n_root_dir }}/backup/{{ n8n_db_name }}.sql.zst

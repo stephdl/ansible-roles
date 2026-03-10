@@ -1,0 +1,25 @@
+<Directory /var/www/html/downtime>
+  Require all granted
+  AllowOverride None
+  Options None
+</Directory>
+
+<VirtualHost *:{{ httpd_port | default('80') }}>
+  ServerName downtime.{{ ansible_domain }}
+  DocumentRoot /var/www/html/downtime/
+  ErrorDocument 404 /
+  Include ansible_conf.d/common_env.inc
+  #Include ansible_conf.d/common_letsencrypt.inc
+  Include ansible_conf.d/common_force_ssl.inc
+</VirtualHost>
+<IfModule mod_ssl.c>
+  <VirtualHost *:{{ httpd_ssl_port | default('443') }}>
+    ServerName downtime.{{ ansible_domain }}
+    SSLEngine on
+    DocumentRoot /var/www/html/downtime/
+    ErrorDocument 404 /
+    Include ansible_conf.d/common_env.inc
+    Include ansible_conf.d/common_filter.inc
+    Include ansible_conf.d/common_perf.inc
+  </VirtualHost>
+</IfModule>

@@ -1,0 +1,33 @@
+---
+- name: rehash postfix
+  command: "postmap /etc/postfix/{{ item }}"
+  with_items:
+    - relay_auth
+
+- name: restart postfix
+  service: name=postfix state=restarted
+
+- name: newaliases
+  command: newaliases
+
+- name: restart journald
+  service: name=systemd-journald state=restarted
+
+- name: systemd-tmpfiles
+  command: systemd-tmpfiles --create
+
+- name: reload systemd
+  command: systemctl daemon-reload
+
+- name: restart crond
+  service: name=crond state=restarted
+
+- name: restart journal-upload
+  service: name=systemd-journal-upload state=restarted
+  when: remote_journal is defined
+
+- name: restart journald
+  service: name=systemd-journald state=restarted
+
+- name: load kmods
+  service: name=systemd-modules-load state=restarted

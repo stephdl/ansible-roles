@@ -1,0 +1,61 @@
+; {{ ansible_managed }}
+{% for pool in httpd_php_ansible_pools | default([]) %}
+{% if pool.version | default(httpd_php_default_version) == item %}
+{% if pool.conf is not defined %}
+{% set conf = {} %}
+{% else %}
+{% set conf = pool.conf %}
+{% endif %}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  Begin pool {{ pool.name }}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[{{ pool.name }}]
+
+listen.owner = root
+listen.group = {{ httpd_group }}
+listen.mode = 0660
+listen = /run/php-fpm/{{ pool.name }}.sock
+user = {{ pool.user | default(httpd_user) }}
+group = {{ pool.user | default(httpd_group) }}
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = {{ conf.max_children | default('15') }}
+pm.start_servers = {{ conf.start_servers | default('3') }}
+pm.min_spare_servers = {{ conf.min_spare_servers | default('3') }}
+pm.max_spare_servers = {{ conf.max_spare_servers | default('6') }}
+pm.max_requests = {{ conf.max_requests | default('5000') }}
+request_terminate_timeout = {{ conf.request_terminate_timeout | default('5m') }}
+
+php_flag[display_errors] = {{ conf.display_errors | default(False) | ternary('on','off') }}
+php_admin_flag[log_errors] = {{ conf.log_errors | default(True) | ternary('on','off') }}
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = {{ conf.memory_limit | default('128M') }}
+php_admin_value[session.save_path] = {{ conf.session_save_path | default('/var/lib/php/session') }}
+php_admin_value[upload_tmp_dir] = {{ conf.tmp_dir | default('/tmp') }}
+php_admin_value[sys_temp_dir] = {{ conf.tmp_dir | default('/tmp') }}
+php_admin_value[post_max_size] = {{ conf.post_max_size | default('5M') }}
+php_admin_value[upload_max_filesize] = {{ conf.upload_max_filesize | default('5M') }}
+php_admin_value[disable_functions] = {{ conf.disable_functions | default([ 'system', 'show_source', 'symlink', 'exec', 'dl', 'shell_exec', 'passthru', 'phpinfo', 'escapeshellarg', 'escapeshellcmd' ]) | difference(conf.enable_functions | default([]) ) | join(', ') }}
+{% if conf.open_basedir is defined %}
+php_admin_value[open_basedir] = {{ conf.open_basedir | join(':') }}
+{% endif %}
+php_admin_value[max_execution_time] = {{ conf.max_execution_time | default('60') }}
+php_admin_value[max_input_time] = {{ conf.max_input_time | default('60') }}
+php_admin_flag[allow_url_include] = {{ conf.allow_url_include | default(False) | ternary('on','off') }}
+php_admin_flag[allow_url_fopen] = {{ conf.allow_url_fopen | default(False) | ternary('on','off') }}
+php_admin_flag[file_uploads] = {{ conf.file_uploads | default(True) | ternary('on','off') }}
+php_admin_flag[session.cookie_httponly] = on
+
+{% if conf.custom_conf is defined %}
+{{ conf.custom_conf }}
+{% endif %}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  End pool {{ pool.name }}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+{% endif %}
+{% endfor %}

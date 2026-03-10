@@ -1,0 +1,6 @@
+{% for realm in pki_realms %}
+{{ realm.name }}:
+  label: {{ realm.description | default(realm.name) }}
+  baseurl: {{ realm.url | default(pki_base_url) }}
+{% endfor %}
+

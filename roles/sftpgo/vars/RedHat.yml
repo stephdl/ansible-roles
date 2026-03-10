@@ -1,0 +1,6 @@
+---
+
+sftpgo_packages:
+  - tar
+  - zstd
+  - mariadb

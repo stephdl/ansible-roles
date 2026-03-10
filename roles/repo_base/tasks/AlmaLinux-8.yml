@@ -1,0 +1,29 @@
+---
+
+- name: Configure repositories
+  yum_repository:
+    file: "{{ item.file }}"
+    description: "AlmaLinux {{ item.name }}"
+    name: "{{ item.name }}"
+    baseurl: https://repo.almalinux.org/almalinux/$releasever/{{ item.dir }}/$basearch/os/
+    gpgcheck: True
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux
+    enabled: "{{ item.enabled | default(True) }}"
+  loop:
+    - name: baseos
+      file: almalinux
+      dir: BaseOS
+    - name: appstream
+      file: almalinux
+      dir: AppStream
+    - name: extras
+      file: almalinux
+      dir: extras
+    - name: powertools
+      file: almalinux-powertools
+      dir: PowerTools
+  tags: repo
+
+- include: epel_{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+- include: fws_{{ ansible_os_family }}.yml
+- include: postgres_client_{{ ansible_os_family }}.yml

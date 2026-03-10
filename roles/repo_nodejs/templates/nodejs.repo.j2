@@ -1,0 +1,11 @@
+[nodejs]
+baseurl = https://rpm.nodesource.com/pub_{{ nodejs_major_version }}.x/el/{{ ansible_distribution_major_version }}/$basearch
+gpgcheck = 1
+gpgkey = https://rpm.nodesource.com/pub/el/NODESOURCE-GPG-SIGNING-KEY-EL
+name = Node.js Packages for Enterprise Linux
+{% if ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('8', '>=') %}
+# Workaround a bug in dnf which would make the default module mask
+module_hotfixes = true
+{% endif %}
+
+

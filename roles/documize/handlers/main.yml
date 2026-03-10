@@ -1,0 +1,5 @@
+---
+
+- name: restart documize
+  service: name=documize state=restarted
+  when: not documize_started.changed

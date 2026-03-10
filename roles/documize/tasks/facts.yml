@@ -1,0 +1,33 @@
+---
+
+# Detect installed version (if any)
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: "{{ documize_root_dir }}"
+        - version: "{{ documize_version }}"
+    - set_fact: documize_install_mode={{ (install_mode == 'upgrade' and not documize_manage_upgrade) | ternary('none',install_mode) }}
+    - set_fact: documize_current_version={{ current_version | default('') }}
+  tags: documize
+
+# Create a random pass for the DB if needed
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ documize_root_dir }}/meta/ansible_db_pass"
+        - complex: False
+    - set_fact: documize_db_pass={{ rand_pass }}
+  when: documize_db_pass is not defined
+  tags: documize
+
+# Create a random salt if needed
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ documize_root_dir }}/meta/ansible_salt"
+        - complex: False
+        - pass_size: 17
+    - set_fact: documize_salt={{ rand_pass }}
+  when: documize_salt is not defined
+  tags: documize
+

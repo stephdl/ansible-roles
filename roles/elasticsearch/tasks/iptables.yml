@@ -1,0 +1,13 @@
+---
+
+- name: Handle Elasticsearch port
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ item.port }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  loop:
+    - port: "{{ es_port }}"
+      name: es_port
+      src_ip: "{{ es_src_ip }}"
+  tags: firewall,es
+

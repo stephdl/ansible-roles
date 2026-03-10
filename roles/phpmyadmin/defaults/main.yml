@@ -1,0 +1,74 @@
+---
+
+# Version to deploy
+pma_version: 5.1.1
+# ID of the instance. Several instances can be installed on the same server
+# they must have different ID
+pma_id: "1"
+# URL from where the archive will be downloaded
+pma_archive_url: https://files.phpmyadmin.net/phpMyAdmin/{{ pma_version }}/phpMyAdmin-{{ pma_version }}-all-languages.zip
+# Expected sha256 of the archive, to verify the download
+pma_archive_sha256: 78a5d93621f9fdfc221a530705025dc79c1abc7a4d6a940a9d0a9a3719d0554c
+# Should ansible handle upgrades. If False, then only the initial install will be done
+pma_manage_upgrade: True
+# Where phpMyAdmin will be installed
+pma_root_dir: /opt/phpmyadmin_{{ pma_id }}
+# phpMyAdmn uses a DB to store queries. Here are the param for this DB
+# MySQL DB user
+pma_db_user: pma_{{ pma_id }}
+# MySQL DB name
+pma_db_name: pma_{{ pma_id }}
+# MySQL DB server
+pma_db_server: "{{ mysql_server | default('localhost') }}"
+# MySQL db password
+# If Not defined, a random one will be created and stored under {{ pma_root_dir }}/meta/ansible_dbpass
+# pma_db_pass: 
+
+# If defined, will use this specific FPM pool, which must exist.
+# Else, a PHP pool will be configured
+# pma_php_fpm_pool: pma
+# PHP version to use for the PHP pool
+pma_php_version: 80
+# Unix account under which the PHP pool will run. The user will be created
+pma_php_user: php-pma_{{ pma_id }}
+
+# Env vars which contain the login of the current user
+# This can be used for example with Lemonldap::NG protecting phpMyAdmin
+pma_sso_user_fields:
+  - REMOTE_USER
+  - REDIRECT_REMOTE_USER
+# Same for the groups the user is member of
+pma_sso_groups_fields: []
+# pma_sso_groups_fields
+#   - HTTP_USER_GROUPS
+
+# Optional list of IP/CIDR having access to phpMyAdmin
+# pma_src_ip:
+#   - 127.0.0.1
+
+# If defined, an alias (eg /phpmyadmin) will be created
+# If not defined, you'll have to create a vhost pointing at {{ pma_root_dir }}/web
+# for phpMyAdmin to be reachable
+# pma_alias: phpmyadmin
+
+# List of database servers
+pma_servers: []
+# pma_servers:
+#   - host: localhost
+#     port: 3306
+#     socket: /var/lib/mysql/mysql.sock
+#     auth_type: signon
+
+# Dict of phpMyAdmin users and their corresponding MySQL credentials
+pma_sso_users: []
+# pma_sso_users:
+#   - user: dani
+#     sql_login: admin
+#     sql_password: p@ssw0rd
+
+# Same for groups
+pma_sso_groups: []
+# pma_sso_groups:
+#   - group: DB_Admins
+#     sql_login: admin
+#     sql_password: s3cr3t.

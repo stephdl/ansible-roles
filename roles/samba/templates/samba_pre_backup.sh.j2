@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -eo pipefail
+
+LDB_MODULES_PATH=/usr/lib64/samba/ldb
+export LDB_MODULES_PATH
+
+mkdir -p /home/lbkp/samba/{private,ldif/sam.ldb.d,offline}
+tar cf /home/lbkp/samba/sysvol.tar.zst --use-compress-program=zstd -C /var/lib/samba/sysvol .
+find /var/lib/samba/private/ -type f -name \*.ldb | xargs tdbbackup
+pushd /var/lib/samba/private/ > /dev/null
+find . -type f -name \*.bak | xargs cp --parents -t /home/lbkp/samba/private/
+popd > /dev/null
+find /var/lib/samba/private -type f -name \*.bak | xargs rm -f
+find /home/lbkp/samba/private/ -type f -name \*.bak | while read F; do mv "$F" "${F%.bak}"; done
+tar cf /home/lbkp/samba/private.tar.zst --use-compress-program=zstd -C /home/lbkp/samba/private .
+rm -rf /home/lbkp/samba/private/
+for LDIF in $(find /var/lib/samba/private/ -type f -name \*.ldb); do
+  ldbsearch --url=$LDIF | zstd -c > /home/lbkp/samba/ldif/$(echo $LDIF | sed -e 's/\/var\/lib\/samba\/private//').ldif.zst
+done
+# Also take a more standard offline backup
+samba-tool domain backup offline --targetdir=/home/lbkp/samba/offline/

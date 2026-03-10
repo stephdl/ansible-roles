@@ -1,0 +1,10 @@
+---
+
+- name: Create openxpki system user
+  user:
+    name: "{{ pki_user }}"
+    system: True
+    shell: /sbin/nologin
+    home: "{{ pki_root_dir }}"
+  tags: pki
+

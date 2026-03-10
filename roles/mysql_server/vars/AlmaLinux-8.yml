@@ -1,0 +1,6 @@
+---
+
+mysql_server_packages:
+  - "{{ (mysql_engine == 'mysql') | ternary('mysql-server','mariadb-server') }}"
+  - "{{ (mysql_engine == 'mysql') | ternary('mysql','mariadb') }}"
+  - python3-mysql

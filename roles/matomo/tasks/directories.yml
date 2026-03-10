@@ -1,0 +1,20 @@
+---
+
+- name: Create directories
+  file: path={{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - path: "{{ matomo_root_dir }}/sessions"
+      group: "{{ matomo_php_user }}"
+      mode: 770
+    - path: "{{ matomo_root_dir }}/tmp"
+      group: "{{ matomo_php_user }}"
+      mode: 770
+    - path: "{{ matomo_root_dir }}/cache"
+      group: "{{ matomo_php_user }}"
+      mode: 770
+    - path: "{{ matomo_root_dir }}/web"
+    - path: "{{ matomo_root_dir }}/meta"
+      mode: 700
+    - path: "{{ matomo_root_dir }}/backup"
+      mode: 700
+  tags: matomo

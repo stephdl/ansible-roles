@@ -1,0 +1,19 @@
+[Unit]
+Description=Bluemind syslog daemon
+After=syslog.target
+
+[Service]
+Type=simple
+ExecStart=/bin/socat -t0 -T0 -u -s udp4-recv:10514 stdout
+User=bm-syslog
+Group=bm-syslog
+Restart=always
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+

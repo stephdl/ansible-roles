@@ -1,0 +1,19 @@
+---
+
+- name: Install sssd and the needed tools
+  apt:
+    name:
+      - sssd
+      - libnss-sss
+      - libpam-sss
+      - ca-certificates
+  tags: auth
+
+- name: Install oddjob-mkhomedir
+  apt:
+    name:
+      - oddjob-mkhomedir
+  when: ansible_distribution_major_version is version('9', '>=')
+  notify: restart oddjobd
+  tags: auth
+

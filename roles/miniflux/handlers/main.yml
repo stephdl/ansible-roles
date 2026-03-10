@@ -1,0 +1,5 @@
+---
+
+- name: restart miniflux
+  service: name=miniflux state=restarted
+  when: not miniflux_started.changed

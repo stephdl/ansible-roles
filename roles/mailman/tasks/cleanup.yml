@@ -1,0 +1,7 @@
+---
+
+- name: Remove uneeded files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ mailman_archive_dir }}"
+  tags: mailman

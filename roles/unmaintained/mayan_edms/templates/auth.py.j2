@@ -1,0 +1,84 @@
+import ldap
+
+from django_auth_ldap.config import (
+    LDAPSearch, LDAPSearchUnion, LDAPGroupQuery, {{ mayan_ldap_group_type }}
+)
+
+from mayan.settings.production import *
+
+ldap.set_option(ldap.OPT_DEBUG_LEVEL, {{ mayan_ldap_debug | ternary('1','0') }})
+
+AUTH_LDAP_ALWAYS_UPDATE_USER = True
+LDAP_USER_AUTO_CREATION = True
+
+AUTH_LDAP_START_TLS = {{ mayan_ldap_start_tls | ternary('True','False') }}
+
+{% if mayan_ldap_bind_dn is defined and mayan_ldap_bind_pass is defined %}
+AUTH_LDAP_BIND_DN = '{{ mayan_ldap_bind_dn }}'
+AUTH_LDAP_BIND_PASSWORD = '{{ mayan_ldap_bind_pass }}'
+{% endif %}
+LDAP_BASE_DN = '{{ mayan_ldap_base }}'
+AUTH_LDAP_SERVER_URI = '{{ mayan_ldap_uri }}'
+
+{% if mayan_ldap_user_ou | length > 0 %}
+AUTH_LDAP_USER_SEARCH = LDAPSearchUnion(
+{% for ou in mayan_ldap_user_ou %}
+    LDAPSearch(
+        '{{ ou }}', ldap.SCOPE_SUBTREE,
+        '{{ mayan_ldap_user_filter }}'
+    ),
+{% endfor %}
+)
+{% else %}
+AUTH_LDAP_USER_SEARCH = LDAPSearch(
+    '{{ mayan_ldap_base }}', ldap.SCOPE_SUBTREE,
+    '{{ mayan_ldap_user_filter }}'
+)
+{% endif %}
+
+AUTH_LDAP_USER_ATTR_MAP = {
+{% for attr in mayan_ldap_user_attr_map.keys() %}
+    '{{ attr }}': '{{ mayan_ldap_user_attr_map[attr] }}',
+{% endfor %}
+}
+
+{% if mayan_ldap_group_ou | length > 0 %}
+AUTH_LDAP_GROUP_SEARCH = LDAPSearchUnion(
+{% for ou in mayan_ldap_group_ou %}
+    LDAPSearch(
+        '{{ ou }}', ldap.SCOPE_SUBTREE,
+        '{{ mayan_ldap_group_filter }}'
+    ),
+{% endfor %}
+)
+{% else %}
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+    '{{ mayan_ldap_base }}', ldap.SCOPE_SUBTREE,
+    '{{ mayan_ldap_group_filter }}'
+)
+{% endif %}
+
+AUTH_LDAP_GROUP_TYPE = {{ mayan_ldap_group_type }}()
+
+AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+{% for key in mayan_ldap_flags_by_group.keys() %}
+{% if mayan_ldap_flags_by_group[key] | length > 0 %}
+    '{{ key }}': (
+{% for group in mayan_ldap_flags_by_group[key] %}
+        LDAPGroupQuery('{{ group }}') {{ '|' if not loop.last }}
+{% endfor %}
+    ),
+{% endif %}
+{% endfor %}
+}
+
+AUTHENTICATION_BACKENDS = (
+    'django_auth_ldap.backend.LDAPBackend',
+    'django.contrib.auth.backends.ModelBackend'
+)
+
+AUTH_LDAP_MIRROR_GROUPS = True
+
+{% if mayan_auth_custom_conf is defined %}
+{{ mayan_auth_custom_conf }}
+{% endif %}

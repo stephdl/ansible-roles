@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+{% if httpd_mod_security | default(True) %}
+Include modsecurity.d/*.conf
+Include modsecurity.d/activated_rules/*.conf
+{% if httpd_mod_security | default(True) == 'audit' %}
+SecRuleEngine DetectionOnly
+{% elif httpd_mod_security | default(True) == True %}
+SecRuleEngine On
+{% else %}
+SecRuleEngine Off
+{% endif %}
+{% for id in httpd_mod_security_disabled_rules | default(['960015', '981203']) %}
+SecRuleRemoveById {{ id }}
+{% endfor %}
+{% endif %}

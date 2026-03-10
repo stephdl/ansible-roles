@@ -1,0 +1,13 @@
+---
+
+system_distro_utils:
+  - openssh-clients
+  - nc
+  - xz
+  - lz4
+  - yum-utils
+  - fuse-sshfs
+  - policycoreutils-python-utils
+  - python3-mysql
+  - python3-psycopg2
+  - zstd

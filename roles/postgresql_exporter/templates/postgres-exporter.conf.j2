@@ -1,0 +1,8 @@
+DATA_SOURCE_URI={{ pg_exporter_data_source_uri }}
+{% if pg_exporter_data_source_user is defined and pg_exporter_data_source_pass is defined %}
+DATA_SOURCE_USER={{ pg_exporter_data_source_user }}
+DATA_SOURCE_PASS={{ pg_exporter_data_source_pass }}
+{% endif %}
+PG_EXPORTER_WEB_LISTEN_ADDRESS=:{{ pg_exporter_port }}
+PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+PG_EXPORTER_EXCLUDE_DATABASES={{ pg_exporter_exclude_databases | join(',') }}

@@ -1,0 +1,84 @@
+<?php
+
+define('DATA_DIR', '{{ kanboard_root_dir}}/data');
+define('DEBUG', false);
+define('LOG_DRIVER', 'syslog');
+define('PLUGINS_DIR', 'plugins');
+define('CACHE_DRIVER', 'memory');
+define('CACHE_DIR', '{{ kanboard_root_dir}}/cache');
+define('FILES_DIR', DATA_DIR.DIRECTORY_SEPARATOR.'files');
+define('MAIL_FROM', 'no-reply@{{ ansible_domain }}');
+define('MAIL_TRANSPORT', 'mail');
+define('DB_DRIVER', 'mysql');
+define('DB_USERNAME', '{{ kanboard_mysql_user }}');
+define('DB_PASSWORD', '{{ kanboard_mysql_pass }}');
+define('DB_HOSTNAME', '{{ kanboard_mysql_server }}');
+define('DB_NAME', '{{ kanboard_mysql_db }}');
+
+# TODO: LDAP / Proxy settings
+{% if kanboard_ldap_auth %}
+define('LDAP_AUTH', true);
+define('LDAP_SERVER', '{{ kanboard_ldap_server | default(ldap_uri) | default('') }}');
+define('LDAP_START_TLS', {{ kanboard_ldap_starttls | default(True) | ternary('true','false') }});
+define('LDAP_USERNAME_CASE_SENSITIVE', false);
+{% if kanboard_ldap_bind_user is defined and kanboard_ldap_bind_pass is defined %}
+define('LDAP_BIND_TYPE', 'proxy');
+define('LDAP_USERNAME', '{{ kanboard_ldap_bind_user }}');
+define('LDAP_PASSWORD', '{{ kanboard_ldap_bind_pass }}');
+{% else %}
+define('LDAP_BIND_TYPE', 'anonymous');
+{% endif %}
+{% if kanboard_ldap_user_base is defined %}
+{% set user_base = kanboard_ldap_user_base %}
+{% elif ldap_base is defined %}
+{% set user_base = ldap_user_base | default('ou=Users') ~ ',' ~ ldap_base %}
+{% else %}
+{% set user_base = '' %}
+{% endif %}
+define('LDAP_USER_BASE_DN', '{{ user_base }}');
+define('LDAP_USER_FILTER', '{{ kanboard_ldap_user_filter }}');
+define('LDAP_USER_ATTRIBUTE_USERNAME', '{{ kanboard_ldap_user_attr_username }}');
+define('LDAP_USER_ATTRIBUTE_FULLNAME', '{{ kanboard_ldap_user_attr_fullname }}');
+define('LDAP_USER_ATTRIBUTE_EMAIL', '{{ kanboard_ldap_user_attr_mail }}');
+define('LDAP_USER_ATTRIBUTE_GROUPS', '{{ kanboard_ldap_user_attr_groups }}');
+define('LDAP_USER_ATTRIBUTE_PHOTO', '{{ kanboard_ldap_user_attr_photo }}');
+define('LDAP_USER_ATTRIBUTE_LANGUAGE', '{{ kanboard_ldap_user_attr_lang }}');
+define('LDAP_USER_CREATION', true);
+define('LDAP_GROUP_PROVIDER', true);
+{% if kanboard_ldap_group_base is defined %}
+{% set group_base = kanboard_ldap_group_base %}
+{% elif ldap_base is defined %}
+{% set group_base = ldap_group_base | default('ou=Groups') ~ ',' ~ ldap_base %}
+{% else %}
+{% set group_base = '' %}
+{% endif %}
+define('LDAP_GROUP_BASE_DN', '{{ group_base }}');
+define('LDAP_GROUP_ADMIN_DN', '{{ kanboard_ldap_admin_group | default('cn=admins,' ~ group_base) }}');
+define('LDAP_GROUP_MANAGER_DN', '{{ kanboard_ldap_manager_group | default('cn=admins,' ~ group_base) }}');
+define('LDAP_GROUP_FILTER', '{{ kanboard_ldap_group_filter }}');
+define('LDAP_GROUP_ATTRIBUTE_NAME', '{{ kanboard_ldap_group_attr_name }}');
+{% if kanboard_ldap_group_user_filter is defined and kanboard_ldap_group_user_filter != '' %}
+define('LDAP_GROUP_USER_FILTER', '{{ kanboard_ldap_group_user_filter | default('(&(objectClass=posixGroup)(memberUid=%s))') }}');
+{% endif %}
+{% endif %}
+
+{% if kanboard_proxy_auth %}
+define('REVERSE_PROXY_AUTH', {{ kanboard_ldap_auth | ternary('false', 'true') }});
+define('REVERSE_PROXY_USER_HEADER', '{{ kanboard_proxy_user_header | default('REMOTE_USER') }}');
+define('REVERSE_PROXY_DEFAULT_ADMIN', '{{ kanboard_proxy_admin | default('admin') }}');
+define('REVERSE_PROXY_DEFAULT_DOMAIN', '{{ kanboard_proxy_domain | default(ansible_domain) }}');
+{% endif %}
+
+define('HIDE_LOGIN_FORM', false);
+define('DISABLE_LOGOUT', false);
+define('ENABLE_HSTS', true);
+define('ENABLE_XFRAME', true);
+define('ENABLE_URL_REWRITE', false);
+define('BRUTEFORCE_CAPTCHA', 3);
+define('BRUTEFORCE_LOCKDOWN', 6);
+define('BRUTEFORCE_LOCKDOWN_DURATION', 15);
+define('SESSION_DURATION', 0);
+
+
+?>
+

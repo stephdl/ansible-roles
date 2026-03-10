@@ -1,0 +1,7 @@
+{% if itop_cron_user is defined and itop_cron_pass is defined %}
+auth_user = {{ itop_cron_user }}
+auth_pwd = {{ itop_cron_pass }}
+{% endif %}
+
+size_min = 20 # in MB
+time_limit = 40 # in minutes

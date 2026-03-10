@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if not wp_db_server in ['localhost', '127.0.0.1'] %}
+    --user={{ wp_db_user }} \
+    --password={{ wp_db_pass | quote }} \
+    --host={{ wp_db_server }} \
+    --port={{ wp_db_port }} \
+{% endif %}
+    --quick --single-transaction \
+    --add-drop-table {{ wp_db_name }} | zstd -c > {{ wp_root_dir }}/backup/{{ wp_db_name }}.sql.zst
+

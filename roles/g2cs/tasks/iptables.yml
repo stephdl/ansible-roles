@@ -1,0 +1,8 @@
+---
+
+- name:  Handle g2cs port in the firewall
+  iptables_raw:
+    name: g2cs_port
+    state: "{{ (g2cs_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -p udp --dport {{ g2cs_port }} -s {{ g2cs_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,cs

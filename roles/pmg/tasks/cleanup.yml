@@ -1,0 +1,24 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/opendkim/verifier.conf
+    - /etc/systemd/system/opendmarc.service
+    - /etc/systemd/system/opendkim-verifier.service
+    - /etc/opendmarc.conf
+    - /etc/opendmarc.dbpass
+    - /usr/local/bin/dmarc_reports
+    - /etc/cron.d/opendmarc
+    - /etc/pmg/templates/main.cf.in
+    - /etc/mail/spamassassin/scores.cf
+  tags: pmg
+
+- name: Disable unused services
+  service: name={{ item }} state=stopped disabled=True
+  loop:
+    - opendmarc
+    - opendkim-verifier
+    - saslauthd
+  failed_when: False
+  tags: pmg

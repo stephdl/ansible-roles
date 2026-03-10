@@ -1,0 +1,16 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: gitea_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: iptables.yml
+- include: service.yml
+- include: admin_user.yml
+- include: archive_post.yml
+  when: gitea_install_mode == 'upgrade'
+- include: write_version.yml
+- include: cleanup.yml

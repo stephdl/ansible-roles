@@ -1,0 +1,24 @@
+---
+
+- name: Create directory structure
+  file: path={{ item }} state=directory
+  with_items:
+    - "{{ glpi_root_dir }}"
+    - "{{ glpi_root_dir }}/web"
+    - "{{ glpi_root_dir }}/tmp"
+    - "{{ glpi_root_dir }}/sessions"
+    - "{{ glpi_root_dir }}/meta"
+    - "{{ glpi_root_dir }}/backup"
+    - "{{ glpi_root_dir }}/data"
+    - "{{ glpi_root_dir }}/data/_files"
+    - "{{ glpi_root_dir }}/data/_cache"
+    - "{{ glpi_root_dir }}/data/_cron"
+    - "{{ glpi_root_dir }}/data/_dumps"
+    - "{{ glpi_root_dir }}/data/_graphs"
+    - "{{ glpi_root_dir }}/data/_lock"
+    - "{{ glpi_root_dir }}/data/_log"
+    - "{{ glpi_root_dir }}/data/_pictures"
+    - "{{ glpi_root_dir }}/data/_plugins"
+    - "{{ glpi_root_dir }}/data/_rss"
+  tags: glpi
+

@@ -1,0 +1,42 @@
+# {{ ansible_managed }}
+
+{% for client in wh_clients %}
+{% for app in client.apps | default([]) %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+################################################
+## vhost for {{ client.name }}-{{ app.name }}
+################################################
+
+<VirtualHost *:80>
+  ServerName {{ app.vhost | default(client.name + '-' + app.name + '.wh.fws.fr') }}
+{% if app.aliases | length > 0 %}
+  ServerAlias {{ app.aliases | join(' ') }}
+{% endif %}
+  ServerAdmin webmaster@fws.fr
+  DocumentRoot /opt/wh/{{ client.name }}/apps/{{ app.name }}/web
+  Alias /_deferror/ "/usr/share/httpd/error/"
+  Include ansible_conf.d/common_env.inc
+  ProxyTimeout {{ app.php.max_execution_time }}
+</VirtualHost>
+
+################################################
+## webroot for {{ client.name }}-{{ app.name }}
+################################################
+
+<Directory /opt/wh/{{ client.name }}/apps/{{ app.name }}/web>
+  AllowOverride All
+  Options FollowSymLinks
+  Require all granted
+{% if app.php.enabled %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/php{{ app.php.version}}-{{ client.name }}-{{ app.name }}.sock|fcgi://localhost"
+  </FilesMatch>
+{% endif %}
+
+  <FilesMatch "^(\.ansible_version|\.git.*|(README|LICENSE|AUTHORS|CHANGELOG|CONTRIBUTING|LEGALNOTICE|PRIVACY|SECURITY)(\.md)?|.*\.co?nf|\.htaccess|composer\.(json|lock))">
+    Require all denied
+  </FilesMatch>
+</Directory>
+
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,16 @@
+[account]
+server = {{ item.server }}
+username = {{ item.login }}
+{% if item.token is defined %}
+token = {{ item.token }}
+{% else %}
+token = {{ seadrive_tokens.results | selectattr("item.id","equalto",item.id) | map(attribute="json.token") | first }}
+{% endif %}
+is_pro = false
+
+[general]
+client_name = seadrive-{{ inventory_hostname }}
+
+[cache]
+size_limit = {{ item.cache_size | default('2') }}GB
+clean_cache_interval = {{ item.cleanup_interval | default('10') }}

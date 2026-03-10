@@ -1,0 +1,214 @@
+---
+
+{% if synapse_tls %}
+tls_certificate_path: "{{ synapse_root_dir }}/etc/{{ synapse_server_name }}.crt"
+tls_private_key_path: "{{ synapse_root_dir }}/etc/{{ synapse_server_name }}.tls.key"
+tls_dh_params_path: "{{ synapse_root_dir }}/etc/{{ synapse_server_name }}.tls.dh"
+{% endif %}
+
+server_name: '{{ synapse_server_name }}'
+public_baseurl: '{{ synapse_public_baseurl | default('https://matrix.' + synapse_server_name) }}'
+
+pid_file: {{ synapse_root_dir }}/tmp/homeserver.pid
+
+web_client: False
+
+soft_file_limit: 0
+filter_timeline_limit: {{ synapse_timeline_limit }}
+
+listeners:
+{% if synapse_tls %}
+  - port: {{ synapse_tls_port }}
+    bind_addresses: [ {{ synapse_tls_listen_ip | join(',') }} ]
+    type: http
+    tls: true
+    x_forwarded: {{ ('0.0.0.0/0' in synapse_tls_src_ip) | ternary('False','True') }}
+    resources:
+      - names: [ client, federation ]
+        compress: False
+{% endif %}
+  - port: {{ synapse_port }}
+    bind_addresses: [ {{ synapse_listen_ip | join(',') }} ]
+    type: http
+    tls: False
+    x_forwarded: {{ ('0.0.0.0/0' in synapse_src_ip) | ternary('False','True') }}
+    resources:
+      - names: [ client, federation ]
+        compress: False
+
+database:
+  name: psycopg2
+  args:
+    database: '{{ synapse_pg_db_name }}'
+    host: '{{ synapse_pg_db_server }}'
+    user: '{{ synapse_pg_db_user }}'
+    password: '{{ synapse_pg_db_pass }}'
+    cp_min: 5
+    cp_max: 10
+
+event_cache_size: '10K'
+
+verbose: 0
+log_config: '{{ synapse_root_dir }}/etc/logging.conf'
+
+{% if '*' not in synapse_federation_domain_whitelist %}
+{% if synapse_federation_domain_whitelist | length > 0 %}
+federation_domain_whitelist:
+{% for domain in synapse_federation_domain_whitelist %}
+  - '{{ domain }}'
+{% endfor %}
+{% else %}
+federation_domain_whitelist: []
+{% endif %}
+{% endif %}
+
+{% if synapse_federation_ip_blacklist | length > 0 %}
+federation_ip_range_blacklist:
+{% for ip in synapse_federation_ip_blacklist %}
+  - '{{ ip }}'
+{% endfor %}
+{% else %}
+federation_ip_range_blacklist: []
+{% endif %}
+
+media_store_path: '{{ synapse_root_dir }}/media_store'
+uploads_path: '{{ synapse_root_dir }}/uploads'
+max_upload_size: '{{ synapse_upload_max_size }}'
+
+{% if synapse_turn_uris is defined and synapse_turn_uris | length > 0 %}
+turn_uris:
+{% for uri in synapse_turn_uris %}
+  - '{{ uri }}'
+{% endfor %}
+turn_shared_secret: '{{ synapse_turn_shared_secret | default(turnserver_auth_secret) }}'
+turn_user_lifetime: '1h'
+turn_allow_guests: {{ synapse_turn_allow_guests | ternary('True', 'False') }}
+{% endif %}
+
+enable_registration: {{ synapse_enable_registration | ternary('True', 'False') }}
+{% if synapse_registration_shared_secret is defined %}
+registration_shared_secret: '{{ synapse_registration_shared_secret }}'
+{% endif %}
+bcrypt_rounds: 12
+allow_guest_access: {{ synapse_allow_guest_access | ternary('True', 'False') }}
+
+rc_message:
+  per_second: {{ synapse_rc_message_per_sec }}
+  burst_count: {{ synapse_rc_message_burst }}
+rc_login:
+  address:
+    per_second: {{ synapse_rc_login_per_sec }}
+    burst_count: {{ synapse_rc_login_burst }}
+  account:
+    per_second: {{ synapse_rc_login_per_sec }}
+    burst_count: {{ synapse_rc_login_burst }}
+  failed_attempts:
+    per_second: {{ synapse_rc_login_per_sec }}
+    burst_count: {{ synapse_rc_login_burst }}
+
+enable_metrics: False
+report_stats: False
+
+default_identity_server: '{{ synapse_public_baseurl | default('https://matrix.' + synapse_server_name) }}'
+
+macaroon_secret_key: '{{ synapse_macaroon_key }}'
+
+expire_access_token: False
+
+{% if synapse_url_preview %}
+url_preview_enabled: True
+{% if synapse_url_preview_ip_range_blacklist is defined and synapse_url_preview_ip_range_blacklist | length > 0 %}
+url_preview_ip_range_blacklist:
+{% for ip in synapse_url_preview_ip_range_blacklist %}
+  - '{{ ip }}'
+{% endfor %}
+{% endif %}
+{% if synapse_url_preview_ip_range_whitelist is defined  and synapse_url_preview_ip_range_whitelist | length > 0 %}
+url_preview_ip_range_whitelist:
+{% for ip in synapse_url_preview_ip_range_whitelist %}
+  - '{{ ip }}'
+{% endfor %}
+{% endif %}
+{% if synapse_url_preview_url_blacklist is defined and synapse_url_preview_url_blacklist | length > 0 %}
+url_preview_url_blacklist:
+{{ synapse_url_preview_url_blacklist | to_nice_yaml(indent=2, width=1000) }}
+{% endif %}
+max_spider_size: {{ synapse_max_spider_size }}
+{% endif %}
+
+form_secret: '{{ synapse_form_secret }}'
+
+signing_key_path: '{{ synapse_root_dir }}/etc/{{ synapse_server_name }}.signing.key'
+
+trusted_key_servers:
+  - server_name: 'matrix.org'
+suppress_key_server_warning: True
+
+email:
+  enable_notifs: True
+  smtp_host: 'localhost'
+  smtp_port: 25
+  require_transport_security: False
+  notif_from: '{{ synapse_smtp_from }}'
+  app_name: '{{ synapse_app_name }}'
+  notif_for_new_users: True
+{% if synapse_client_url is defined %}
+  client_base_url: '{{ synapse_client_base_url }}'
+{% endif %}
+
+{% if 'ldap' in synapse_auth or 'rest' in synapse_auth  or synapse_auth in ['ldap','rest'] %}
+password_providers:
+{% endif %}
+{% if synapse_auth == 'ldap' or 'ldap' in synapse_auth %}
+  - module: 'ldap_auth_provider.LdapAuthProvider'
+    config:
+      enabled: True
+      uri: '{{ synapse_ldap_uri }}'
+      start_tls: {{ synapse_ldap_start_tls | ternary('True', 'False') }}
+      base: '{{ synapse_ldap_user_base }}'
+      attributes:
+        uid: '{{ synapse_ldap_attr_uid }}'
+        mail: '{{ synapse_ldap_attr_email }}'
+        name: '{{ synapse_ldap_attr_name }}'
+{% if synapse_ldap_bind_dn is defined and synapse_ldap_bind_pass is defined %}
+      bind_dn: '{{ synapse_ldap_bind_dn }}'
+      bind_password: '{{ synapse_ldap_bind_pass }}'
+{% endif %}
+      filter: '{{ synapse_ldap_filter }}'
+{% endif %}
+{% if synapse_auth == 'rest' or 'rest' in synapse_auth %}
+  - module: 'rest_auth_provider.RestAuthProvider'
+    config:
+      endpoint: '{{ synapse_auth_rest_uri }}'
+{% endif %}
+{% if synapse_auth == 'oidc' or 'oidc' in synapse_auth %}
+oidc_config:
+  enabled: True
+  issuer: '{{ synapse_oidc_server }}'
+  client_id: '{{ synapse_oidc_client }}'
+  client_secret: '{{ synapse_oidc_secret }}'
+  user_mapping_provider:
+    config:
+      localpart_template: '{{ synapse_oidc_localpart }}'
+{% if synapse_oidc_display_name is defined %}
+      display_name_template: '{{ synapse_oidc_display_name }}'
+{% endif %}
+
+sso:
+  client_whitelist:
+    - {{ synapse_public_baseurl | default('https://matrix.' + synapse_server_name + '/') }}
+  update_profile_information: True
+{% endif %}
+
+password_config:
+  enabled: {{ ('internal' in synapse_auth or 'ldap' in synapse_auth or 'rest' in synapse_auth) | ternary('True', 'False') }}
+
+alias_creation_rules:
+    - user_id: '*'
+      alias: '*'
+      action: allow
+
+server_notices:
+   system_mxid_localpart: server
+   system_mxid_display_name: "Notification bot"
+...

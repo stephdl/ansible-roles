@@ -1,0 +1,23 @@
+---
+- name: Remove previous zabbix packages
+  yum:
+    name:
+      - zabbix
+    state: absent
+  tags: zabbix
+
+- name: Install Zabbix Proxy
+  yum:
+   name:
+      - zabbix-proxy-sqlite3
+      - zabbix-get
+      - perl-JSON
+      - perl-IO-Socket-SSL
+      - perl-libwww-perl
+      - perl-URI
+      - perl-DateTime-Format-ISO8601
+      - perl-Getopt-Long
+      - perl-Pod-Usage
+  notify: restart zabbix-proxy
+  register: zabbix_proxy_rpm
+  tags: zabbix

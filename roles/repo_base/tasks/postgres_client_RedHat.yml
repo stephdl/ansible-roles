@@ -1,0 +1,5 @@
+---
+
+- name: Configure latest PostgreSQL repository
+  template: src=postgresql-client.repo.j2 dest=/etc/yum.repos.d/postgresql-client.repo
+  tags: repo

@@ -1,0 +1,29 @@
+---
+
+- name: Create needed directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ n8n_root_dir }}"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/app"
+      group: "{{ n8n_user }}"
+      mode: 775
+    - dir: "{{ n8n_root_dir }}/data"
+      owner: "{{ n8n_user }}"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/.n8n/custom"
+      owner: "{{ n8n_user }}"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/etc"
+      group: "{{ n8n_user }}"
+      mode: 750
+    - dir: "{{ n8n_root_dir }}/tmp"
+      owner: "{{ n8n_user }}"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ n8n_root_dir }}/archives"
+      mode: 700
+  tags: n8n

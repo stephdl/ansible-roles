@@ -1,0 +1,9 @@
+---
+
+- name: Handle bitwarden_rs ports in the firewall
+  iptables_raw:
+    name: bitwarden_rs
+    state: "{{ (bitwarden_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -m multiport -p tcp --dports {{ bitwarden_http_port }},{{ bitwarden_ws_port }} -s {{ bitwarden_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: firewall,bitwarden

@@ -1,0 +1,60 @@
+---
+
+- name: Install repositories
+  yum: name=centos-release-qemu-ev state=latest
+
+- name: Install libvirt tools
+  yum:
+    name:
+      - libvirt
+      - libvirt-python
+      - python-lxml
+      - qemu-kvm-ev
+      - bridge-utils
+      - lzop
+      - virt-backup
+
+- name: Create libvirt group
+  group: name=libvirt state=present
+
+- name: Add admin users in libvirt group
+  user:
+    name: "{{ item }}"
+    groups: libvirt
+    append: yes
+  with_items: system_admin_users
+
+- name: Deploy libvirtd configuration
+  template: src={{ item }}.j2 dest=/etc/libvirt/{{ item }} backup=yes mode=644
+  with_items:
+    - libvirtd.conf
+    - qemu.conf
+  notify: restart libvirtd
+
+- name: Start and enable libvirtd
+  service: name=libvirtd state=started enabled=yes
+
+- name: Remove the default libvirt network
+  virt_net: name=default state=absent
+
+- name: Set guest concurrency suspend
+  lineinfile:
+    dest: /etc/sysconfig/libvirt-guests
+    regexp: "#?PARALLEL_SHUTDOWN=.*"
+    line: "PARALLEL_SHUTDOWN={{ libvirt_parallel_suspend }}"
+    backup: yes
+
+- name: Create system override directory
+  file: path=/etc/systemd/system/libvirt-guests.service.d/ state=directory
+
+- name: Add a systemd snippet to override the service stop timeout
+  copy: src=libvirt-guests-timeout.conf dest=/etc/systemd/system/libvirt-guests.service.d/timeout.conf
+  notify:
+    - reload systemd
+
+- name: Enable libvirt guest suspending support
+  service: name=libvirt-guests enabled=yes
+
+- name: Deploy sudo configuration
+  template: src=sudo_libvirt.j2 dest=/etc/sudoers.d/backup_libvirt mode=400
+...

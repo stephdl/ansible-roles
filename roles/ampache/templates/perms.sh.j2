@@ -1,0 +1,15 @@
+#!/bin/sh
+
+restorecon -R {{ ampache_root_dir }}
+chown root:root {{ ampache_root_dir }}
+chmod 700 {{ ampache_root_dir }}
+setfacl -k -b {{ ampache_root_dir }}
+setfacl -m u:{{ ampache_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ ampache_root_dir }}
+chown -R root:root {{ ampache_root_dir }}/web
+chown {{ ampache_php_user }} {{ ampache_root_dir }}/data
+chown -R {{ ampache_php_user }} {{ ampache_root_dir }}/{tmp,sessions,logs,data/metadata}
+chmod 700 {{ ampache_root_dir }}/{tmp,sessions,logs,data}
+find {{ ampache_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ ampache_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown :{{ ampache_php_user }} {{ ampache_root_dir }}/web/config/ampache.cfg.php
+chmod 640 {{ ampache_root_dir }}/web/config/ampache.cfg.php

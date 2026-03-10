@@ -1,0 +1,4 @@
+---
+
+- name: restart psono-server
+  service: name=psono-server state=restarted

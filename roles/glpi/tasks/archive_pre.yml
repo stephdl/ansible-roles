@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ glpi_root_dir }}"
+    - version: "{{ glpi_current_version }}"
+    - db_name: "{{ glpi_mysql_db }}"
+  tags: glpi
+

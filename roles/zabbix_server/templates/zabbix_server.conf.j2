@@ -1,0 +1,16 @@
+ListenPort={{ zabbix_server_port }}
+DBHost={{ zabbix_server_db_server }}
+DBName={{ zabbix_server_db_name }}
+DBUser={{ zabbix_server_db_user }}
+DBPassword={{ zabbix_server_db_pass }}
+{% if zabbix_server_db_server == 'localhost' %}
+DBSocket=/var/lib/mysql/mysql.sock
+{% else %}
+DBPort={{ zabbix_server_db_port }}
+{% endif %}
+{% for key in zabbix_server_conf.keys() | list %}
+{{ key }}={{zabbix_server_conf[key] }}
+{% endfor %}
+{% if ansible_all_ipv6_addresses | length < 1 %}
+Fping6Location=
+{% endif %}

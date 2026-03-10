@@ -1,0 +1,8 @@
+---
+
+- name: Remove obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/systemd/system/documentserver-spellchecker.service
+    - /etc/systemd/system/multi-user.target.wants/documentserver-spellchecker.service
+  tags: oo

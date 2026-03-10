@@ -1,0 +1,9 @@
+{% if ansible_service_mgr == 'systemd' %}
+# We use journalbeat on systemd based systems
+{% else %}
+- module: system
+  syslog:
+    enabled: True
+  auth:
+    enabled: True
+{% endif %}

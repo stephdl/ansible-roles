@@ -1,0 +1,20 @@
+#!/bin/sh
+
+restorecon -R {{ glpi_root_dir }}
+chown root:root {{ glpi_root_dir }}
+chmod 700 {{ glpi_root_dir }}
+chown root:root {{ glpi_root_dir }}/{meta,backup}
+chmod 700 {{ glpi_root_dir }}/{meta,backup}
+setfacl -k -b {{ glpi_root_dir }}
+setfacl -m u:{{ glpi_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ glpi_root_dir }}
+chown -R root:root {{ glpi_root_dir }}/web
+chown -R {{ glpi_php_user }} {{ glpi_root_dir }}/{tmp,sessions,data}
+chmod 700 {{ glpi_root_dir }}/{tmp,sessions,data}
+find {{ glpi_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ glpi_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown -R :{{ glpi_php_user }} {{ glpi_root_dir }}/web/config
+chown -R :{{ glpi_php_user }} {{ glpi_root_dir }}/web/marketplace
+chmod 770 {{ glpi_root_dir }}/web/config
+chmod 660 {{ glpi_root_dir }}/web/config/*
+chmod 770 {{ glpi_root_dir }}/web/marketplace
+chmod 660 {{ glpi_root_dir }}/web/marketplace/*

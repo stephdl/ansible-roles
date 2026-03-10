@@ -1,0 +1,9 @@
+---
+
+- name: Create a system account to run graylog
+  user:
+    name: graylog
+    comment: "Graylog system account"
+    system: True
+    shell: /sbin/nologin
+  tags: graylog

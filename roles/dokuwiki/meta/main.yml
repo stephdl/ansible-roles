@@ -1,0 +1,6 @@
+---
+allow_duplicates: true
+dependencies:
+  - role: mkdir
+  - role: httpd_php
+...

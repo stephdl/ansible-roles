@@ -1,0 +1,39 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest={{ mailman_root_dir }}/etc/{{ item }} group={{ mailman_user }} mode=640
+  loop:
+    - mailman.cfg
+    - settings.py
+    - uwsgi.ini
+    - urls.py
+    - hyperkitty.cfg
+  notify:
+    - restart mailman
+  tags: mailman
+
+- block:
+    - name: Migrate web database
+      command: "{{ mailman_root_dir }}/venv/bin/mailman-web migrate"
+
+    - name: Collect static assets
+      shell: echo yes | {{ mailman_root_dir }}/venv/bin/mailman-web collectstatic
+
+    - name: Compress assets
+      command: "{{ mailman_root_dir }}/venv/bin/mailman-web compress"
+  when: mailman_install_mode == 'upgrade' or 'install' in [mailman_postorius_install_mode,mailman_hyperkitty_install_mode]
+  environment:
+    - MAILMAN_WEB_CONFIG: "{{ mailman_root_dir }}/etc/settings.py"
+  become_user: "{{ mailman_user }}"
+  tags: mailman
+
+- name: Create an initial superuser
+  django_manage:
+    command: createsuperuser --noinput --username admin --email {{ mailman_site_owner }}
+    app_path: "{{ mailman_root_dir }}/venv/bin"
+    virtualenv: "{{ mailman_root_dir }}/venv"
+  environment:
+    DJANGO_SUPERUSER_PASSWORD: "{{ mailman_admin_pass }}"
+  register: mailman_admin_user
+  when: mailman_install_mode == 'install'
+  tags: mailman

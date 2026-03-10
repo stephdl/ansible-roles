@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - /tmp/cs-firewall-bouncer.tgz
+    - /tmp/cs-firewall-bouncer-v{{ cs_fw_version }}
+  tags: cs

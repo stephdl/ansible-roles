@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ wp_root_dir }}"
+    - version: "{{ wp_current_version }}"
+    - db_name: "{{ wp_db_name }}"
+  tags: wp
+

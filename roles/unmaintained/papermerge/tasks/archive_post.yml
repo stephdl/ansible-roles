@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ papermerge_root_dir }}"
+    - version: "{{ papermerge_current_version }}"
+  tags: ged
+

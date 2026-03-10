@@ -1,0 +1,73 @@
+---
+
+- name: Set bitwarden facts
+  block:
+    - set_fact: bitwarden_root_dir={{ bitwarden_root_dir | default('/opt/bitwarden_rs') }}
+    - set_fact: bitwarden_db_name={{ bitwarden_db_name | default('bitwardenrs') }}
+  tags: vaultwarden
+
+- name: Check if SQLite DB exists
+  stat: path={{ bitwarden_root_dir }}/data/db.sqlite3
+  register: vaultwarden_bitwarden_sqlite
+  tags: vaultwarden
+
+- name: Stop the old service
+  service: name=bitwarden_rs state=stopped
+  tags: vaultwarden
+
+- name: Migrate data dir
+  synchronize:
+    src: "{{ bitwarden_root_dir }}/data/"
+    dest: "{{ vaultwarden_root_dir }}/data/"
+    compress: False
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  tags: vaultwarden
+
+- name: Fix permissions on vaultwarden data dir
+  file: path={{ vaultwarden_root_dir }}/data/ recurse=True owner={{ vaultwarden_user }} group={{ vaultwarden_user }}
+  tags: vaultwarden
+
+# We assume vaultwarden was configured the same way bitwarden was, same db engine, db server etc.
+# So here we just dump the database and inject the dump in the new DB
+- when: vaultwarden_db_engine == 'mysql'
+  block:
+    # Dump the database of Bitwarden_RS
+    - mysql_db:
+        state: dump
+        name: "{{ bitwarden_db_name }}"
+        target: "{{ vaultwarden_root_dir }}/tmp/bitwardenrs.sql.xz"
+        login_host: "{{ vaultwarden_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ mysql_admin_pass }}"
+        quick: True
+        single_transaction: True
+
+    # Inject the dump in the new vaultwarden database
+    - mysql_db:
+        state: import
+        name: "{{ vaultwarden_db_name }}"
+        target: "{{ vaultwarden_root_dir }}/tmp/bitwardenrs.sql.xz"
+        login_host: "{{ vaultwarden_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ mysql_admin_pass }}"
+
+  tags: vaultwarden
+
+- name: Cleanup files
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/systemd/system/bitwarden_rs.service
+    - /etc/nginx/ansible_conf.d/31-bitwarden.conf
+    - /etc/backup/pre.d/bitwarden_rs.sh
+    - /etc/backup/post.d/bitwarden_rs.sh
+    - "{{ vaultwarden_root_dir }}/tmp/bitwardenrs.sql.xz"
+  notify: reload nginx
+  tags: vaultwarden
+
+- name: Remove old iptables rules
+  iptables_raw:
+    name: bitwarden_rs
+    state: absent
+  when: iptables_manage | default(True)
+  tags: vaultwarden

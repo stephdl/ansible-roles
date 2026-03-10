@@ -1,0 +1,28 @@
+IP_HEADER=X-Forwarded-For
+SIGNUPS_VERIFY=true
+SIGNUPS_ALLOWED={{ vaultwarden_registration | ternary('true','false') }}
+{% if vaultwarden_domains_whitelist | length > 0 %}
+SIGNUPS_DOMAINS_WHITELIST={{ vaultwarden_domains_whitelist | join(',') }}
+{% endif %}
+ADMIN_TOKEN={{ vaultwarden_admin_token }}
+DISABLE_ADMIN_TOKEN={{ vaultwarden_disable_admin_token | ternary('true','false') }}
+DOMAIN={{ vaultwarden_public_url }}
+ROCKET_ENV=prod
+ROCKET_ADDRESS=0.0.0.0
+ROCKET_PORT={{ vaultwarden_http_port }}
+WEBSOCKET_ENABLED=true
+WEBSOCKET_PORT={{ vaultwarden_ws_port }}
+SMTP_HOST=localhost
+SMTP_PORT=25
+SMTP_SSL=false
+SMTP_FROM=vaultwarden-noreply@{{ ansible_domain }}
+{% if vaultwarden_db_engine == 'mysql' %}
+DATABASE_URL=mysql://{{ vaultwarden_db_user }}:{{ vaultwarden_db_pass | urlencode | regex_replace('/','%2F') }}@{{ vaultwarden_db_server }}:{{ vaultwarden_db_port }}/{{ vaultwarden_db_name }}
+ENABLE_DB_WAL=false
+{% else %}
+DATABASE_URL=data/db.sqlite3
+{% endif %}
+{% if vaultwarden_yubico_client_id is defined and vaultwarden_yubico_secret_key is defined %}
+YUBICO_CLIENT_ID={{ vaultwarden_yubico_client_id }}
+YUBICO_SECRET_KEY={{ vaultwarden_yubico_secret_key }}
+{% endif %}

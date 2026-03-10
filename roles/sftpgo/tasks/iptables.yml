@@ -1,0 +1,21 @@
+---
+
+- name:  Handle sftpgo ports in the firewall
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp {{ item.port is string | ternary('--dport ' ~ item.port, '-m multiport --dports ' ~ item.port | join(',')) }} -s {{ item.src_ip | join(',') }} -j ACCEPT"
+  with_items:
+    - port: "{{ sftpgo_conf.sftpd.bindings.port }}"
+      name: sftpgo_sftp_port
+      src_ip: "{{ sftpgo_sftp_src_ip }}"
+    - port: "{{ [sftpgo_conf.ftpd.bindings.port,sftpgo_conf.ftpd.passive_port_range.start ~ ':' ~ sftpgo_conf.ftpd.passive_port_range.end] }}"
+      name: sftpgo_ftp_port
+      src_ip: "{{ sftpgo_ftp_src_ip }}"
+    - port: "{{ sftpgo_conf.webdavd.bindings.port }}"
+      name: sftpgo_webdav_port
+      src_ip: "{{ sftpgo_webdav_src_ip }}"
+    - port: "{{ sftpgo_conf.httpd.bindings.port }}"
+      name: sftpgo_http_port
+      src_ip: "{{ sftpgo_http_src_ip }}"
+  tags: firewall,sftpgo

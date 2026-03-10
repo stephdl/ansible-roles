@@ -1,0 +1,16 @@
+---
+
+# patrix_server:
+# 
+#
+# Auth can be done either with login / pass
+# patrix_user:
+# patrix_pass:
+# 
+# Or with an existing token
+#
+# patrix_token:
+#
+# patrix_room:
+
+...

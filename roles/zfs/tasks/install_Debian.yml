@@ -1,0 +1,46 @@
+---
+
+- when: ansible_distribution_major_version is version('11', '<')
+  block:
+    - name: Install dependencies
+      apt:
+        name:
+          - libcapture-tiny-perl
+          - libconfig-inifiles-perl
+          - pv
+          - lzop
+          - mbuffer
+
+    - name: Install sanoid
+      apt: deb=http://ftp.fr.debian.org/debian/pool/main/s/sanoid/sanoid_2.0.3-4_all.deb
+
+  tags: zfs
+
+- when: ansible_distribution_major_version is version('11', '>=')
+  apt: name=sanoid
+  tags: zfs
+
+
+- name: Setup sanoid service and timer
+  template: src=sanoid.{{ item }}.j2 dest=/etc/systemd/system/sanoid.{{ item }}
+  loop:
+    - service
+    - timer
+  register: zfs_sanoid_units
+  notify: restart sanoid
+  tags: zfs
+
+- name: Remove sanoid-prune dependency
+  file: path=/etc/systemd/system/sanoid.service.wants/sanoid-prune.service state=absent
+  register: zfs_sanoid_prune
+  tags: zfs
+
+- name: Disable cronjob
+  copy: content='# Cron job disabled, service is managed by a systemd timer' dest=/etc/cron.d/sanoid
+  tags: zfs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zfs_sanoid_units.results | selectattr('changed','equalto',True) | list | length > 0 or zfs_sanoid_prune.changed
+  tags: zfs
+

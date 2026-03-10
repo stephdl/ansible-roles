@@ -1,0 +1,442 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+    - vars/defaults.yml
+  tags: fpbx
+
+- name: Install Asterisk and its dependencies
+  yum: name={{ fpbx_packages }}
+  tags: fpbx
+
+- name: Build a list of music on hold format to install
+  set_fact: fpbx_moh_pkg={{ fpbx_moh_pkg | default([ 'asterisk-moh-opsound' ]) + [ 'asterisk-moh-opsound-' ~ item ] }}
+  loop:
+    - alaw
+    - g722
+    - g729
+    - gsm
+    - siren14
+    - siren7
+    - sln16
+    - ulaw
+    - wav
+  tags: fpbx
+
+- name: Build a list of languages packages to install
+  set_fact: fpbx_snd_pkg={{ fpbx_snd_pkg | default([]) + [ 'asterisk-sounds-core-' ~ item.0 ~ '-' ~ item.1 ] }}
+  with_nested:
+    - - en
+      - es
+      - fr
+      - it
+    - - alaw
+      - g722
+      - g729
+      - gsm
+      - siren14
+      - siren7
+      - sln16
+      - ulaw
+      - wav
+  tags: fpbx
+
+- name: Install music on hold and languages packages
+  yum: name={{ fpbx_moh_pkg + fpbx_snd_pkg }}
+  tags: fpbx
+
+- import_tasks: ../includes/disable_selinux.yml
+  tags: fpbx
+
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: "{{ fpbx_root_dir }}"
+        - version: "{{ fpbx_version }}"
+        - manage_upgrade: False
+    - set_fact: fpbx_install_mode={{ (install_mode == 'install') | ternary('install','none') }}
+    - set_fact: fpbx_current_version={{ current_version | default('') }}
+  tags: fpbx
+
+- name: Create directories
+  file: path={{ fpbx_root_dir }}/{{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: web
+    - dir: cgi-bin
+    - dir: meta
+      mode: 700
+    - dir: backup
+      mode: 700
+    - dir: tmp
+    - dir: sessions
+    - dir: archives
+    - dir: web/admin/modules/ucp/
+    - dir: provisioning/contacts
+    - dir: provisioning/logs
+    - dir: provisioning/overrides
+    - dir: provisioning/licenses
+    - dir: provisioning/bmp
+    - dir: provisioning/config_bkup/contacts
+  tags: fpbx
+
+- name: Remove obsolete directories
+  file: path={{ fpbx_root_dir }}/{{ item }} state=absent
+  loop:
+    - db_dumps
+  tags: fpbx
+
+- name: Create /tftpboot
+  file: dest=/tftpboot src={{ fpbx_root_dir }}/provisioning state=link
+  tags: fpbx
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ fpbx_root_dir }}/meta/ansible_phonepass"
+    - pass_size: 12
+    - complex: False
+  when: fpbxphone_pass is not defined
+  tags: fpbx
+- set_fact: fpbx_phone_pass={{ rand_pass }}
+  when: fpbx_phone_pass is not defined
+  tags: fpbx
+
+- name: Create a user for provisioning
+  user:
+    name: phone
+    home: "{{ fpbx_root_dir }}/provisioning"
+    shell: /bin/rbash
+    password: "{{ fpbx_phone_pass | password_hash('sha256', 65535 | random(seed=inventory_hostname)) }}"
+  tags: fpbx
+
+- name: Configure vsftpd
+  template: src=vsftpd/{{ item }}.j2 dest=/etc/vsftpd/{{ item }}
+  loop:
+    - user_list
+    - vsftpd.conf
+    - chroot_list
+  notify: restart vsftpd
+  tags: fpbx
+
+- name: Deploy PAM config for vsftpd
+  template: src=vsftpd/pam.j2 dest=/etc/pam.d/vsftpd
+  tags: fpbx
+
+- name: Load iptables FTP helper
+  copy: content="nf_conntrack_ftp" dest=/etc/modules-load.d/freepbx.conf
+  notify: restart systemd-modules-load
+  tags: fpbx
+
+- name: Start and enable vsftpd
+  service: name=vsftpd state=started enabled=True
+  tags: fpbx
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ fpbx_root_dir }}"
+    - version: "{{ fpbx_current_version }}"
+    - db_name: "{{ fpbx_db_name }}"
+    - db_server: "{{ fpbx_db_server }}"
+  when: fpbx_install_mode == 'upgrade'
+  tags: fpbx
+
+- name: Download FreePBX
+  get_url:
+    url: "{{ fpbx_archive_url }}"
+    dest: "{{ fpbx_root_dir }}/tmp/"
+    checksum: "sha1:{{ fpbx_archive_sha1 }}"
+  when: fpbx_install_mode != 'none'
+  tags: fpbx
+
+- name: Extract fpbx archive
+  unarchive:
+    src: "{{ fpbx_root_dir }}/tmp/freepbx-{{ fpbx_version }}-latest.tgz"
+    dest: "{{ fpbx_root_dir }}/tmp"
+    remote_src: yes
+  when: fpbx_install_mode != 'none'
+  tags: fpbx
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ fpbx_root_dir }}/meta/ansible_dbpass"
+    - complex: False
+  when: fpbx_db_pass is not defined
+  tags: fpbx
+- set_fact: fpbx_db_pass={{ rand_pass }}
+  when: fpbx_db_pass is not defined
+  tags: fpbx
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ fpbx_db_name }}"
+    - db_user: "{{ fpbx_db_user }}"
+    - db_server: "{{ fpbx_db_server }}"
+    - db_pass: "{{ fpbx_db_pass }}"
+    - append_privs: True
+  tags: fpbx
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ fpbx_cdr_db_name }}"
+    - db_user: "{{ fpbx_db_user }}"
+    - db_server: "{{ fpbx_db_server }}"
+    - db_pass: "{{ fpbx_db_pass }}"
+    - append_privs: True
+  tags: fpbx
+
+- name: Ensure asterisk is running
+  service: name=asterisk state=started
+  when: fpbx_install_mode == 'install'
+  tags: fpbx
+
+- name: Remove config file before installation
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/freepbx.conf
+    - /etc/amportal.conf
+  when: fpbx_install_mode == 'install'
+  tags: fpbx
+
+- name: Install base framework
+  command: >
+    scl enable php{{ fpbx_php_version }} -- ./install
+      -n --webroot={{ fpbx_root_dir }}/web --dbengine=mysql
+      --dbuser={{ fpbx_db_user }} --dbname={{ fpbx_db_name }}
+      --cdrdbname={{ fpbx_cdr_db_name }} --dbpass={{ fpbx_db_pass | quote }}
+      --astmoddir=/usr/lib64/asterisk/modules/
+      --astagidir=/usr/share/asterisk/agi-bin/
+      --ampsbin=/usr/local/bin
+      --ampcgibin=/opt/freepbx/cgi-bin
+  args:
+    chdir: "{{ fpbx_root_dir }}/tmp/freepbx"
+  when: fpbx_install_mode == 'install'
+  tags: fpbx
+
+  # TODO: should be in a loop to patch easily several files, but checking for file presence in a loop
+  # is a pain with ansible
+  #- name: Check if webrtc class exist
+  #  stat: path={{ fpbx_root_dir }}/web/admin/modules/webrtc/Webrtc.class.php
+  #  register: fpbx_webrtc_class
+  #  tags: fpbx
+  #
+  #- name: Patch webrtc class
+  #  patch: src=patches/webrtc_proxy.patch dest={{ fpbx_root_dir }}/web/admin/modules/webrtc/Webrtc.class.php
+  #  when: fpbx_webrtc_class.stat.exists
+  #  tags: fpbx
+
+- name: Check for wrapper symlinks
+  stat: path=/usr/local/bin/{{ item }}
+  register: fpbx_wrapper_links
+  loop:
+    - fwconsole
+    - amportal
+  tags: fpbx
+
+- name: Remove symlinks
+  file: path=/usr/local/bin/{{ item.item }} state=absent
+  when: item.stat.islnk is defined and item.stat.islnk
+  loop: "{{ fpbx_wrapper_links.results }}"
+  tags: fpbx
+
+- name: Install wrappers
+  template: src={{ item }}.j2 dest=/usr/local/bin/{{ item }} mode=755
+  loop:
+    - fwconsole
+    - amportal
+  tags: fpbx
+
+- name: Install safe_asterisk
+  copy: src=safe_asterisk dest=/usr/local/bin/safe_asterisk mode=755
+  tags: fpbx
+
+- name: Ensure asterisk service is stopped and disabled
+  service: name=asterisk state=stopped enabled=False
+  tags: fpbx
+
+- name: Ensure /etc/systemd/system/ exists
+  file: path=/etc/systemd/system/ state=directory
+  tags: fpbx
+
+- name: Deploy FreePBX service unit
+  template: src=freepbx.service.j2 dest=/etc/systemd/system/freepbx.service
+  register: fpbx_unit
+  notify: restart freepbx
+  tags: fpbx
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: fpbx_unit.changed
+  tags: fpbx
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ fpbx_root_dir }}/tmp/freepbx-{{ fpbx_version }}-latest.tgz"
+    - "{{ fpbx_root_dir }}/tmp/freepbx"
+  tags: fpbx
+
+  #- name: Update modules
+  #  command: /usr/local/bin/fwconsole ma updateall
+  #  changed_when: False
+  #  tags: fpbx
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ fpbx_root_dir }}/meta/ansible_manager_pass"
+    - complex: False
+  when: fpbx_manager_pass is not defined
+  tags: fpbx
+- set_fact: fpbx_manager_pass={{ rand_pass }}
+  when: fpbx_manager_pass is not defined
+  tags: fpbx
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/etc/{{ item }}
+  loop:
+    - freepbx.conf
+  notify:
+    - reload freepbx
+    - fpbx chown
+  tags: fpbx
+
+- name: Configure manager.conf and extensions.conf
+  lineinfile:
+    path: "{{ item.file }}"
+    regexp: '^{{ item.param }}\s*=.*'
+    line: '{{ item.param }} = {{ item.value }}'
+  loop:
+          # - param: AMPMGRPASS
+          #   value: "{{ fpbx_manager_pass }}"
+          #   file: /etc/asterisk/extensions_additional.conf
+          #- param: AMPDBHOST
+          #  value: "{{ fpbx_db_server }}"
+          #  file: /etc/amportal.conf
+          #- param: AMPDBNAME
+          #  value: "{{ fpbx_db_name }}"
+          #  file: /etc/amportal.conf
+          #- param: AMPDBUSER
+          #  value: "{{ fpbx_db_user }}"
+          #  file: /etc/amportal.conf
+          #- param: AMPDBPASS
+          #  value: "{{ fpbx_db_pass }}"
+          #  file: /etc/amportal.conf
+          #- param: CDRDBNAME
+          #  value: "{{ fpbx_cdr_db_name }}"
+          #  file: /etc/amportal.conf
+    - param: secret
+      value: "{{ fpbx_manager_pass }}"
+      file: /etc/asterisk/manager.conf
+  tags: fpbx
+
+- name: Set amportal settings
+  command: /usr/local/bin/fwconsole setting {{ item.param }} {{ item.value }}
+  loop:
+    - param: AMPMGRUSER
+      value: admin
+    - param: AMPMGRPASS
+      value: "{{ fpbx_manager_pass }}"
+    - param: PROXY_ENABLED
+      value: "{{ (system_proxy is defined and system_proxy != '') | ternary('TRUE','FALSE') }}"
+    - param: PROXY_ADDRESS
+      value: "'{{ (system_proxy is defined and system_proxy != '') | ternary(system_proxy,'') }}'"
+    - param: AUTHTYPE
+      value: "{{ fpbx_auth_type }}"
+    - param: PHPTIMEZONE
+      value: "{{ system_tz | default('UTC') }}"
+    - param: HTTPENABLED
+      value: TRUE
+    - param: HTTPBINDADDRESS
+      value: 0.0.0.0
+    - param: HTTPBINDPORT
+      value: 8088
+    - param: HTTPPREFIX
+      value: asterisk
+    - param: NODEJSBINDADDRESS
+      value: 0.0.0.0
+    - param: NODEJSHTTPSBINDADDRESS
+      value: 0.0.0.0
+    - param: SIGNATURECHECK
+      value: FALSE  # Needed since we're going to patch some module to pass through a rev proxy
+  changed_when: False
+  tags: fpbx
+
+- name: Set global language # TODO : this is an ugly hack
+  command: mysql --host={{ fpbx_db_server}} --user={{ fpbx_db_user }} --password={{ fpbx_db_pass | quote }} {{ fpbx_db_name }} -e "UPDATE `soundlang_settings` SET `value`='fr' WHERE `keyword`='language'"
+  changed_when: False
+  tags: fpbx
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: freepbx
+    - php_version: "{{ fpbx_php_version }}"
+    - php_fpm_pool: "{{ fpbx_php_fpm_pool | default('') }}"
+  tags: fpbx
+
+- name: Deploy pre/post backup scripts
+  template: src={{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/freepbx.sh mode=750
+  loop:
+    - pre
+    - post
+  tags: fpbx
+
+- name: Install agi scripts
+  copy: src=agi/{{ item }} dest=/usr/share/asterisk/agi-bin/{{ item }} mode=750 group=asterisk
+  loop:
+    - jitsi_conf_pin
+  tags: fpbx
+
+- name: Handle FreePBX ports
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src | length > 0 and (item.tcp_ports | length > 0 or item.udp_ports | length > 0)) | ternary('present','absent') }}"
+    rules: "{% if item.tcp_ports is defined and item.tcp_ports | length > 0 %}-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ item.tcp_ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT\n{% endif %}
+            {% if item.udp_ports is defined and item.udp_ports | length > 0 %}-A INPUT -m state --state NEW -p udp -m multiport --dports {{ item.udp_ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT{% endif %}"
+  when: iptables_manage | default(True)
+  loop:
+    - name: fpbx_mgm_ports
+      tcp_ports: "{{ fpbx_mgm_tcp_ports }}"
+      udp_ports: "{{ fpbx_mgm_udp_ports }}"
+      src: "{{ fpbx_mgm_src_ip }}"
+    - name: fpbx_voip_ports
+      tcp_ports: "{{ fpbx_voip_tcp_ports }}"
+      udp_ports: "{{ fpbx_voip_udp_ports }}"
+      src: "{{ fpbx_voip_src_ip }}"
+    - name: fpbx_http_ports
+      tcp_ports: "{{ fpbx_http_ports }}"
+      src: "{{ fpbx_http_src_ip }}"
+    - name: fpbx_prov_ports
+      tcp_ports: "{{ fpbx_prov_tcp_ports }}"
+      udp_ports: "{{ fpbx_prov_udp_ports }}"
+      src: "{{ fpbx_prov_src_ip }}"
+  tags: fpbx,firewall
+
+- name: Remove old iptables rules
+  iptables_raw:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - ast_mgm_tcp_ports
+    - ast_mgm_udp_ports
+    - ast_voip_tcp_ports
+    - ast_voip_udp_ports
+    - ast_http_ports
+  tags: fpbx,firewall
+
+- name: Install logrotate config
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/asterisk
+  tags: fpbx
+
+- name: Start and enable the service
+  service: name=freepbx state=started enabled=True
+  tags: fpbx
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ fpbx_root_dir }}"
+    - version: "{{ fpbx_version }}"
+  tags: fpbx
+
+- include: filebeat.yml

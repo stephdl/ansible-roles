@@ -1,0 +1,12 @@
+---
+filebeat_output_type: logstash
+filebeat_output_hosts: []
+# filebeat_output_hosts:
+#   - graylog.example.org:5044
+filebeat_output_ssl:
+  enabled: True
+  # cert_authorities:
+  #   - /path/to/ca.crt
+  # client_cert: /etc/filebeat/ssl/cert.pem
+  # client_key: /etc/filebeat/ssl/key.pem
+  # client_key_passphrase: s3cr3t.

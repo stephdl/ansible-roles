@@ -1,0 +1,37 @@
+---
+
+itop_id: 1
+itop_manage_upgrade: True
+itop_version: 2.7.5-1
+itop_build: 7770
+itop_archive_url: https://sourceforge.net/projects/itop/files/itop/{{ itop_version }}/iTop-{{ itop_version }}-{{ itop_build }}.zip
+itop_archive_sha1: edff7fb8d5a79ed31a8065f4b7350d4ae4686af1
+
+itop_php_cas_version: 1.4.0
+itop_php_cas_archive_url: https://github.com/apereo/phpCAS/releases/download/{{ itop_php_cas_version }}/CAS-{{ itop_php_cas_version }}.tgz
+itop_php_cas_archive_sha1: 9052431246c95c17b4d67775af7b5b2fb482be44
+
+itop_root_dir: /opt/itop_{{ itop_id }}
+itop_php_user: php-itop_{{ itop_id }}
+itop_php_version: 74
+
+# If you prefer using a custom PHP FPM pool, set it's name.
+# You might need to adjust itop_php_user
+# itop_php_fpm_pool: custom_itop
+
+
+itop_db_server: "{{ mysql_server | default('localhost') }}"
+# itop_db_port: 3306
+itop_db_name: itop_{{ itop_id }}
+itop_db_user: itop_{{ itop_id }}
+# If not defined, a random pass will be generated and stored in the meta directory (under itop_root_dir)
+# itop_db_pass: itop
+
+# itop_alias: itop
+# itop_src_ip: []
+#   - 192.168.7.0/24
+#   - 10.2.0.0/24
+
+# Cron task needs a user and a pass, so it won't be enabled until you set it
+# itop_cron_user: cron
+# itop_cron_pass: secret

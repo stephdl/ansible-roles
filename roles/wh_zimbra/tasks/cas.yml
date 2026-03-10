@@ -1,0 +1,116 @@
+---
+- name: Get or generate a pre authentication key
+  shell: |
+    KEY=$(/opt/zimbra/bin/zmprov getDomain {{ item }} zimbrapreauthkey | perl -ne '/^(?:zimbraP|p)reAuthKey: (.*)/ && print $1')
+    [ -z $KEY ] && KEY=$(/opt/zimbra/bin/zmprov generateDomainPreAuthKey {{ item }} | perl -ne '/^(?:zimbraP|p)reAuthKey: (.*)/ && print $1')
+    echo $KEY
+  become_user: zimbra
+  register: zcs_preauthkeys
+  changed_when: False
+  loop: "{{ wh_mail_domains }}"
+  tags: mail
+
+- name: Install preauth pages
+  template: src=../zimbra/templates/cas_preauth.jsp.j2 dest=/opt/zimbra/jetty/webapps/zimbra/public/preauth_{{ item.item }}.jsp owner=zimbra group=zimbra
+  loop: "{{ zcs_preauthkeys.results }}"
+  notify: restart zmmailboxd
+  tags: mail
+
+- name: Install admin preauth pages
+  template: src=../zimbra/templates/cas_preauth_admin.jsp.j2 dest=/opt/zimbra/jetty/webapps/zimbraAdmin/public/preauth_{{ item.item }}.jsp owner=zimbra group=zimbra
+  loop: "{{ zcs_preauthkeys.results }}"
+  notify: restart zmmailboxd
+  tags: mail
+
+- name: Configure CAS filters
+  blockinfile:
+    path: /opt/zimbra/jetty/etc/zimbra.web.xml.in
+    block: |2
+
+      <filter>
+        <filter-name>CasSingleSignOutFilter</filter-name>
+        <filter-class>org.jasig.cas.client.session.SingleSignOutFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>https://sso-cl.fws.fr/cas</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasSingleSignOutFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+
+      <listener>
+        <listener-class>org.jasig.cas.client.session.SingleSignOutHttpSessionListener</listener-class>
+      </listener>
+
+      {% for item in wh_clients | default([]) %}
+      {% if item.mail is defined and item.mail.enabled is defined and item.mail.enabled and item.mail.domain is defined %}
+      <!-- filters for {{ item.name }} -->
+      <filter>
+        <filter-name>CasAuthenticationFilter{{ item.name }}</filter-name>
+        <filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
+        <init-param>
+          <param-name>casServerLoginUrl</param-name>
+          <param-value>https://sso-cl.fws.fr/cas/login</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ item.mail.vhosts | first }}</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasAuthenticationFilter{{ item.name }}</filter-name>
+        <url-pattern>/public/preauth_{{ item.mail.domain }}.jsp</url-pattern>
+      </filter-mapping>
+
+      <filter>
+        <filter-name>CasValidationFilter{{ item.name }}</filter-name>
+        <filter-class>org.jasig.cas.client.validation.Cas20ProxyReceivingTicketValidationFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>https://sso-cl.fws.fr/cas</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ item.mail.vhosts | first }}</param-value>
+        </init-param>
+        <init-param>
+          <param-name>redirectAfterValidation</param-name>
+          <param-value>true</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasValidationFilter{{ item.name }}</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+      <!-- End filter configuration for {{ item.name }} -->
+      {% else %}
+      <!-- Email not enabled for client {{ item.name }} -->
+      {% endif %}
+      {% endfor %}
+
+      <filter>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <filter-class>org.jasig.cas.client.util.HttpServletRequestWrapperFilter</filter-class>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <url-pattern>/public/*</url-pattern>
+      </filter-mapping>
+
+      <!-- prevent Zimbra from adding ;jsessionid=XXXX in the URL, which the CAS server could reject
+           as it doesn't match the initial service anymore -->
+      <session-config>
+        <tracking-mode>COOKIE</tracking-mode>
+      </session-config>
+    marker: '<!-- "# {mark} ANSIBLE MANAGED BLOCK (wh Zimbra CAS Auth)" -->'
+    insertafter: '</error-page>'
+    validate: xmllint %s
+  notify: restart zmmailboxd
+  tags: zcs
+

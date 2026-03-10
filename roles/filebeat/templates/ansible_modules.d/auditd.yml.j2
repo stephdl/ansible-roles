@@ -1,0 +1,7 @@
+- module: auditd
+  log:
+    enabled: True
+    input:
+      exclude_files:
+        - '\.[xg]z$'
+        - '\d+$'

@@ -1,0 +1,41 @@
+---
+
+- name: Install packages
+  yum: name=lemonldap-ng-handler
+  tags:
+    - web
+    - package
+
+- name: Create configuration directory
+  file: path=/etc/lemonldap-ng state=directory owner=root group={{ httpd_group }} mode=750 setype=httpd_config_t
+  tags:
+    - web
+    - config
+
+- name: Create local configuration cache directory
+  file: path=/var/cache/lemonldap-ng-handler state=directory owner=root group={{ httpd_group }} mode=770 setype=httpd_cache_t
+  tags:
+    - web
+
+- name: Deploy main Lemonldap::NG Handler configuration
+  template: src=lemonldap-ng.ini.j2 dest=/etc/lemonldap-ng/lemonldap-ng.ini owner=root group={{ httpd_group }} mode=640
+  notify: reload httpd
+  tags:
+    - web
+    - config
+
+- name: Load mod_perl
+  copy: src=03-perl.conf dest=/etc/httpd/ansible_conf.modules.d/03-perl.conf
+  notify: reload httpd
+  tags:
+    - web
+    - config
+
+- name: Deploy Lemonldap::NG Handler configuration in apache
+  template: src=lemonldap-ng-handler.conf.j2 dest=/etc/httpd/ansible_conf.d/10-lemonldap-ng-handler.conf
+  notify: reload httpd
+  tags:
+    - web
+    - config
+
+...

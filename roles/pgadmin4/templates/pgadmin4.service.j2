@@ -1,0 +1,25 @@
+[Unit]
+Description=pgAdmin4 server daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=pgadmin4_{{ pga_id }}
+Group=pgadmin4_{{ pga_id }}
+ExecStart={{ pga_root_dir }}/venv/bin/gunicorn --bind 0.0.0.0:{{ pga_port }} \
+          --workers=1 \
+          --threads=25 \
+          --chdir {{ pga_root_dir }}/venv/lib/python3.6/site-packages/pgadmin4 \
+          pgAdmin4:app
+ExecReload=/bin/kill -HUP $MAINPID
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+SyslogIdentifier=pgadmin4_{{ pga_id }}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

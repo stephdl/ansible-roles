@@ -1,0 +1,68 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/zimbra/mount
+
+source /opt/zimbra/bin/zmshutil
+zmsetvars
+
+echo 'Starting Zimbra backup'
+
+{% if 'ldap' in zcs_enabled_components %}
+echo 'Dumping LDAP database'
+
+# Dump ldap data
+/opt/zimbra/common/sbin/slapcat \
+  -F /opt/zimbra/data/ldap/config \
+  -n 0 | zstd -c > /home/lbkp/zimbra/ldap-config.ldif.zst
+/opt/zimbra/common/sbin/slapcat \
+  -F /opt/zimbra/data/ldap/config \
+  -b "" | zstd -c > /home/lbkp/zimbra/ldap.ldif.zst
+{% endif %}
+{% if 'mailbox' in zcs_enabled_components %}
+
+# Dump MySQL data
+echo 'Dumping MySQL database'
+/opt/zimbra/common/bin/mysqldump \
+  --user=root \
+  --password=$mysql_root_password \
+  --socket=$mysql_socket \
+  --all-databases \
+  --single-transaction \
+  --flush-logs | zstd -c > /home/lbkp/zimbra/mysql.sql.zst
+
+# Export calendars, tasks and address books to ics and vcf files
+OLDIFS=$IFS
+IFS=$'\n'
+for MAILBOX in $(/usr/local/bin/zmprov getQuotaUsage $(hostname --fqdn) | awk '{ print $1}'); do
+  echo ''
+  echo "Cheking contact and calendar folders for $MAILBOX"
+  for LINE in $(/usr/local/bin/zmmailbox -z -m $MAILBOX -t 0 getAllFolders); do
+    # Skip folders whose ID indicates it's a shared folder
+    if echo $LINE | grep -qiP '^\s*[a-z0-9]{8}\-[a-z0-9]'; then
+      continue
+    fi
+    DIR=$(echo $LINE | perl -ne 'm/\s*\d+\s+(\w{4})\s+\d+\s+\d+\s+(\/.*)/ && print "$2\n"')
+    if echo $DIR | grep -qiP '\([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}:\d+\)$'; then
+      continue
+    fi
+    TYPE=$(echo $LINE | perl -ne 'm/\s*\d+\s+(\w{4})\s+\d+\s+\d+\s+(\/.*)/ && print "$1\n"')
+    if [ "$TYPE" == "appo" -o "$TYPE" == "task" -o "$TYPE" == "cont" ]; then
+      echo "Exporting folder $DIR (account $MAILBOX, type $TYPE)"
+      mkdir -p /home/lbkp/zimbra/exports/$MAILBOX/$(dirname $DIR)
+    fi
+    if [ "$TYPE" == "appo" -o "$TYPE" == "task" ]; then
+      /usr/local/bin/zmmailbox -z -m $MAILBOX -t 0 getRestUrl "$(printf '%q' $DIR)?fmt=ics" > "/home/lbkp/zimbra/exports/$MAILBOX/$DIR"".ics"
+    elif [ "$TYPE" == "cont" ]; then
+      /usr/local/bin/zmmailbox -z -m $MAILBOX -t 0 getRestUrl "$(printf '%q' $DIR)?fmt=vcf" > "/home/lbkp/zimbra/exports/$MAILBOX/$DIR"".vcf"
+    fi
+  done
+done
+IFS=$OLDIFS
+
+{% endif %}
+# Try to snapshot Zimbra tree
+echo ''
+echo "Handle /opt/zimbra snapshot / bind mount on /home/lbkp/zimbra/mount"
+/opt/zimbra/bin/zmbh --pre --snap-size=10G --verbose --mount=/home/lbkp/zimbra/mount --shutdown=ldap

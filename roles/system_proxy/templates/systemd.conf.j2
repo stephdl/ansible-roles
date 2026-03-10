@@ -1,0 +1,6 @@
+[Manager]
+{% if system_proxy is defined  and system_proxy != '' %}
+DefaultEnvironment=http_proxy={{ system_proxy }} https_proxy={{ system_proxy }} ftp_proxy={{ system_proxy }} HTTP_PROXY={{ system_proxy }} HTTPS_PROXY={{ system_proxy }} FTP_PROXY={{ system_proxy }} no_proxy={{ system_proxy_no_proxy | join(',') }} NO_PROXY={{ system_proxy_no_proxy | join(',') }}
+{% else %}
+# No proxy configured
+{% endif %}

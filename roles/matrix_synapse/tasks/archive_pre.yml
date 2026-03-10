@@ -1,0 +1,31 @@
+---
+
+- name: Create archive dir
+  file: path={{ synapse_root_dir }}/archives/{{ synapse_current_version }} state=directory
+  tags: matrix
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ synapse_root_dir }}/{{ item }}"
+    dest: "{{ synapse_root_dir }}/archives/{{ synapse_current_version }}/"
+    delete: True
+    compress: False
+  loop:
+    - etc
+    - res
+    - venv
+  delegate_to: "{{ inventory_hostname }}"
+  tags: matrix
+
+- name: Archive a database dump
+  shell: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ synapse_pg_db_server }}
+    --port={{ synapse_pg_db_port }}
+    --username=sqladmin {{ synapse_pg_db_name }} |
+    zstd -T0 -10 -c > {{ synapse_root_dir }}/archives/{{ synapse_current_version }}/{{ synapse_pg_db_name }}.sql.zst
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  tags: matrix

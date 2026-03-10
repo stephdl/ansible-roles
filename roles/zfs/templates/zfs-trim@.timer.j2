@@ -1,0 +1,9 @@
+[Unit]
+Description=Regular ZFS pool trim
+
+[Timer]
+OnCalendar={{ zfs_trim_freq }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,4 @@
+---
+
+- name: start geoipupdate
+  service: name=geoipupdate state=started

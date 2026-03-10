@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: "{{ wp_php_user }}"
+    - comment: "PHP FPM for wordpress {{ wp_id }}"
+  tags: wp

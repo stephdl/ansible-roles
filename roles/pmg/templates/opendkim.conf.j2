@@ -1,0 +1,23 @@
+Syslog yes
+LogResults yes
+LogWhy yes
+SyslogSuccess yes
+UMask 007
+{% if item == 'signer' %}
+KeyTable /etc/opendkim/keytable
+SigningTable /etc/opendkim/signingtable
+Mode s
+InternalHosts 0.0.0.0/0
+{% else %}
+Mode v
+AllowSHA1Only yes
+AlwaysAddARHeader yes
+{% endif %}
+Socket local:/var/run/opendkim/{{ item }}.sock
+PidFile /var/run/opendkim/{{ item }}.pid
+TrustAnchorFile /usr/share/dns/root.key
+UserID opendkim
+Background no
+{% if pmg_dkim_nameservers is defined and pmg_dkim_nameservers | length > 0 %}
+Nameservers {{ pmg_dkim_nameservers | join(',') }}
+{% endif %}

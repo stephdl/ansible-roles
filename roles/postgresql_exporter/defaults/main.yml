@@ -1,0 +1,22 @@
+---
+
+pg_exporter_version: 0.8.0
+pg_exporter_archive_url: https://github.com/wrouesnel/postgres_exporter/releases/download/v{{ pg_exporter_version }}/postgres_exporter_v{{ pg_exporter_version }}_linux-amd64.tar.gz
+pg_exporter_archive_sha1: 9af399257fe6ad20bf6ea7a4984721ae364bd574
+pg_exporter_root_dir: /opt/pg_exporter
+
+# Account under which postgres-exporter will run
+pg_exporter_user: postgres
+# TCP port on which postgres-exporter will bind
+pg_exporter_port: 9187
+# List of IP address / CIDR allowed to access postgres-exporter
+pg_exporter_src_ip: []
+
+# URI to connect. The default value will connect using the unix socket /var/run/postgresql
+pg_exporter_data_source_uri: "postgresql@:5432/postgres?host=/var/run/postgresql"
+# If set, will use the provided user and password
+# pg_exporter_data_source_user: sqladmin
+# pg_exporter_data_source_pass: secret
+
+# List of DB to exclude
+pg_exporter_exclude_databases: []

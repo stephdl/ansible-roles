@@ -1,0 +1,9 @@
+---
+dependencies:
+  - role: repo_rpmfusion
+  - role: memcached_server
+    when: seafile_memcached_server is search('^(127\.0\.0\.1|localhost)')
+  - role: clamav
+    when: seafile_license is defined and seafile_scan_av == True
+  - role: mysql_server
+    when: seafile_db_server in ['127.0.0.1', 'localhost']

@@ -1,0 +1,21 @@
+---
+
+- name: Create required directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /etc/crowdsec
+      mode: 755
+    - dir: "{{ cs_root_dir }}"
+    - dir: "{{ cs_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ cs_root_dir }}/data"
+    - dir: /etc/crowdsec/parsers/s00-raw
+    - dir: /etc/crowdsec/parsers/s01-parse
+    - dir: /etc/crowdsec/parsers/s02-enrich
+    - dir: /etc/crowdsec/scenarios
+    - dir: /etc/crowdsec/postoverflows/s00-enrich
+    - dir: /etc/crowdsec/postoverflows/s01-whitelist
+    - dir: /etc/crowdsec/acquis
+    - dir: /etc/crowdsec/meta
+      mode: 700
+  tags: cs

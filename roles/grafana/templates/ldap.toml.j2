@@ -1,0 +1,37 @@
+[[servers]]
+host = "{{ grafana_auth.ldap.servers | join(' ') }}"
+port = {{ grafana_auth.ldap.port }}
+use_ssl = {{ (grafana_auth.ldap.use_ssl or grafana_auth.ldap.start_tls) | ternary('true','false') }}
+start_tls = {{ grafana_auth.ldap.start_tls | ternary('true','false') }}
+ssl_skip_verify = {{ grafana_auth.ldap.ssl_skip_verify | ternary('true','false') }}
+
+{% if grafana_auth.ldap.root_ca_cert is defined %}
+root_ca_cert = {{ grafana_auth.ldap.root_ca_cert }}
+{% endif %}
+
+{% if grafana_auth.ldap.bind_dn is defined and grafana_auth.ldap.bind_password is defined %}
+bind_dn = "{{ grafana_auth.ldap.bind_dn }}"
+bind_password = '{{ grafana_auth.ldap.bind_password }}'
+{% endif %}
+search_filter = "{{ grafana_auth.ldap.search_filter }}"
+search_base_dns = ["{{ grafana_auth.ldap.search_base_dns | join('","') }}"]
+
+{% if grafana_auth.ldap.group_search_filter is defined %}
+group_search_filter = "{{ grafana_auth.ldap.group_search_filter }}"
+group_search_base_dns = ["{{ grafana_auth.ldap.group_search_base_dns | join('","') }}"]
+{% if grafana_auth.ldap.group_search_filter_user_attribute is defined %}
+group_search_filter_user_attribute = "{{ grafana_auth.ldap.group_search_filter_user_attribute }}"
+{% endif %}
+{% endif %}
+
+[servers.attributes]
+{% for attr in grafana_auth.ldap.attributes %}
+{{ attr }} = "{{ grafana_auth.ldap.attributes[attr] }}"
+{% endfor %}
+
+{% for map in grafana_auth.ldap.group_mappings %}
+[[servers.group_mappings]]
+group_dn = "{{ map['ldap_group'] }}"
+org_role = "{{ map['role'] }}"
+
+{% endfor %}

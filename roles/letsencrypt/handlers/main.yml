@@ -1,0 +1,6 @@
+---
+- name: renew dehydrated
+  command: dehydrated -c
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+...

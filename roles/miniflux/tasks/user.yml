@@ -1,0 +1,5 @@
+---
+
+- name: Create user
+  user: name={{ miniflux_user }} system=True shell=/sbin/nologin home={{ miniflux_root_dir }}
+  tags: miniflux

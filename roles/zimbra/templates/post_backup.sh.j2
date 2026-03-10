@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+echo 'Removing Zimbra database dumps'
+rm -f /home/lbkp/zimbra/{ldap*,mysql*}
+rm -rf /home/lbkp/zimbra/exports/
+
+# Remove snapshot mount point
+echo 'Cleanup backup mount point and snapshot'
+/opt/zimbra/bin/zmbh --post --shutdown=ldap --verbose --mount=/home/lbkp/zimbra/mount

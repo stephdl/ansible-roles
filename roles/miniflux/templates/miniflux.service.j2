@@ -1,0 +1,23 @@
+[Unit]
+Description=Miniflux Feed Reader
+After=network.target postgresql.service
+
+[Service]
+Type=notify
+EnvironmentFile={{ miniflux_root_dir }}/etc/miniflux.conf
+User={{ miniflux_user }}
+ExecStart={{ miniflux_root_dir }}/bin/miniflux
+Restart=always
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictRealtime=true
+ReadWritePaths=/run
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

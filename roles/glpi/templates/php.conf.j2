@@ -1,0 +1,35 @@
+[glpi_{{ glpi_id }}]
+
+listen.owner = root
+listen.group = apache
+listen.mode = 0660
+listen = /run/php-fpm/glpi_{{ glpi_id }}.sock
+user = {{ glpi_php_user }}
+group = {{ glpi_php_user }}
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 5m
+
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = 256M
+php_admin_value[session.save_path] = {{ glpi_root_dir }}/sessions
+php_admin_value[upload_tmp_dir] = {{ glpi_root_dir }}/tmp
+php_admin_value[sys_temp_dir] = {{ glpi_root_dir }}/tmp
+php_admin_value[post_max_size] = 100M
+php_admin_value[upload_max_filesize] = 100M
+php_admin_value[disable_functions] = system, show_source, symlink, exec, dl, shell_exec, passthru, phpinfo, escapeshellarg, escapeshellcmd
+php_admin_value[open_basedir] = {{ glpi_root_dir }}:/usr/share/pear/:/usr/share/php/
+php_admin_value[max_execution_time] = 60
+php_admin_value[max_input_time] = 60
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = off
+php_admin_flag[file_uploads] = on
+php_admin_flag[session.cookie_httponly] = on

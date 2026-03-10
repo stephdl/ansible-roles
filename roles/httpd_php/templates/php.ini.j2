@@ -1,0 +1,166 @@
+[php]
+engine=on
+file_uploads={{ php_conf_file_uploads | default('off') }}
+upload_max_filesize={{ php_conf_upload_max_filesize | default('2M') }}
+max_file_uploads={{ php_conf_max_file_uploads | default('20') }}
+max_execution_time={{ php_conf_max_execution_time | default('30') }}
+memory_limit={{ php_conf_memory_limit | default('128M') }}
+post_max_size={{ php_conf_post_max_size | default('8M') }}
+max_input_time=60
+
+zlib.output_compression=off
+
+expose_php=off
+
+display_error=off
+display_startup_errors=off
+log_errors=on
+error_reporting=E_ALL & ~E_DEPRECATED & ~E_STRICT
+report_memleaks=on
+auto_globals_jit=on
+output_buffering=4096
+register_argc_argv=off
+request_order=GP
+variables_order=GPCS
+short_open_tag=off
+
+sys_temp_dir='/tmp'
+upload_tmp_dir='/tmp'
+
+allow_url_fopen={{ php_conf_allow_url_fopen | default('on') }}
+allow_url_include=off
+
+[CLI Server]
+cli_server.color=on
+
+[Date]
+date.timezone={{ php_conf_date_timezone | default('Europe/Paris') }}
+
+[filter]
+
+[iconv]
+
+[intl]
+
+[sqlite]
+
+[sqlite3]
+
+[Pcre]
+pcre.jit=0
+
+[Pdo]
+
+[Pdo_mysql]
+pdo_mysql.cache_size=2000
+pdo_mysql.default_socket=
+
+[Phar]
+
+[mail function]
+sendmail_path=/usr/sbin/sendmail -t -i
+mail.add_x_header=On
+
+[SQL]
+sql.safe_mode=off
+
+[ODBC]
+odbc.allow_persistent=on
+odbc.check_persistent=on
+odbc.max_persistent=-1
+odbc.max_links=-1
+odbc.defaultlrl=4096
+odbc.defaultbinmode=1
+
+[Interbase]
+ibase.allow_persistent=1
+ibase.max_persistent=-1
+ibase.max_links=-1
+ibase.timestampformat="%Y-%m-%d %H:%M:%S"
+ibase.dateformat="%Y-%m-%d"
+ibase.timeformat="%H:%M:%S"
+
+[MySQLi]
+mysqli.max_persistent=-1
+mysqli.allow_persistent=on
+mysqli.max_links=-1
+mysqli.cache_size=2000
+mysqli.default_port=3306
+mysqli.default_socket=
+mysqli.default_host=
+mysqli.default_user=
+mysqli.default_pw=
+mysqli.reconnect=off
+
+[mysqlnd]
+mysqlnd.collect_statistics=on
+mysqlnd.collect_memory_statistics=off
+
+[PostgreSQL]
+pgsql.allow_persistent=on
+pgsql.auto_reset_persistent=off
+pgsql.max_persistent=-1
+pgsql.max_links=-1
+pgsql.ignore_notice=0
+pgsql.log_notice=0
+
+[bcmath]
+bcmath.scale=0
+
+[browscap]
+
+[Sessions]
+session.save_handler=files
+session.save_path=/var/lib/php/sessions
+session.use_strict_mode=1
+session.use_cookies=1
+session.use_only_cookies=1
+session.name=PHPSESSID
+session.auto_start=0
+session.cookie_lifetime=0
+session.cookie_path=/
+session.cookie_httponly=1
+session.serialize_handler=php
+session.gc_divisor=1000
+session.gc_maxlifetime={{ php_conf_session_gc_maxlifetime | default('1440') }}
+session.hash_bits_per_character=5
+session.referer_check=
+session.cache_limiter=nocache
+session.cache_expire=100
+session.use_trans_sid=0
+session.hash_function=1
+
+
+url_rewriter.tags = "a=href,area=href,frame=src,input=src,form=fakeentry"
+
+[Assertion]
+zend.assertions=-1
+
+[mbstring]
+
+[gd]
+
+[exif]
+
+[Tidy]
+tidy.clean_output=off
+
+[soap]
+soap.wsdl_cache_enabled=1
+soap.wsdl_cache_dir=/var/lib/php/wsdlcache/
+soap.wsdl_cache_ttl=86400
+soap.wsdl_cache_limit=5
+
+[sysvshm]
+
+[ldap]
+ldap.max_links=-1
+
+[mcrypt]
+
+[dba]
+
+[curl]
+
+[openssl]
+

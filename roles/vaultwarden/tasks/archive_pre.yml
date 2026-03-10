@@ -1,0 +1,38 @@
+---
+
+- name: Create archive dir
+  file: path={{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }} state=directory
+  tags: vaultwarden
+
+- name: Stop vaultwarden during upgrade
+  service: name=vaultwarden state=stopped
+  tags: vaultwarden
+
+- name: Archive current version
+  synchronize:
+    src: "{{ vaultwarden_root_dir }}/{{ item }}"
+    dest: "{{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }}/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  loop:
+    - bin
+    - data
+    - etc
+    - web-vault
+  tags: vaultwarden
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ vaultwarden_db_name }}"
+    target: "{{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }}/{{ vaultwarden_db_name }}.sql.xz"
+    login_host: "{{ vaultwarden_db_server }}"
+    login_user: "{{ vaultwarden_db_user }}"
+    login_password: "{{ vaultwarden_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  when: vaultwarden_db_engine == 'mysql'
+  tags: vaultwarden

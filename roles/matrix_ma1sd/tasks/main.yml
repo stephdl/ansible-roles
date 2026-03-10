@@ -1,0 +1,19 @@
+---
+
+- include: facts.yml
+- include: user.yml
+- include: directories.yml
+- include: archive_pre.yml
+  when: ma1sd_install_mode == 'upgrade'
+- include: migrate_mxisd.yml
+  when: ma1sd_mxisd_dir.stat.exists
+- include: install.yml
+- include: conf.yml
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: service.yml
+- include: write_version.yml
+- include: archive_post.yml
+  when: ma1sd_install_mode == 'upgrade'
+- include: cleanup.yml
+

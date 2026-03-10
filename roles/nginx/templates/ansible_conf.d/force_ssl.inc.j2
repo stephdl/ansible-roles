@@ -1,0 +1,15 @@
+set $ssl 1;
+if ($scheme = 'https') {
+  set $ssl 0;
+}
+if ($remote_addr = '127.0.0.1'){
+  set $ssl 0;
+}
+{% for ip in ansible_all_ipv4_addresses %}
+if ($remote_addr = '{{ ip }}'){
+  set $ssl 0;
+}
+{% endfor %}
+if ($ssl = 1){
+  return 301 https://$host$request_uri;
+}

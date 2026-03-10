@@ -1,0 +1,9 @@
+127.0.0.1 localhost
+::1       localhost6
+{% if net_hosts is not defined or net_hosts | length < 1 %}
+{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ inventory_hostname | regex_replace('^([^\.]+)\..*','\\1') }}{% if system_hostname is defined %} {{ system_hostname }}{% endif %} 
+{% else %}
+{% for host in net_hosts %}
+{{ host.ip }}  {{ host.aliases | join(' ') }}
+{% endfor %}
+{% endif %}

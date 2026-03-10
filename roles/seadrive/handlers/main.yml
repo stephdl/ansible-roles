@@ -1,0 +1,5 @@
+---
+
+- name: restart seadrive
+  service: name=seadrive-{{ item.id }} state=restarted
+  with_items: "{{ seadrive_daemons }}"

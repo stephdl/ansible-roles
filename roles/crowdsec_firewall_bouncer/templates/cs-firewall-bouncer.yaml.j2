@@ -1,0 +1,12 @@
+---
+
+mode: iptables
+piddir: /var/run/
+update_frequency: 10s
+daemonize: true
+log_mode: stdout
+log_level: info
+api_url: {{ (cs_fw_lapi_url is search('/$')) | ternary(cs_fw_lapi_url,cs_fw_lapi_url ~ '/') }}
+api_key: {{ cs_fw_lapi_key }}
+disable_ipv6: false
+

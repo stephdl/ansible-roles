@@ -1,0 +1,19 @@
+[Unit]
+Description=Update Tiny Tiny RSS feeds
+After=network.target mysql.service
+
+[Service]
+User={{ ttrss_php_user }}
+ExecStart={{ ttrss_php_bin }} {{ ttrss_root_dir }}/web/update_daemon2.php
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=256M
+SyslogIdentifier=ttrss_{{ ttrss_id }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

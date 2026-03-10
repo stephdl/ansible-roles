@@ -1,0 +1,11 @@
+---
+
+- include: facts.yml
+- include: install_{{ ansible_os_family }}.yml
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+- include: conf.yml
+- include: psk.yml
+- include: sensors.yml
+- include: iptables.yml
+- include: service.yml

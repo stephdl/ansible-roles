@@ -1,0 +1,6 @@
+---
+
+- name: Configure zfs
+  template: src=zfs.conf.j2 dest=/etc/modprobe.d/zfs.conf
+  tags: zfs
+

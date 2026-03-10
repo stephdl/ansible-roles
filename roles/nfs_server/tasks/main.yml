@@ -1,0 +1,28 @@
+---
+
+- name: Install packages
+  yum: name=nfs-utils
+  tags: nfs
+
+- name: Handle NFS ports
+  iptables_raw:
+    name: nfs_ports
+    state: "{{ (nfs_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ nfs_ports | join(',') }} -s {{ nfs_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p udp -m multiport --dports {{ nfs_ports | join(',') }} -s {{ nfs_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: nfs,firewall
+
+- name: Configure exports
+  template: src=exports.j2 dest=/etc/exports
+  notify: reload nfs
+
+- name: Create the exports.d directory
+  file: path=/etc/exports.d state=directory
+  tags: nfs
+
+- name: Start and enable services
+  service: name={{ item }} state=started enabled=True
+  with_items:
+    - nfs-server
+  tags: nfs

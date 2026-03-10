@@ -1,0 +1,19 @@
+---
+
+- name: start jenkins
+  systemd: 
+    name: jenkins 
+    state: started
+    
+- name: restart jenkins
+  systemd: 
+    name: jenkins 
+    state: restarted
+
+- name: reload nginx
+  systemd: 
+    name: nginx
+    state: reloaded
+    
+- name: Reload systemd
+  systemd: daemon_reload=True

@@ -1,0 +1,5 @@
+---
+
+- name: Create psono user account
+  user: name={{ psono_user }} home={{ psono_root_dir }}/server system=True
+  tags: psono

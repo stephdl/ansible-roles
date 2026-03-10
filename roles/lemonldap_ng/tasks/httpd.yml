@@ -1,0 +1,24 @@
+---
+
+- name: Create httpd conf dir
+  file: path=/etc/httpd/ansible_conf.d/ state=directory
+  tags: web
+
+- name: Deploy handler's httpd configuration
+  template: src=httpd_handler.conf.j2 dest=/etc/httpd/ansible_conf.d/10-llng_handler.conf
+  when: llng_handler == True
+  notify: reload httpd
+  tags: web
+
+- name: Deploy portal's httpd configuration
+  template: src=httpd_portal.conf.j2 dest=/etc/httpd/ansible_conf.d/22-llng_portal.conf
+  when: llng_portal == True
+  notify: reload httpd
+  tags: web
+
+- name: Deploy manager's httpd configuration
+  template: src=httpd_manager.conf.j2 dest=/etc/httpd/ansible_conf.d/23-llng_manager.conf
+  when: llng_manager == True
+  notify: reload httpd
+  tags: web
+

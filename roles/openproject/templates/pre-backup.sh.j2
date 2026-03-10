@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/openproject
+mount -o bind,ro {{ openproject_data_dir }}/backup /home/lbkp/openproject
+openproject run backup

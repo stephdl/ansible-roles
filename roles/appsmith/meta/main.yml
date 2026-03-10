@@ -1,0 +1,11 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: maven
+  - role: repo_mongodb
+  - role: redis_server
+    when: appsmith_redis_url | urlsplit('hostname') in ['localhost','127.0.0.1']
+  - role: mongodb_server
+    when: appsmith_mongo_url | urlsplit('hostname') in ['localhost','127.0.0.1']
+  - role: nginx

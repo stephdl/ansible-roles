@@ -1,0 +1,19 @@
+---
+
+- name: Copy SELinux policy
+  copy: src=seadrive.te dest=/etc/selinux/targeted/local/
+  register: seadrive_selinux_policy
+  tags: seadrive
+
+- name: Compile SELinux policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o seadrive.mod seadrive.te
+    semodule_package -o seadrive.pp -m seadrive.mod
+  when: seadrive_selinux_policy.changed
+  tags: seadrive
+
+- name: Load SELinux policy
+  command: semodule -i /etc/selinux/targeted/local/seadrive.pp
+  when: seadrive_selinux_policy.changed
+  tags: seadrive

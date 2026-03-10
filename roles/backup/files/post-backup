@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ -d "/etc/backup/post.d" ]; then
+  for H in $(find /etc/backup/post.d -type f -o -type l | sort); do
+    if [ -x $H ]; then
+      echo "Running hook $H"
+      $H "$@"
+      echo "Finished hook $H"
+    else
+      echo "Skiping hook $H as it's not executable"
+    fi
+  done
+fi
+# Remove the lock
+rm -f /var/lock/bkp.lock

@@ -1,0 +1,19 @@
+---
+
+pki_packages:
+  - openssl-devel
+  - openldap-devel
+  - libxml2-devel
+  - expat-devel
+  - mariadb-devel
+  - libapreq2-devel
+  - gcc
+  - perl-App-cpanminus
+  - gettext                     # To build I18N files
+  - pwgen                       # To generate random secrets
+  - java-1.8.0-openjdk-headless # For keytool utility
+  - mariadb                     # To load the schema
+  - patch                       # To apply local patches
+  - perl-autodie                # Provides perl(Fatal), needed to install perl deps
+  - perl-Config-Std             # needed to install perl deps
+

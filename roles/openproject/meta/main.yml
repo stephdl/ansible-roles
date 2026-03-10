@@ -1,0 +1,7 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: repo_openproject
+  - role: memcached_server
+    when: openproject_memcached_server is search('^localhost') or openproject_memcached_server is search('127\.0\.0\.1')

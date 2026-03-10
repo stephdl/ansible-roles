@@ -1,0 +1,9 @@
+{% if zabbix_lld_all_graph_api_user is defined %}
+ZBX_API_USER={{ zabbix_lld_all_graph_api_user | quote }}
+{% endif %}
+{% if zabbix_lld_all_graph_api_pass is defined %}
+ZBX_API_PASS={{ zabbix_lld_all_graph_api_pass | quote }}
+{% endif %}
+{% if zabbix_lld_all_graph_api_url is defined %}
+ZBX_API_URL={{ zabbix_lld_all_graph_api_url | quote }}
+{% endif %}

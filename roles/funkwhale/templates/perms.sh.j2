@@ -1,0 +1,15 @@
+#!/bin/bash
+
+chown -R root:root {{ funkwhale_root_dir }}/{front,api}
+chmod 755 {{ funkwhale_root_dir }}
+chown {{ funkwhale_user }}:apache {{ funkwhale_root_dir }}/data
+chmod 750 {{ funkwhale_root_dir }}/data
+chown -R {{ funkwhale_user }}:{{ funkwhale_user }} {{ funkwhale_root_dir }}/data/{media,music}
+chown -R root:root {{ funkwhale_root_dir }}/data/static
+find {{ funkwhale_root_dir }}/{front,api,data/static} -type f -exec chmod 644 "{}" \;
+find {{ funkwhale_root_dir }}/{front,api} -type d -exec chmod 755 "{}" \;
+chmod 755 {{ funkwhale_root_dir }}/api/manage.py
+chmod 700 {{ funkwhale_root_dir }}/{meta,db_dumps,archives}
+chown -R root:{{ funkwhale_user }} {{ funkwhale_root_dir }}/config
+chmod 750 {{ funkwhale_root_dir }}/config
+chmod 640 {{ funkwhale_root_dir }}/config/.env

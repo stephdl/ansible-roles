@@ -1,0 +1,12 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: itop_{{ itop_id }}
+    - php_version: "{{ itop_php_version }}"
+    - php_fpm_pool: "{{ itop_php_fpm_pool | default('') }}"
+  tags: itop
+
+- name: Deploy cron param file
+  template: src=cron.param.j2 dest={{ itop_root_dir }}/etc/cron.params group={{ itop_php_user }} mode=640
+  tags: itop

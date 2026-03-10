@@ -1,0 +1,15 @@
+---
+
+- include: ../prosody/handlers/main.yml
+
+- name: restart jitsi-videobridge
+  service: name=jitsi-videobridge state=restarted
+
+- name: restart jitsi-jicofo
+  service: name=jitsi-jicofo state=restarted
+
+- name: restart jitsi-jigasi
+  service: name=jitsi-jigasi state={{ jitsi_jigasi | ternary('restarted', 'stopped') }}
+
+- name: restart jitsi-confmapper
+  service: name=jitsi-confmapper state={{ jitsi_jigasi | ternary('restarted', 'stopped') }}

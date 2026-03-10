@@ -1,0 +1,24 @@
+[global]
+log_config = {{ pki_root_dir }}/etc/webui/log.conf
+socket = {{ pki_root_dir }}/run/openxpki.socket
+scripturl = {{ (pki_web_alias == '/') | ternary('',pki_web_alias) }}/cgi-bin/webui.fcgi
+locale_directory = {{ pki_root_dir }}/locale
+default_language = en_US
+
+[session]
+driver = driver:openxpki
+timeout = +20m
+cookey = {{ pki_secret_cookie }}
+
+[session_driver]
+DataSource = dbi:mysql:dbname={{ pki_db_name }};host={{ pki_db_server }};port={{ pki_db_port }}
+User = {{ pki_db_session_user }}
+Password = {{ pki_db_session_pass }}
+EncryptKey = {{ pki_secret_cookie }}
+LogIP = 1
+
+[header]
+Strict-Transport-Security = max-age=31536000;
+X-Frame-Options = SAMEORIGIN;
+X-XSS-Protection = 1; mode=block;
+

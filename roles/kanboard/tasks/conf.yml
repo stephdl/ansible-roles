@@ -1,0 +1,12 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: kanboard_{{ kanboard_id }}
+    - php_version: "{{ kanboard_php_version }}"
+    - php_fpm_pool: "{{ kanboard_php_fpm_pool | default('') }}"
+  tags: kanboard
+
+- name: Deploy kanboard configuration
+  template: src=config.php.j2 dest={{ kanboard_root_dir }}/web/config.php owner=root group={{ kanboard_php_user }} mode=640
+  tags: kanboard

@@ -1,0 +1,1 @@
+TRANSMISSION_OPTS="--encryption-preferred --foreground -c {{ transmission_data_dir }}/watch --rpc-bind-address {{ transmission_rpc_listen_ip }} --port {{ transmission_rpc_port }} --no-auth --download-dir {{ transmission_data_dir }}/finished --incomplete-dir {{ transmission_data_dir }}/incomplete --log-error"

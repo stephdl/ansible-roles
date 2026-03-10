@@ -1,0 +1,16 @@
+#!/bin/sh
+
+restorecon -R {{ dokuwiki_root_dir }}
+chown root:root {{ dokuwiki_root_dir }}
+chmod 700 {{ dokuwiki_root_dir }}
+setfacl -k -b {{ dokuwiki_root_dir }}
+setfacl -m u:{{ dokuwiki_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ dokuwiki_root_dir }}
+chown -R root:root {{ dokuwiki_root_dir }}/web
+chown -R {{ dokuwiki_php_user | default('apache') }} {{ dokuwiki_root_dir }}/web/lib/{plugins,tpl}
+chown -R {{ dokuwiki_php_user }} {{ dokuwiki_root_dir }}/{tmp,sessions,cache,data}
+chmod 700 {{ dokuwiki_root_dir }}/{tmp,sessions,cache,data}
+find {{ dokuwiki_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ dokuwiki_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown -R :{{ dokuwiki_php_user }} {{ dokuwiki_root_dir }}/web/conf
+find {{ dokuwiki_root_dir }}/web/conf -type f -exec chmod 660 "{}" \;
+find {{ dokuwiki_root_dir }}/web/conf -type d -exec chmod 770 "{}" \;

@@ -1,0 +1,9 @@
+---
+
+- name: Handle ports for openproject
+  iptables_raw:
+    name: openproject_ports
+    state: "{{ (openproject_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -p tcp --dport {{ openproject_port }} -s {{ openproject_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: firewall,openproject

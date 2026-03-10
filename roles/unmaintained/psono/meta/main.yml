@@ -1,0 +1,9 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: postgresql_server
+    when: psono_db_server == 'localhost' or psono_db_server == '127.0.0.1'
+  - role: redis_server
+    when: psono_redis_server | urlsplit('hostname') == 'localhost' or psono_redis_server | urlsplit('hostname') == '127.0.0.1'
+  - role: nginx

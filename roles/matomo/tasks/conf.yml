@@ -1,0 +1,140 @@
+---
+
+- name: Restore configuration
+  copy: src={{ matomo_root_dir }}/archives/{{ matomo_current_version }}/web/config/config.ini.php dest={{ matomo_root_dir }}/web/config/config.ini.php remote_src=True
+  when: matomo_install_mode == "upgrade"
+  tags: matomo
+
+- name: Configure Matomo
+  ini_file:
+    path: "{{ matomo_root_dir }}/web/config/config.ini.php"
+    option: "{{ item.option }}"
+    section: "{{ item.section }}"
+    value: "{{ item.value }}"
+    mode: 0660
+    group: "{{ matomo_php_user }}"
+  with_items:
+    - option: host
+      section: database
+      value: '"{{ matomo_db_server }}"'
+    - option: username
+      section: database
+      value: '"{{ matomo_db_user }}"'
+    - option: password
+      section: database
+      value: '"{{ matomo_db_pass }}"'
+    - option: dbname
+      section: database
+      value: '"{{ matomo_db_name }}"'
+    - option: assume_secure_protocol
+      section: General
+      value: 1
+    - option: salt
+      section: General
+      value: '"{{ matomo_salt }}"'
+    - option: enable_load_data_infile
+      section: General
+      value: 0
+    - option: tmp_path
+      section: General
+      value: "/../tmp"
+    - option: enable_auto_update
+      section: General
+      value: 0
+    - option: piwik_professional_support_ads_enabled
+      section: General
+      value: 0
+    - option: enable_fingerprinting_across_websites
+      section: Tracker
+      value: 1
+    - option: transport
+      section: mail
+      value: '"smtp"'
+    - option: host
+      section: mail
+      value: '"localhost"'
+  tags: matomo
+
+- name: Configure system proxy
+  ini_file:
+    path: "{{ matomo_root_dir }}/web/config/config.ini.php"
+    option: "{{ item.option }}"
+    section: "{{ item.section }}"
+    value: "{{ item.value }}"
+  with_items:
+    - option: host
+      section: proxy
+      value: "{{ system_proxy | urlsplit('hostname') }}"
+    - option: port
+      section: proxy
+      value: "{{ system_proxy | urlsplit('port') | default('8080') }}"
+  when: system_proxy is defined
+  tags: matomo
+
+- name: Configure reverse proxy
+  ini_file:
+    path: "{{ matomo_root_dir }}/web/config/config.ini.php"
+    option: "{{ item.option }}"
+    section: "{{ item.section }}"
+    value: "{{ item.value }}"
+  with_items:
+    - option: "proxy_client_headers[]"
+      section: General
+      value: '"HTTP_X_FORWARDED_FOR"'
+    - option: "proxy_host_headers[]"
+      section: General
+      value: '"HTTP_X_FORWARDED_HOST"'
+  when: httpd_src_ip is defined and httpd_src_ip | length > 0 and '0.0.0.0/0' not in httpd_src_ip
+  tags: matomo
+
+- name: Configure LDAP Authentication
+  ini_file:
+    path: "{{ matomo_root_dir }}/web/config/config.ini.php"
+    option: "{{ item }}"
+    section: LoginLdap
+    value: "{{ (matomo_ldap_all[item] is number) | ternary(matomo_ldap_all[item],'\"' + matomo_ldap_all[item] | string + '\"') }}"
+    state: "{{ matomo_ldap_all.enabled | ternary('present','absent') }}"
+  with_items: "{{ matomo_ldap_all.keys() | list | difference(['enabled','hostname','admin_user','admin_pass','base_dn','port']) }}"
+  tags: matomo
+
+- name: Configure LDAP Servers
+  ini_file:
+    path: "{{ matomo_root_dir }}/web/config/config.ini.php"
+    option: "{{ item }}"
+    section: LoginLdap_ldap
+    value: "{{ (matomo_ldap_all[item] is number) | ternary(matomo_ldap_all[item],'\"' + matomo_ldap_all[item] | string + '\"') }}"
+    state: "{{ (matomo_ldap_all.enabled and matomo_ldap_all[item] is defined) | ternary('present','absent') }}"
+  with_items: [hostname,port,base_dn,admin_user,admin_pass]
+  tags: matomo
+
+- name: Clear cache
+  command: php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console cache:clear
+  changed_when: False
+  when: matomo_install_mode == 'upgrade'
+  tags: matomo
+
+- name: Enable plugins
+  command: php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console plugin:activate {{ item }}
+  with_items: "{{ matomo_plugins_to_install }}"
+  changed_when: False
+  tags: matomo
+
+- name: Update Matomo database
+  command: /bin/php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console --no-interaction core:update --yes
+  when: matomo_install_mode != 'none'
+  tags: matomo
+
+- name: Sync LDAP users
+  command: php{{ (matomo_php_version == '54') | ternary('',matomo_php_version) }} {{ matomo_root_dir }}/web/console loginldap:synchronize-users
+  when:
+    - matomo_ldap_all.enabled
+    - '"LoginLdap" in matomo_plugins_to_install'
+  changed_when: False
+  tags: matomo
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: matomo_{{ glpi_id }}
+    - php_version: "{{ matomo_php_version }}"
+    - php_fpm_pool: "{{ matomo_php_fpm_pool | default('') }}"
+  tags: matomo

@@ -1,0 +1,36 @@
+---
+
+- name: Set correct SELinux context on the ntp_signd socket dir
+  sefcontext:
+    target: "/var/lib/samba/ntp_signd(/.*)?"
+    setype: ntpd_var_run_t
+    state: present
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  register: samba_ntp_selinux
+  tags: samba
+
+- name: Restore SELinux context
+  command: restorecon -R /var/lib/samba/
+  when: samba_ntp_selinux is defined and samba_ntp_selinux.changed
+  tags: samba
+
+- name: Set SEbool
+  seboolean: name={{ item }} state=True persistent=True
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  with_items:
+    - samba_domain_controller
+  tags: samba
+
+- name: Copy custom policy
+  copy: src=samba-dc.te dest=/etc/selinux/targeted/local/
+  register: samba_dc_selinux
+  tags: samba
+
+- name: Compile and load SELinux policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o samba-dc.mod samba-dc.te
+    semodule_package -o samba-dc.pp -m samba-dc.mod
+    semodule -i /etc/selinux/targeted/local/samba-dc.pp
+  when: samba_dc_selinux is defined and samba_dc_selinux.changed
+  tags: samba

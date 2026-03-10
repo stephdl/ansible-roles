@@ -1,0 +1,12 @@
+{% for element in pve_cluster | selectattr("type","equalto","node") | sort(attribute='id')%}
+node:
+  ip_port = 7777
+  ip_address = {{ element.ip }}
+  number = {{ loop.index0 }}
+  name = {{ element.name }}
+  cluster = ocfs2
+
+{% endfor %}
+cluster:
+  node_count = {{ pve_cluster | selectattr("type","equalto","node") | list | length }}
+  name = ocfs2

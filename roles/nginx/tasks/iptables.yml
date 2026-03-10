@@ -1,0 +1,8 @@
+---
+- name: Handle HTTP and HTTPS ports
+  iptables_raw:
+    name: nginx_ports
+    state: "{{ (nginx_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ (nginx_ports + nginx_ssl_ports) | join(',') }} -s {{ nginx_src_ip | join(',') }} -j ACCEPT\n"
+  when: iptables_manage | default(True)
+  tags: [firewall,web]

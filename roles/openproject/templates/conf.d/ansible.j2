@@ -1,0 +1,17 @@
+export DATABASE_URL='postgres://{{ openproject_db_user }}:{{ openproject_db_pass | urlencode | regex_replace('/','%2F') }}@{{ openproject_db_server }}:{{ openproject_db_port }}/{{ openproject_db_name }}'
+export EXECJS_RUNTIME='Node'
+export RAILS_CACHE_STORE='memcache'
+export OPENPROJECT_CACHE__MEMCACHE__SERVER='{{ openproject_memcached_server }}'
+export ATTACHMENTS_STORAGE_PATH='{{ openproject_data_dir }}'
+export HOST='0.0.0.0'
+export PORT='{{ openproject_port }}'
+export WEB_TIMEOUT='300'
+export SECRET_KEY_BASE='{{ openproject_secret_key_base }}'
+export SECRET_TOKEN='{{ openproject_secret_token }}'
+export OPENPROJECT_INSTALLATION__TYPE='packager'
+export EMAIL_DELIVERY_METHOD='sendmail'
+export ADMIN_EMAIL='{{ openproject_admin_email }}'
+{% if openproject_sso_header is defined and openproject_sso_secret is defined %}
+export OPENPROJECT_AUTH__SOURCE__SSO_HEADER='{{ openproject_sso_header }}'
+export OPENPROJECT_AUTH__SOURCE__SSO_SECRET='{{ openproject_sso_secret }}'
+{% endif %}

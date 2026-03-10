@@ -1,0 +1,8 @@
+---
+allow_duplicates: True
+dependencies:
+  - role: mkdir
+  - role: httpd_php
+  - role: mysql_server
+    when: wp_db_server == 'localhost' or wp_db_server == '127.0.0.1'
+...

@@ -1,0 +1,66 @@
+---
+
+llng_handler: True
+llng_portal: False
+llng_manager: False
+
+# Either httpd or nginx
+llng_server: httpd
+
+llng_portal_vhost: auth.{{ ansible_domain }}
+llng_api_vhost: sso-api.{{ ansible_domain }}
+llng_manager_vhost: sso-manager.{{ ansible_domain }}
+
+# If llng_portal and llng_manager are both set to False (only the handler is deployed)
+# which conf backend to use. can be api or mysql
+llng_conf_backend: api
+
+# List of IP allowed to access SOAP endpoints
+# Empty or undefined disable api endpoints
+llng_api_src_ip: []
+
+# List of IP allowed to access the manager
+llng_manager_src_ip: "{{ trusted_ip }}"
+
+# List of IP allowed to call the reload URI
+llng_reload_src_ip: "{{ ansible_all_ipv4_addresses + ['127.0.0.1'] }}"
+
+# When the manager send requests to handlers to reload their config
+# should there request use the globally defined proxy.
+# This is often not wanted because you want to limit access to the reload
+# endpoint only from the manager IP, not from a proxy
+llng_reload_use_proxy: False
+
+# If defined, access to api endpoints will require basic auth.
+llng_api_user: lemonldapapi
+# llng_api_pass: sEcr3t.P@ssw0rd
+
+# SSL for vhosts
+# llng_portal_ssl:
+#   letsencrypt_cert: auth.{{ ansible_domain }}
+#
+# Or
+#
+# llng_portal_ssl:
+#   cert: /etc/pki/tls/cert/mycert.crt
+#   key: /etc/pki/tls/private/mykey.key
+#   cert_chain: /etc/pki/tls/cert/mychain.crt
+#
+# Same keys exist for api and manager (llng_api_ssl and llng_manager_ssl
+
+# Path to a CA cert if using SSL auth
+# llng_portal_ssl.ca: /etc/pki/tls/privateca.crt
+
+# How the manager is protected. Can be none, authenticate, manager, or directly a access rule
+llng_manager_protection: manager
+
+# Possibliity to use a MySQL backend
+llng_db_server: "{{ mysql_server | default('localhost') }}"
+llng_db_name: lemonldapng
+llng_db_user: lemonldapng
+llng_handler_db_user: lemonldapnghandler
+# llng_db_pass: s3cr3t.
+# llng_handler_db_pass
+
+# Number of llng-fastcgi-server workers. The upstream default is 7 which is often too much
+llng_fcgi_workers: 6

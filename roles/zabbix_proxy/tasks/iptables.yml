@@ -1,0 +1,8 @@
+---
+- name: Handle Zabbix Proxy port
+  iptables_raw:
+    name: zabbix_proxy_port
+    state: "{{ (zabbix_proxy_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ zabbix_proxy_port | default('10051') }} -s {{ zabbix_proxy_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zabbix

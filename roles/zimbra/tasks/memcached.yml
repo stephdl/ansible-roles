@@ -1,0 +1,10 @@
+---
+
+- name: Handle Zimbra memcached ports
+  iptables_raw:
+    name: zcs_memcached_ports
+    state: "{{ (zcs_cluster_ip | length > 0 ) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports 11211 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p udp -m multiport --dports 11211 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs

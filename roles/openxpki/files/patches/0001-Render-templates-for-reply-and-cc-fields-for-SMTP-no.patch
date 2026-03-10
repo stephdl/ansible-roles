@@ -1,0 +1,29 @@
+From 7938c0f6977196bc0c074ff5c5f0fe11018dc111 Mon Sep 17 00:00:00 2001
+From: Daniel Berteaud <daniel@firewall-services.com>
+Date: Fri, 7 Sep 2018 08:52:15 +0200
+Subject: [PATCH] Render templates for reply and cc fields for SMTP
+ notifications Just as the to field is rendered. BTW the reply is needed even
+ with the sample config in notification.smtp.message.csr_created.raop
+
+---
+ core/server/OpenXPKI/Server/Notification/SMTP.pm | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/core/server/OpenXPKI/Server/Notification/SMTP.pm b/core/server/OpenXPKI/Server/Notification/SMTP.pm
+index 28658e07f..7f8a27135 100644
+--- a/core/server/OpenXPKI/Server/Notification/SMTP.pm
++++ b/core/server/OpenXPKI/Server/Notification/SMTP.pm
+@@ -592,8 +592,8 @@ sub _send_html {
+         Charset => 'UTF-8',
+     );
+ 
+-    push @args, (Cc => join(",", @{$vars->{cc}})) if ($vars->{cc});
+-    push @args, ("Reply-To" => $cfg->{reply}) if ($cfg->{reply});
++    push @args, (Cc => $self->_render_template(join(",", @{$vars->{cc}}),$vars)) if ($vars->{cc});
++    push @args, ("Reply-To" => $self->_render_template($cfg->{reply},$vars)) if ($cfg->{reply});
+ 
+     ##! 16: 'Building with args: ' . Dumper @args
+ 
+-- 
+2.17.1
+

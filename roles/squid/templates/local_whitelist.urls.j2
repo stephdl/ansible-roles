@@ -1,0 +1,5 @@
+{% for item in squid_local_whitelist %}
+{% if item is search('^(ht|f)tps?://') %}
+{{ item }}
+{% endif %}
+{% endfor %}

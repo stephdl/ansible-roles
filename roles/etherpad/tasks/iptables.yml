@@ -1,0 +1,10 @@
+---
+
+- name: Handle Etherpad port
+  iptables_raw:
+    name: etherpad_{{ etherpad_id }}_port
+    state: "{{ (etherpad_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ etherpad_port }} -s {{ etherpad_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: etherpad
+

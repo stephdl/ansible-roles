@@ -1,0 +1,11 @@
+; {{ ansible_managed }}
+[default]
+{% if zabbix_server_matrix_user is defined and zabbix_server_matrix_pass is defined %}
+user={{ zabbix_server_matrix_user }}
+password={{ zabbix_server_matrix_pass }}
+{% elif zabbix_server_matrix_access_token is defined %}
+access_token={{ zabbix_server_matrix_access_token }}
+{% endif %}
+{% if zabbix_server_matrix_server is defined %}
+server={{ zabbix_server_matrix_server }}
+{% endif %}

@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Set correct SELinux label
+restorecon -R /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}
+
+# Remove all the ACL so we can start from scratch
+setfacl -R --remove-all --remove-default /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}
+
+# Set permissions on the top level client dir. Not recursively !
+# Here, the corresponding client only has read permissions (pus the tech team)
+chown root:root /opt/wh/{{ item.0.name }}/{,apps}
+chmod 750 /opt/wh/{{ item.0.name }}/
+chmod 755 /opt/wh/{{ item.0.name }}/apps
+setfacl -m u:apache:rX,g:Tech:rX,g:Client_{{ item.0.name }}:rX,u:{{ item.1.run_as | default('wh-' + item.0.name) }}:rX /opt/wh/{{ item.0.name }}/
+
+# Set decent permissions, aka rw for files and rwx for directories. With setgid so the group owner is inherited to new files
+find /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/{data,tmp,web} -type f -exec chmod 660 "{}" \;
+find /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/{data,tmp,web} -type d -exec chmod 2770 "{}" \;
+
+# Now, grant apache read access (needed for serving static assets), and full rw access to the client group. Set mask to full permission, we don't want to limit ACL. And excplicitely set other perms to 0
+# Members of the tech team has write access for install/debug
+setfacl -R -m u:apache:rX,d:u:apache:rX,g:Tech:rwX,d:g:Tech:rwX,g:Client_{{ item.0.name }}:rwX,d:g:Client_{{ item.0.name }}:rwX,u:{{ item.1.run_as | default('wh-' + item.0.name) }}:rwX,d:u:{{ item.1.run_as | default('wh-' + item.0.name) }}:rwX,m:rwX,o:- /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}
+
+# The bin folder shouldn't be visible to the client, it only contains admin's scripts
+setfacl -R --remove-all --remove-default /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/bin
+chown -R root:root /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/bin
+chmod 700 /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/bin
+chmod 750 /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/bin/*
+
+# Info is readonly for the client (and the tech team)
+setfacl -R --remove-all --remove-default /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/info
+chown -R root:Client_{{ item.0.name }} /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/info
+chmod 750 /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/info
+chmod 640 /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/info/*
+setfacl -R -m g:Tech:rX,d:g:Tech:rX,m:rwX,o:- /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/info

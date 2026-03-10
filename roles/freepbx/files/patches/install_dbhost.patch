@@ -1,0 +1,32 @@
+--- ./installlib/installcommand.class.php.orig	2019-05-24 18:06:10.587719554 +0200
++++ ./installlib/installcommand.class.php	2019-05-24 18:09:43.226443972 +0200
+@@ -17,6 +17,10 @@
+ 			'default' => 'mysql',
+ 	 		'description' => 'Database engine'
+ 		),
++		'dbhost' => array(
++			'default' => 'localhost',
++			'description' => 'Database server'
++		),
+ 		'dbname' => array(
+ 			'default' => 'asterisk',
+ 	 		'description' => 'Database name'
+@@ -366,6 +370,9 @@
+ 		if (isset($answers['dbengine'])) {
+ 			$amp_conf['AMPDBENGINE'] = $answers['dbengine'];
+ 		}
++		if (isset($answers['dbhost'])) {
++			$amp_conf['AMPDBHOST'] = $answers['dbhost'];
++		}
+ 		if (isset($answers['dbname'])) {
+ 			$amp_conf['AMPDBNAME'] = $answers['dbname'];
+ 		}
+@@ -415,7 +422,7 @@
+ 
+ 			$amp_conf['AMPDBUSER'] = $answers['dbuser'];
+ 			$amp_conf['AMPDBPASS'] = $answers['dbpass'];
+-			$amp_conf['AMPDBHOST'] = 'localhost';
++			$amp_conf['AMPDBHOST'] = $answers['dbhost'];
+ 
+ 			if($dbroot) {
+ 				$output->write("Database Root installation checking credentials and permissions..");

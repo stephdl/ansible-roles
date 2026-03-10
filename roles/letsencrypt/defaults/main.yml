@@ -1,0 +1,76 @@
+---
+
+# Set the API endpoint to use. Default is to use https://acme-v02.api.letsencrypt.org/directory
+# letsencrypt_ca: https://acme-staging-v02.api.letsencrypt.org/directory
+
+# letsencrypt_key_size: 4096
+# letsencrypt_renew_days: 30
+# Can be rsa, prime256v1 or secp384r1
+# letsencrypt_key_algo: rsa
+# letsencrypt_auto_renew: True
+# letsencrypt_revoke_old_certs: False
+#
+letsencrypt_challenge: http
+# If you want to use dns-01 challenges
+# letsencrypt_challenge: dns
+# letsencrypt_dns_provider: gandi
+# letsencrypt_dns_provider_options: '--api-protocol=rest'
+# letsencrypt_dns_auth_token: XXXX
+
+# Specify a preferred chain of intermediate certs
+# If not specified, it'll use the short ISRG Root X1 chain
+# (not signed with the expired DST Root CA X3)
+# The special value "default" means to omit the directive, and use the default
+# dehydrated value
+# letsencrypt_preferred_chain: default
+
+#
+letsencrypt_certs: []
+# letsencrypt_certs:
+#   - common_name: www.domain.org
+#     alt_names:
+#       - www1.domain.org
+#       - m.domain.org
+#       - foo.domain.org
+#   - common_name: mail.domain.com
+#   - common_name: ldap.domain.com
+#     alt_names:
+#       - directory.domain.com
+#     config:
+#       CHALLENGETYPE: http-01
+#       RENEW_DAYS: 20
+#       KEYSIZE: 3072
+
+letsencrypt_base_hooks:
+  clean_challenge: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  deploy_cert: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  deploy_challenge: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  exit_hook: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  generate_csr: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  invalid_challenge: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  request_failure: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  startup_hook: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+  unchanged_cert: |
+    #!/bin/bash -e
+    # Managed by ansible, manual modifications will be lost
+
+letsencrypt_extra_hooks: {}
+letsencrypt_hooks: "{{ letsencrypt_base_hooks | combine(letsencrypt_extra_hooks, recursive=True) }}"
+
+...

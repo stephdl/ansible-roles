@@ -1,0 +1,39 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: glpi_{{ glpi_id }}
+    - php_version: "{{ glpi_php_version }}"
+    - php_fpm_pool: "{{ glpi_php_fpm_pool | default('') }}"
+  tags: glpi
+
+- name: Deploy glpi configuration
+  template: src={{ item }}.j2 dest={{ glpi_root_dir }}/web/config/{{ item }} owner=root group={{ glpi_php_user }} mode=660
+  with_items:
+    - local_define.php
+    - config_db.php
+  tags: glpi
+
+- name: Remove obsolete conf files
+  file: path={{ glpi_root_dir }}/web/config/{{ item }} state=absent
+  with_items:
+    - config_path.php
+  tags: glpi
+
+- name: Init database
+  command: "/bin/php{{ glpi_php_version }} {{ glpi_root_dir }}/web/bin/console -n db:install"
+  when: glpi_install_mode == 'install'
+  tags: glpi
+
+- name: Upgrade database
+  command: "/bin/php{{ glpi_php_version }} {{ glpi_root_dir }}/web/bin/console -n db:update"
+  when: glpi_install_mode == 'upgrade'
+  tags: glpi
+
+- name: Deploy sso.php script
+  template: src=sso.php.j2 dest={{ glpi_root_dir }}/web/sso.php
+  tags: glpi
+
+- name: Deploy logrotate conf
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/glpi_{{ glpi_id }}
+  tags: glpi

@@ -1,0 +1,71 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - tar
+      - zstd
+      - postgresql14
+  tags: miniflux
+
+- name: Download miniflux
+  get_url:
+    url: "{{ miniflux_bin_url }}"
+    dest: "{{ miniflux_root_dir }}/bin/miniflux"
+    checksum: sha1:{{ miniflux_bin_sha1 }}
+    mode: 755
+  when: miniflux_install_mode != 'none'
+  notify: restart miniflux
+  tags: miniflux
+
+- name: Install systemd unit
+  template: src=miniflux.service.j2 dest=/etc/systemd/system/miniflux.service
+  notify: restart miniflux
+  register: miniflux_unit
+  tags: miniflux
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: miniflux_unit.changed
+  tags: miniflux
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ miniflux_db_user }}"
+    password: "{{ miniflux_db_pass }}"
+    login_host: "{{ miniflux_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: miniflux
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ miniflux_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ miniflux_db_user }}"
+    login_host: "{{ miniflux_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: miniflux
+
+- name: Enable required PostgreSQL extensions
+  postgresql_ext:
+    name: "{{ item }}"
+    db: "{{ miniflux_db_name }}"
+    login_host: "{{ miniflux_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  loop:
+    - hstore
+  tags: miniflux
+
+- name: Install backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/miniflux mode=700
+  loop:
+    - pre
+    - post
+  tags: miniflux

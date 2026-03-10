@@ -1,0 +1,46 @@
+---
+
+- name: Install prosody
+  yum:
+    name:
+      - prosody
+      - lua-ldap
+      - lua-cyrussasl
+  tags: prosody
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/prosody.service.d state=directory
+  tags: prosody
+
+- name: Install modules
+  get_url:
+    url: "{{ item.url | default('https://raw.githubusercontent.com/prosody-modules/' ~ item.name ~ '/master/' ~ item.name ~ '.lua') }}"
+    dest: /opt/prosody/modules/{{ item.name }}.lua
+  loop: "{{ prosody_modules }}"
+  notify: restart prosody
+  tags: prosody
+
+- name: Install Participan Metadata module
+  copy:
+    src: mod_participant_metadata.lua
+    dest: /opt/prosody/modules/
+  notify: restart prosody
+  tags: prosody
+
+- name: Remove useless unit override
+  file: path=/etc/systemd/system/prosody.service.d/99-ansible.conf state=absent
+  register: prosody_unit
+  notify: restart prosody
+  tags: prosody
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: prosody_unit.changed
+  tags: prosody
+
+- name: Allow prosody to query LDAP servers
+  seboolean: name={{ item }} state=True persistent=True
+  loop:
+    - authlogin_nsswitch_use_ldap
+  when: ansible_selinux.status == 'enabled'
+  tags: prosody

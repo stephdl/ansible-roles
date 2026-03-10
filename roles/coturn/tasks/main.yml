@@ -1,0 +1,122 @@
+---
+
+- name: Check if turnserver is installed
+  stat: path=/lib/systemd/system/turnserver.service
+  register: turn_turnserver
+  tags: turn
+
+  # Migrate from the turnserver package/role
+- when: turn_turnserver.stat.exists
+  block:
+    - name: Stop and disable turnserver
+      service: name=turnserver state=stopped enabled=False
+
+    - name: Remove turnserver package
+      yum: name=turnserver state=absent
+
+    - name: Remove turnserver dehydrated hook
+      file: path=/etc/dehydrated/hooks_deploy_cert.d/20turnserver.sh state=absent
+  tags: turn
+
+- name: Install Coturn
+  yum: name=coturn state=present
+  register: turn_installed
+  tags: turn
+
+- name: Create tmpfiles
+  command: systemd-tmpfiles --create
+  when: turn_installed.changed
+  tags: turn
+
+- name: Deploy main configuration
+  template: src=turnserver.conf.j2 dest=/etc/coturn/turnserver.conf group=coturn mode=640
+  notify: restart coturn
+  tags: turn
+
+- name: Create the ssl dir
+  file: path=/etc/coturn/ssl state=directory group=coturn mode=750
+  tags: turn
+
+  # Create a self signed cert. This is needed even if a cert is later obtained with dehydrated as
+  # turnserver must be started before that
+- import_tasks: ../includes/create_selfsigned_cert.yml
+  vars:
+    - cert_path: /etc/coturn/ssl/cert.pem
+    - cert_key_path: /etc/coturn/ssl/key.pem
+    - cert_user: coturn
+  tags: turn
+
+- name: Deploy dehydrated hook
+  template: src=dehydrated_deploy_hook.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/20coturn.sh mode=755
+  tags: turn
+
+- name: Remove turnserver rules
+  iptables_raw:
+    name: turnserver_ports
+    state: absent
+  when: iptables_manage | default(True)
+  tags: turn,firewall
+
+- name: Handle coturn ports
+  iptables_raw:
+    name: coturn_ports
+    state: "{{ (turn_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: |
+      -A INPUT -m state --state NEW -p tcp -m multiport --dports {{ [turn_port,turn_tls_port] | join(',') }} -s {{ turn_src_ip | join(',') }} -j ACCEPT
+      -A INPUT -p udp -m multiport --dports {{ [turn_port,turn_tls_port] | join(',') }} -s {{ turn_src_ip | join(',') }} -j ACCEPT
+      -A INPUT -p tcp --dport 49152:65535 -s {{ turn_src_ip | join(',') }} -j ACCEPT
+      -A INPUT -p udp --dport 49152:65535 -s {{ turn_src_ip | join(',') }} -j ACCEPT
+  when: iptables_manage | default(True)
+  tags: turn,firewall
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/coturn.service.d state=directory
+  tags: turn
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Service]
+      # Allow binding on privileged ports
+      CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+      AmbientCapabilities=CAP_NET_BIND_SERVICE
+    dest: /etc/systemd/system/coturn.service.d/99-ansible.conf
+  register: turn_unit
+  tags: turn
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: turn_unit.changed
+  tags: turn
+
+- name: Start and enable the service
+  service: name=coturn state=started enabled=True
+  tags: turn
+
+- name: Add long term users
+  command: turnadmin --add --user={{ item.name }} --password={{ item.pass | quote }} --realm={{ turn_realm | default(ansible_domain) }}
+  loop: "{{ turn_lt_users }}"
+  tags: turn
+
+- name: Remove users with unknown realm
+  shell: |
+    for U in $(turnadmin --list | grep -vP '^0:\s+:\s+(log file opened|SQLite connection)'); do
+      user=$(echo $U | cut -d'[' -f1)
+      realm=$(echo $U | perl -pe 's/.*\[(.*)\]/$1/')
+      [ "$realm" == "{{ turn_realm | default(ansible_domain) }}" ] || turnadmin --delete --user=$user --realm=$realm
+    done
+  changed_when: False
+  tags: turn
+
+- name: List long term users
+  shell: turnadmin --list | grep -vP '^0:\s+:\s+(log file opened|SQLite connection)' | cut -d'[' -f1
+  register: turn_lt_existing_users
+  changed_when: False
+  tags: turn
+
+- name: Remove unmanaged long term users
+  command: turnadmin --delete --user={{ item }} --realm={{ turn_realm | default(ansible_domain) }}
+  when: item not in turn_lt_users | map(attribute='name') | list
+  loop: "{{ turn_lt_existing_users.stdout_lines }}"
+  tags: turn
+

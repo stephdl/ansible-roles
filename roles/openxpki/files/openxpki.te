@@ -1,0 +1,10 @@
+module openxpki 1.0;
+
+require {
+        type httpd_sys_script_t;
+        type httpd_var_run_t;
+        class sock_file write;
+}
+
+#============= httpd_sys_script_t ==============
+allow httpd_sys_script_t httpd_var_run_t:sock_file write;

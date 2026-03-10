@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+{% if postfix_relay_host is defined and postfix_relay_user is defined and postfix_relay_pass is defined %}
+{{ postfix_relay_host }}        {{ postfix_relay_user }}:{{ postfix_relay_pass }}
+{% endif %}
+

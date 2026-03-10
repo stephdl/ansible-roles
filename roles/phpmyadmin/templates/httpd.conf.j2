@@ -1,0 +1,44 @@
+{% if pma_alias is defined %}
+Alias /{{ pma_alias }} {{ pma_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+ProxyTimeout 1800
+<Directory {{ pma_root_dir }}/web>
+  AllowOverride All
+  Options FollowSymLinks
+{% if pma_allowed_ip is defined %}
+  Require ip {{ pma_allowed_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ pma_php_fpm_pool | default('pma_' + pma_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+  <FilesMatch "(\.git.*|README|LICENSE|DCO|CONTRIBUTING\.md|ChangeLog|composer\..*|config(\.sample)?\.inc\.php)">
+    Require all denied
+  </FilesMatch>
+</Directory>
+<Directory {{ pma_root_dir }}/web/examples>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/libraries>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/sql>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/locales>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/setup>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/sql>
+  Require all denied
+</Directory>
+<Directory {{ pma_root_dir }}/web/vendor>
+  Require all denied
+</Directory>

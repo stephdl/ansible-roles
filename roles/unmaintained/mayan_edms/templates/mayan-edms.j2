@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+set -o allexport
+. {{ mayan_root_dir }}/config/.env
+set +o allexport
+{{ mayan_root_dir }}/venv/bin/python {{ mayan_root_dir }}/venv/bin/mayan-edms.py $@

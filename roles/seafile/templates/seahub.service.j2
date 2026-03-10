@@ -1,0 +1,22 @@
+[Unit]
+Description=Seafile hub
+After=network.target seafile.service
+
+[Service]
+Type=forking
+Environment=PYTHONPATH={{ seafile_root_dir }}/lib64/python3.6/site-packages/
+Environment=PYTHON={{ seafile_root_dir }}/bin/python
+ExecStart={{ seafile_root_dir }}/seafile-server/seahub.sh start {{ seafile_seahub_port }}
+ExecStop={{ seafile_root_dir }}/seafile-server/seahub.sh stop
+User={{ seafile_user }}
+Group={{ seafile_group }}
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=seahub
+StartLimitInterval=0
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

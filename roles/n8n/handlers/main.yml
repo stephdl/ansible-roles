@@ -1,0 +1,5 @@
+---
+
+- name: restart n8n
+  service: name=n8n state=restarted
+  when: not n8n_started.changed

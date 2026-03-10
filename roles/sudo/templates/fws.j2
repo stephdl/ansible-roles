@@ -1,0 +1,7 @@
+{% for def in sudo_defaults.keys() | list %}
+Defaults {{ def }}={{ sudo_defaults[def] }}
+{% endfor %}
+
+{% for group in sudo_admin_groups %}
+%{{ group }} ALL=(ALL) ALL
+{% endfor %}

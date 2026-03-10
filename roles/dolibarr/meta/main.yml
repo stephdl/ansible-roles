@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: httpd_php
+  - role: mysql_server
+    when: dolibarr_db_server in [ 'localhost', '127.0.0.1' ]

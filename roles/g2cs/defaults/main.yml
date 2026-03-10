@@ -1,0 +1,11 @@
+---
+
+# Port on which g2cs will listen
+g2cs_port: 3514
+
+# Where log files will be created. Thos files won't grow too large as g2cs truncates them after 10000 lines
+# so better to use a tmpfs
+g2cs_log_dir: /run/g2cs/logs
+
+# List of IP/CIDR for which g2cs port will be reachable
+g2cs_src_ip: []

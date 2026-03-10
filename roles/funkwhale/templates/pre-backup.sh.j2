@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD={{ funkwhale_db_pass | quote }} /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ funkwhale_db_user | quote }} \
+  --host={{ funkwhale_db_server | quote }} \
+  {{ funkwhale_db_name | quote }} | \
+  zstd -c > {{ funkwhale_root_dir }}/backup/{{ funkwhale_db_name | quote }}.sql.zst

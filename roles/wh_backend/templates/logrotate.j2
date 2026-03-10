@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+{% for client in wh_clients %}
+{% for app in client.apps %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+/opt/wh/{{ client.name }}/apps/{{ app.name }}/logs/* {
+    rotate 52
+    weekly
+    copytruncate
+    missingok
+    compress
+    compressoptions -T0
+    compresscmd /bin/xz
+    uncompresscmd /bin/unxz
+    compressext .xz
+    tabooext + .xz .gz .bz2 .lz4 .7z
+    su {{ app.run_as | default('wh-' + client.name) }} {{ app.run_as | default('wh-' + client.name) }}
+}
+
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,8 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /etc/prosody/ansible_conf.d
+    - dir: /opt/prosody/modules
+  tags: prosody

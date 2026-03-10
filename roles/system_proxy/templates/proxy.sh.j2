@@ -1,0 +1,12 @@
+#!/bin/bash
+
+{% if system_proxy is defined and system_proxy != '' %}
+export http_proxy={{ system_proxy }}
+export https_proxy={{ system_proxy }}
+export ftp_proxy={{ system_proxy }}
+export HTTP_PROXY={{ system_proxy }}
+export HTTPS_PROXY={{ system_proxy }}
+export FTP_PROXY={{ system_proxy }}
+export no_proxy='{{ system_proxy_no_proxy | join(',') }}'
+export NO_PROXY='{{ system_proxy_no_proxy | join(',') }}'
+{% endif %}

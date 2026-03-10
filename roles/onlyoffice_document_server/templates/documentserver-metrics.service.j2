@@ -1,0 +1,21 @@
+[Unit]
+Description=Only Office metrics
+
+[Service]
+Type=simple
+ExecStart=/var/www/onlyoffice/documentserver/server/Metrics/metrics ./config/config.js
+WorkingDirectory=/var/www/onlyoffice/documentserver/server/Metrics/
+User=ds
+Group=ds
+Environment=NODE_DISABLE_COLORS=1
+Restart=always
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=oods-metrics
+MemoryLimit=50M
+
+[Install]
+WantedBy=multi-user.target

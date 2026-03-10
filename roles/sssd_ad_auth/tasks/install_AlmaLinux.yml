@@ -1,0 +1,10 @@
+---
+- name: Install packages
+  yum:
+    name:
+      - sssd-ad
+      - adcli
+      - oddjob-mkhomedir
+      - krb5-workstation
+      - authconfig
+  tags: auth

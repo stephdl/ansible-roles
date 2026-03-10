@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use LWP::UserAgent;
+use JSON;
+
+my $ret = 'error';
+
+my $url = $ARGV[0] . '?id=' . $ARGV[1];
+my $ua = LWP::UserAgent->new(timeout => 10);
+$ua->env_proxy;
+
+my $response = $ua->get($url);
+if ($response->is_success){
+  my $json = from_json($response->content);
+  if (defined $json and defined $json->{conference}){
+    $ret = $json->{conference};
+    $ret =~ s/@.*//;
+  }
+}
+
+print "SET VARIABLE JITSI_ROOM $ret\n";

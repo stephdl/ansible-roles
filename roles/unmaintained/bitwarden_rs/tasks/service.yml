@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the service
+  service: name=bitwarden_rs state=started enabled=True
+  register: bitwarden_started
+  tags: bitwarden

@@ -1,0 +1,9 @@
+set $maintenance 1;
+{% for ip in nginx_maintenance_ip %}
+if ($remote_addr ~ "^{{ ip | replace('.','\.') }}") {
+  set $maintenance 0;
+}
+{% endfor %}
+if ($maintenance = 1) {
+  rewrite (.*) https://downtime.{{ nginx_primary_domain | default(ansible_domain) }}/ redirect;
+}

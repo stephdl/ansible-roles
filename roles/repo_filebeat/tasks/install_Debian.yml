@@ -1,0 +1,15 @@
+---
+- name: Add Filebeat repo key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  environment:
+    https_proxy: "{{ system_proxy | default('') }}"
+  tags: repo,logs
+
+- name: Add Filebeat repository
+  apt_repository:
+    repo: deb https://artifacts.elastic.co/packages/{{ filebeat_major_version }}.x/apt stable main
+    filename: filebeat
+  environment:
+    https_proxy: "{{ system_proxy | default('') }}"
+  tags: repo,logs

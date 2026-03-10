@@ -1,0 +1,19 @@
+---
+
+- name: Create directories
+  file: path={{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - path: "{{ pga_root_dir }}"
+      owner: pgadmin4_{{ pga_id }}
+      mode: 700
+    - path: "{{ pga_root_dir }}/sessions"
+      owner: pgadmin4_{{ pga_id }}
+    - path: "{{ pga_root_dir }}/data"
+      owner: pgadmin4_{{ pga_id }}
+    - path: "{{ pga_root_dir }}/logs"
+      owner: pgadmin4_{{ pga_id }}
+    - path: "{{ pga_root_dir }}/meta"
+      mode: 700
+    - path: "{{ pga_root_dir }}/backup"
+      mode: 700
+  tags: pgadmin4

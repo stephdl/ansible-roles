@@ -1,0 +1,10 @@
+---
+- name: Add ElasticSearch repository
+  yum_repository:
+    name: elasticsearch
+    description: ElasticSearch
+    baseurl: https://artifacts.elastic.co/packages/oss-{{ es_major_version }}.x/yum
+    gpgcheck: True
+    repo_gpgcheck: True
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  tags: repo

@@ -1,0 +1,11 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: install.yml
+- include: conf.yml
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: services.yml
+- include: cleanup.yml

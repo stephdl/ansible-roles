@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-webserver - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="SYSLOG" />
+  </root>
+
+  <appender name="DAV" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-dav - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.dav.server" level="INFO" additivity="false">
+    <appender-ref ref="DAV" />
+  </logger>
+
+  <appender name="SETUP" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-setup - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.sw.server" level="INFO" additivity="false">
+    <appender-ref ref="SETUP" />
+  </logger>
+
+  <appender name="JSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-js-errors - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <logger name="net.bluemind.webmodule.server.handlers.LogHandler" level="INFO" additivity="false">
+    <appender-ref ref="JSLOG" />
+  </logger>
+</configuration>
+

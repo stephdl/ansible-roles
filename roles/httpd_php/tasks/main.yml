@@ -1,0 +1,96 @@
+---
+
+- name: Build the list of packages
+  set_fact:
+     httpd_php_packages: "{{ httpd_php_packages | default([]) }} + [ 'php{{ item.0 }}-php-{{ item.1 }}' ]"
+  with_nested:
+    - "{{ httpd_php_versions }}"
+    - "{{ httpd_php_common_modules }}"
+  tags: web
+
+- name: Install PHP packages
+  yum: name={{ httpd_php_packages }}
+  notify: restart php-fpm
+  register: httpd_php_installed
+  tags: web
+
+- name: Install scl utils
+  yum:
+    name:
+      - scl-utils
+  tags: web
+
+- name: Create tmpfiles.d fragment
+  copy: src=tmpfiles.conf dest=/etc/tmpfiles.d/php-fpm-scl.conf
+  notify: systemd-tmpfiles
+  register: httpd_php_tmpfiles
+  tags: web
+
+- name: Create tmpfiles
+  command: systemd-tmpfiles --create
+  when: httpd_php_installed.changed or httpd_php_tmpfiles.changed
+  tags: web
+
+- name: Disable default FPM pools
+  template: src=default_fpm_pool.conf.j2 dest=/etc/opt/remi/php{{ item }}/php-fpm.d/www.conf
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Deploy main php.ini configuration
+  template: src=php.ini.j2 dest=/etc/opt/remi/php{{ item }}/php.ini
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Deploy PHP FPM master's configuration
+  template: src=php-fpm.conf.j2 dest=/etc/opt/remi/php{{ item }}/php-fpm.conf
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Deploy default PHP FPM pools configurations
+  template: src=php_fpm_pool.conf.j2 dest=/etc/opt/remi/php{{ item }}/php-fpm.d/php{{ item }}.conf
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Create user accounts for ansible PHP FPM pools
+  user: name={{ item }} comment="PHP FPM {{ item }}" system=True shell=/sbin/nologin
+  loop: "{{ httpd_php_ansible_pools | default([]) | selectattr('user', 'defined') | map(attribute='user') | list }}"
+  tags: web
+
+- name: Deploy ansible PHP FPM pools configurations
+  template: src=php_fpm_ansible_pools.conf.j2 dest=/etc/opt/remi/php{{ item }}/php-fpm.d/ansible_pools.conf
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Create log directories
+  file: path=/var/log/php/php{{ item }} state=directory mode=770 owner=root group={{ httpd_user }}
+  loop: "{{ httpd_php_versions }}"
+  notify: restart php-fpm
+  tags: web
+
+- name: Start and enable SCL PHP FPM services
+  service: name=php{{ item }}-php-fpm state=started enabled=yes
+  loop: "{{ httpd_php_versions }}"
+  tags: web
+
+- name: Deploy httpd configuration fragments
+  template: src={{ item.src }} dest={{ item.dest }}
+  loop:
+    - { src: httpd_php.conf.j2, dest: /etc/httpd/ansible_conf.d/php.conf }
+  notify: reload httpd
+  tags: web
+
+- name: Allow network connections in SELinux
+  seboolean: name={{ item }} state=yes persistent=yes
+  loop:
+    - httpd_can_network_connect_db
+    - httpd_can_network_memcache
+    - httpd_can_network_connect
+    - httpd_can_sendmail
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+...

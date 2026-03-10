@@ -1,0 +1,71 @@
+---
+
+# IP allowed in the firewall
+dnscache_src_ip: []
+
+# IP on which we bind
+dnscache_ip: 127.0.0.1
+
+# If we want to delegate only some zones
+#dnscache_forwarded_zones:
+#  - zone: firewall-services.com
+#    servers:
+#      - 192.168.133.254
+#  - zone: 133.168.192.in-addr.arpa
+#    servers:
+#      - 192.168.133.254
+
+dnscache_forwarded_zones:
+  - zone: letsencrypt.org
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+  - zone: api.letsencrypt.org
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+  - zone: edgekey.net
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+  - zone: akamaiedge.net
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+  - zone: akamaized.net
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+  - zone: akamai.net
+    servers:
+      - 80.67.169.12
+      - 80.67.169.40
+
+# Root server list. If dnscache_forward_only is True, should be a list
+# of server to which we forward queries instead of root servers
+dnscache_roots:
+  - 128.63.2.53
+  - 192.112.36.4
+  - 192.203.230.10
+  - 192.228.79.201
+  - 192.33.4.12
+  - 192.36.148.17
+  - 192.5.5.241
+  - 192.58.128.30
+  - 193.0.14.129
+  - 198.41.0.4
+  - 199.7.83.42
+  - 199.7.91.13
+  - 202.12.27.33
+
+# Do we act as a resolver or a simple forwarder
+dnscache_forward_only: False
+
+# Data and Cache sizes. Cache should not exceed data
+dnscache_data_limit: 12000000
+dnscache_cache_size: 10000000
+
+# Account under which we run. Default to daemons
+dnscache_uid: 2
+dnscache_gid: 2
+

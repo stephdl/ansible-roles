@@ -1,0 +1,9 @@
+location /llng-reload {
+{% for ip in llng_reload_src_ip | default([]) %}
+  allow {{ ip }};
+{% endfor %}
+  deny all;
+  include /etc/nginx/fastcgi_params;
+  fastcgi_pass unix:/var/run/llng-fastcgi-server/llng-fastcgi.sock;
+  fastcgi_param LLTYPE reload;
+}

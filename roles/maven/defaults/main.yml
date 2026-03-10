@@ -1,0 +1,6 @@
+---
+
+mvn_version: 3.8.3
+mvn_archive_url: https://miroir.univ-lorraine.fr/apache/maven/maven-3/{{ mvn_version }}/binaries/apache-maven-{{ mvn_version }}-bin.tar.gz
+mvn_archive_sha1: cbd24fbfa9845e72f1ca01b8571b5db5bde6c333
+mvn_root_dir: /opt/maven

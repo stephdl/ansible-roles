@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD='{{ paperless_db_pass }}' /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ paperless_db_user | quote }} \
+  --host={{ paperless_db_server | quote }} \
+  --port={{ paperless_db_port }} \
+  {{ paperless_db_name | quote }} | \
+  zstd -c > {{ paperless_root_dir }}/backup/{{ paperless_db_name | quote }}.sql.zst

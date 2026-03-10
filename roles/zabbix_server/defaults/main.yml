@@ -1,0 +1,65 @@
+---
+
+zabbix_server_port: 10051
+zabbix_server_src_ip: []
+
+zabbix_server_java_gateway_port: 10052
+
+# If defined, can restrict IP to access the web interface
+# zabbix_server_web_src_ip:
+
+zabbix_server_db_server: "{{ mysql_server | default('localhost') }}"
+zabbix_server_db_port: 3306
+zabbix_server_db_user: zabbix
+zabbix_server_db_name: zabbix
+# zabbix_server_db_pass: secret
+
+zabbix_server_php_user: zabbix
+zabbix_server_php_version: 74
+
+# If you want to use a custom php pool
+# zabbix_server_php_fpm_pool: php70
+
+zabbix_server_base_conf:
+  Timeout: 4
+  LogSlowQueries: 2000
+  LoadModulePath: /usr/lib64/zabbix/modules
+  LogType: system
+  PidFile: /var/run/zabbix/zabbix_server.pid
+  SocketDir: /var/run/zabbix
+  AlertScriptsPath: /var/lib/zabbix/bin
+  ExternalScripts: /var/lib/zabbix/bin
+  TmpDir: /tmp
+  ProxyConfigFrequency: 900
+  ProxyDataFrequency: 30
+  JavaGateway: 127.0.0.1
+  JavaGatewayPort: "{{ zabbix_server_java_gateway_port }}"
+  StartJavaPollers: 0
+zabbix_server_extra_conf: {}
+zabbix_server_conf: "{{ zabbix_server_base_conf | combine(zabbix_server_extra_conf, recursive=True) }}"
+
+zabbix_server_auth_http: False
+
+# Housekeeping settings
+
+# Matrix notifications
+# zabbix_server_matrix_server: matrix.org
+# zabbix_server_matrix_user: alerts
+# zabbix_server_matrix_pass: secret
+#
+# Or
+#
+# zabbix_server_matrix_access_token: ...
+
+# Zabbix DB can be huge. If zabbix_server_backup_on_full_only is true
+# pre-backup will skip history tables from the dump. Except if called with
+# pre-backup full
+zabbix_server_backup_on_full_only: False
+
+# Disable zabbix pre/post backup if you need to handle it with your own script
+zabbix_server_backup_hooks: True
+
+# You might want to ignore system proxy for Zabbix server itself,
+# so its web monitoring can be direct
+# This will only have an effect if system_proxy is defined
+zabbix_server_uses_system_proxy: True

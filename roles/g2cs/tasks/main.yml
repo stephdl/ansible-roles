@@ -1,0 +1,7 @@
+---
+
+- include: user.yml
+- include: install.yml
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: service.yml

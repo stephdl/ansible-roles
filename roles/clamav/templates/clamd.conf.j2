@@ -1,0 +1,12 @@
+LogSyslog yes
+LogVerbose yes
+ExtendedDetectionInfo yes
+LocalSocket /var/run/clamav/clamd.sock
+LocalSocketMode 666
+TCPSocket {{ clam_listen_port }}
+TCPAddr {{ clam_listen_ip }}
+StreamMinPort {{ clam_stream_port_min }}
+StreamMaxPort {{ clam_stream_port_max }}
+StreamMaxLength {{ clam_stream_max_size }}M
+ExitOnOOM yes
+Foreground yes

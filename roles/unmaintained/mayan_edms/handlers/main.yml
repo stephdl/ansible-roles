@@ -1,0 +1,11 @@
+---
+
+- name: restart mayan-edms
+  service: name={{ item }} state=restarted
+  loop:
+    - mayan-edms-web
+    - mayan-edms-worker-fast
+    - mayan-edms-worker-medium
+    - mayan-edms-worker-slow
+    - mayan-edms-beat
+

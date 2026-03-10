@@ -1,0 +1,13 @@
+---
+
+- name: restart mailman
+  service: name={{ item }} state=restarted
+  loop:
+    - mailman-core
+    - mailman-web
+
+- name: restart mailman timers
+  systemd: name={{ item }}.timer state=restarted
+  loop:
+    - mailman-digests
+    - mailman-notify

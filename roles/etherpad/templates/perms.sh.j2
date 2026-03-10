@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+restorecon -R {{ etherpad_root_dir }}
+chown -R {{ etherpad_user }}:{{ etherpad_user }} {{ etherpad_root_dir }}/app
+find {{ etherpad_root_dir }}/app -type f -exec chmod 644 "{}" \;
+find {{ etherpad_root_dir }}/app -type d -exec chmod 755 "{}" \;
+chmod 600 {{ etherpad_root_dir }}/app/{settings.json,SESSIONKEY.txt,APIKEY.txt}

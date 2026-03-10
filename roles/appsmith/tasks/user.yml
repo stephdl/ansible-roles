@@ -1,0 +1,8 @@
+---
+
+- name: Create appsmith user
+  user:
+    name: "{{ appsmith_user }}"
+    home: "{{ appsmith_root_dir }}"
+    system: True
+  tags: appsmith

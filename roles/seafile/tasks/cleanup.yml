@@ -1,0 +1,21 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ seafile_root_dir }}/tmp/seafile-server_{{ seafile_version }}_x86-64.tar.gz"
+    - "{{ seafile_root_dir }}/tmp/seafile-server-{{ seafile_version }}"
+    - "{{ seafile_root_dir }}/tmp/seafile-pro-server_{{ seafile_version }}_x86-64_CentOS.tar.gz"
+    - "{{ seafile_root_dir }}/tmp/seafile-pro-server-{{ seafile_version }}"
+    - "{{ seafile_data_dir }}/db_dumps"
+    - "{{ seafile_data_dir }}/backup"
+    # All these are obsoletes backup hooks
+    - /etc/backup/pre.d/seafile_dump_db.sh
+    - /etc/backup/pre.d/seafile_mount_fuse.sh
+    - /etc/backup/post.d/seafile_rm_dumps.sh
+    - /etc/backup/post.d/seafile_umount_fuse.sh
+    # Old cron job, replaced with systemd timers
+    - /etc/cron.d/seafile_gc
+    # This one has a typo in even older versions of the role
+    - /etc/cron.d/seafil_gc
+  tags: seafile

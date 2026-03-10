@@ -1,0 +1,12 @@
+---
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ riot_root_dir }}"
+    - version: "{{ riot_version }}"
+  tags: matrix
+- set_fact: riot_install_mode={{ (install_mode == 'upgrade' and not riot_manage_upgrade) | ternary('none',install_mode) }}
+  tags: matrix
+- set_fact: riot_current_version={{ current_version | default('') }}
+  tags: matrix
+

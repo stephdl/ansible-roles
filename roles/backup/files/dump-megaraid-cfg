@@ -1,0 +1,57 @@
+#!/usr/bin/perl -w
+
+# This script will backup the config of MegaRAID based
+# RAID controllers. The saved config can be restored with
+# MegaCli -CfgRestore -f /home/lbkp/mega_0.bin for example
+# It also create a backup of the config as text, so you can
+# manually check how things were configured at a certain point in time
+
+# If MegaCli is not installed, then the script does nothing
+
+use strict;
+
+my $megacli = undef;
+
+if (-x '/opt/MegaRAID/MegaCli/MegaCli64'){
+  $megacli = '/opt/MegaRAID/MegaCli/MegaCli64';
+} elsif (-x '/opt/MegaRAID/MegaCli/MegaCli'){
+  $megacli = '/opt/MegaRAID/MegaCli/MegaCli';
+}
+
+if (!$megacli){
+  print "MegaCli not installed, nothing to do\n";
+  exit 0;
+}
+
+my $adapters = 0;
+foreach (qx($megacli -adpCount -NoLog)) {
+  if ( m/Controller Count:\s*(\d+)/ ) {
+    $adapters = $1;
+    last;
+  }
+}
+
+foreach my $adp (0..$adapters-1){
+  my $hba = 0;
+  my $failgrouplist = 0;
+  foreach my $line (qx($megacli -CfgDsply -a$adp -NoLog)) {
+    if ( $line =~ m/Failed to get Disk Group list/ ) {
+      $failgrouplist = 1;
+    } elsif ( $line =~ m/Product Name:.*(JBOD|HBA)/ ) {
+      $hba = 1;
+    }
+  }
+  # Skip adapter if in HBA mode
+  next if ($hba && $failgrouplist);
+
+  # Save the config in binary format
+  print "Saving config for adapter $adp\n";
+  qx($megacli -CfgSave -f /home/lbkp/megaraid/cfg_$adp.bin -a$adp -NoLog);
+  die "Failed to backup conf for adapter $adp\n" unless ($? == 0);
+
+  # Now also save in text representation
+  open TXT, ">/home/lbkp/megaraid/cfg_$adp.txt";
+  print TXT foreach qx($megacli -CfgDsply -a$adp -NoLog);
+  die "Failed to backup Cfg text description for adapter $adp\n" unless ($? == 0);
+  close TXT;
+}

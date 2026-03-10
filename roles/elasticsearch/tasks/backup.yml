@@ -1,0 +1,18 @@
+---
+
+- name: Declare repo in ElasticSearch
+  uri:
+    url: http://localhost:{{ es_port }}/_snapshot/lbkp
+    method: PUT
+    body:
+      type: fs
+      settings:
+        compress: True
+        location: "{{ es_backup_dir }}"
+    body_format: json
+  register: es_lbkp
+  until: es_lbkp.failed == False
+  retries: 10
+  delay: 10
+  tags: es
+

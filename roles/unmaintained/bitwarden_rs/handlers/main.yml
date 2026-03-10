@@ -1,0 +1,5 @@
+---
+
+- name: restart bitwarden_rs
+  service: name=bitwarden_rs state=restarted
+  when: not bitwarden_started.changed

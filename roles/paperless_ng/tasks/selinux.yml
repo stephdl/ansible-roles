@@ -1,0 +1,15 @@
+---
+
+- name: Copy SELinux policy
+  copy: src=paperless.te dest=/etc/selinux/targeted/local/
+  register: paperless_selinux_policy
+  tags: ged
+
+- name: Compile and load SELinux policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o paperless.mod paperless.te
+    semodule_package -o paperless.pp -m paperless.mod
+    semodule -i /etc/selinux/targeted/local/paperless.pp
+  when: paperless_selinux_policy.changed
+  tags: ged

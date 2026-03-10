@@ -1,0 +1,141 @@
+---
+- name: Install grafana
+  yum: name=grafana state=present
+  register: grafana_install
+  tags: grafana
+
+- name: Create unit snippet dir
+  file: path=/etc/systemd/system/grafana-server.service.d state=directory
+  tags: grafana
+
+- name: Tune to restart indefinitely
+  copy:
+    content: |
+      [Service]
+      StartLimitInterval=0
+      RestartSec=20
+    dest: /etc/systemd/system/grafana-server.service.d/restart.conf
+  register: grafana_unit
+  tags: grafana
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: grafana_unit.changed
+  tags: grafana
+
+- name: Handle grafana port
+  iptables_raw:
+    name: grafana_port
+    state: "{{ (grafana_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ grafana_port }} -s {{ grafana_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: grafana,firewall
+
+- when: grafana_db_pass is not defined
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: /etc/grafana/ansible_db_pass
+        - complex: False
+    - set_fact: grafana_db_pass={{ rand_pass }}
+  tags: grafana
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ grafana_db_name }}"
+    - db_user: "{{ grafana_db_user }}"
+    - db_server: "{{ grafana_db_server }}"
+    - db_pass: "{{ grafana_db_pass }}"
+  when: grafana_db_type == 'mysql'
+  tags: grafana
+
+- when: grafana_db_type == 'postgres'
+  block:
+    - name: Create the PostgreSQL role
+      postgresql_user:
+        name: "{{ grafana_db_user }}"
+        password: "{{ grafana_db_pass }}"
+        login_host: "{{ grafana_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+    
+    - name: Create the PostgreSQL database
+      postgresql_db:
+        name: "{{ grafana_db_name }}"
+        encoding: UTF-8
+        lc_collate: C
+        lc_ctype: C
+        template: template0
+        owner: "{{ grafana_db_user }}"
+        login_host: "{{ grafana_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+  tags: grafana
+
+- block:
+  - import_tasks: ../includes/get_rand_pass.yml
+    vars:
+      - pass_file: /etc/grafana/ansible_secret_key
+  - set_fact: grafana_secret_key={{ rand_pass }}
+  tags: grafana
+
+- name: Deploy grafana configuration
+  template: src={{ item }}.j2 dest=/etc/grafana/{{ item }} owner=root group=grafana mode=640
+  with_items:
+    - grafana.ini
+    - ldap.toml
+  notify: restart grafana
+  tags: grafana
+
+  # Since Grafana 7.5.7, grafana-cli even when invoked as root takes action under the grafana user
+  # so we need to be sure permissions are OK, or plugin update/installation/removal will fail
+- name: Ensure correct permissions on data dir
+  file: path=/var/lib/grafana owner=grafana group=grafana mode=770 recurse=True
+  tags: grafana
+
+- name: Build a list of installed plugins
+  shell: grafana-cli plugins ls | perl -ne '/^(\w[\-\w]+)\s\@\s\d+\./ && print "$1\n"'
+  register: grafana_installed_plugins
+  changed_when: False
+  tags: grafana
+
+- name: Remove unmanaged plugins
+  command: grafana-cli plugins uninstall {{ item }}
+  with_items: "{{ grafana_installed_plugins.stdout_lines }}"
+  when: item not in grafana_plugins
+  notify: restart grafana
+  tags: grafana
+
+- name: Install plugins
+  command: grafana-cli plugins install {{ item }}
+  with_items: "{{ grafana_plugins }}"
+  when: item not in grafana_installed_plugins.stdout_lines
+  notify: restart grafana
+  tags: grafana
+
+- name: Check installed plugins versions
+  shell: grafana-cli plugins ls | perl -ne '/^(\w[\-\w]+)\s\@\s(\d+[^\s]*)/ && print "$1 $2\n"'
+  register: grafana_installed_plugins_versions
+  changed_when: False
+  tags: grafana
+
+- name: Check available plugins versions
+  shell: grafana-cli plugins list-remote | perl -ne '/^id:\s+(\w[\-\w]+)\sversion:\s+(\d+[^\s]*)/ && print "$1 $2\n"'
+  register: grafana_remote_plugins_versions
+  changed_when: False
+  tags: grafana
+
+- name: Update grafana plugins
+  command: grafana-cli plugins update-all
+  when: grafana_installed_plugins_versions.stdout_lines is not subset(grafana_remote_plugins_versions.stdout_lines)
+  notify: restart grafana
+  tags: grafana
+
+- name: Start and enable the service
+  service: name=grafana-server state=started enabled=True
+  tags: grafana
+
+- name: Change admin password to a random one
+  command: grafana-cli admin reset-admin-password --homepath="/usr/share/grafana" --config /etc/grafana/grafana.ini $(openssl rand -base64 33)
+  when: grafana_install.changed
+  tags: grafana

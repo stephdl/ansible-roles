@@ -1,0 +1,7 @@
+[Unit]
+Description=Seafile Garbage Collect service
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+ExecStart={{ seafile_root_dir }}/bin/gc.sh

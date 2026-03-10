@@ -1,0 +1,4 @@
+---
+
+- set_fact: wh_mail_domains_to_relay={{ wh_mail_domains + wh_mail_aliases | default([]) }}
+  tags: mail

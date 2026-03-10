@@ -1,0 +1,13 @@
+httpredir.debian.org
+ftp.fr.debian.org
+cdn-fastly.deb.debian.org
+security.debian.org
+ftp.debian.org
+security-cdn.debian.org
+cdimage.debian.org
+deb.debian.org
+
+# Ubuntu
+ppa.launchpad.net
+archive.ubuntu.com
+security.ubuntu.com

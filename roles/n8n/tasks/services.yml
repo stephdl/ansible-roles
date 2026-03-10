@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable n8n daemon
+  service: name=n8n state=started enabled=True
+  register: n8n_started
+  tags: n8n

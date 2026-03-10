@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ miniflux_root_dir }}/archives/{{ miniflux_current_version }}.tar.zst --use-compress-program=zstd ./
+  args:
+    chdir: "{{ miniflux_root_dir }}/archives/{{ miniflux_current_version }}"
+    warn: False
+  environment:
+    ZSTD_CLEVEL: 10
+  tags: miniflux

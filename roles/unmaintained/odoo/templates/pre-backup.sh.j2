@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD={{ odoo_db_pass | quote }} /usr/bin/pg_dump \
+  --format=custom \
+  --clean \
+  --username={{ odoo_db_user }} \
+  --host={{ odoo_db_server }} \
+  --file={{ odoo_root_dir }}/db_dumps/{{ odoo_db_name }}.sqlc \
+  {{ odoo_db_name }}

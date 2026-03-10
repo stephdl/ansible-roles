@@ -1,0 +1,60 @@
+---
+
+- name: Install agent and dependencies
+  apt:
+    name: "{{ zabbix_agent_packages }}"
+    state: "{{ zabbix_agent_update | ternary('latest','present') }}"
+    policy_rc_d: 101 # Prevent the daemon from starting automatically after install
+  tags: zabbix
+
+- name: Create needed directories
+  file: path={{ item }} state=directory
+  with_items:
+    - /etc/zabbix/zabbix_agentd.conf.d
+    - /var/lib/zabbix/bin
+    - /var/lib/zabbix/addons
+    - /usr/local/lib/site_perl/Zabbix/Agent/Addons
+  tags: zabbix
+
+- name: Checkout Addons script
+  git:
+    repo: https://git.fws.fr/fws/zabbix-agent-addons.git
+    dest: /var/lib/zabbix/addons
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  register: zabbix_agent_addons_git
+  notify: restart zabbix-agent
+  tags: zabbix
+
+- name: Install addons
+  shell: cp -af /var/lib/zabbix/addons/{{ item.src }}/* {{ item.dest }}/
+  with_items:
+    - src: zabbix_conf
+      dest: /etc/zabbix/zabbix_agentd.conf.d
+    - src: zabbix_scripts
+      dest: /var/lib/zabbix/bin
+    - src: lib
+      dest: /usr/local/lib/site_perl
+  when: zabbix_agent_addons_git.changed
+  tags: zabbix
+
+- name: Set permissions on Addons Scripts
+  shell: chmod +x /var/lib/zabbix/bin/*
+  args:
+    warn: False
+  when: zabbix_agent_addons_git.changed
+  tags: zabbix
+
+- name: Install sudo fragment
+  shell: cp -af /var/lib/zabbix/addons/conf/sudo.conf /etc/sudoers.d/zabbix_agent && chmod 600 /etc/sudoers.d/zabbix_agent
+  when: zabbix_agent_addons_git.changed
+  tags: zabbix
+
+- name: Don't log pam's sudo session for zabbix
+  lineinfile:
+    path: /etc/pam.d/sudo
+    regexp: '^session.*ruser\s?=\s?zabbix.*'
+    line: 'session [success=1 default=ignore] pam_succeed_if.so quiet uid = 0 ruser = zabbix'
+    insertbefore: '^@include\scommon-session-noninteractive'
+    state: present
+  tags: zabbix

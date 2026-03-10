@@ -1,0 +1,7 @@
+---
+
+pma_packages:
+  - unzip
+  - MySQL-python
+  - mariadb
+  - acl

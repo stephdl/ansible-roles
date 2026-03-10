@@ -1,0 +1,11 @@
+---
+
+- name: Create directory structure
+  file: path={{ element_root_dir }}/{{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: tmp
+    - dir: archives
+      mode: 700
+    - dir: meta
+      mode: 700
+  tags: matrix

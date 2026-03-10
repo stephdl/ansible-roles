@@ -1,0 +1,10 @@
+---
+
+- name: Create a system user
+  user:
+    name: ds
+    comment: OnlyOffice Document Server
+    system: True
+    home: /var/www/onlyoffice
+    shell: /sbin/nologin
+  tags: oo

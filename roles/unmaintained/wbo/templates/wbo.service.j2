@@ -1,0 +1,21 @@
+[Unit]
+Description=Online collaborative Whiteboard (Instance {{ wbo_id }})
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=wbo_{{ wbo_id }}
+Group=wbo_{{ wbo_id }}
+Environment=PORT={{ wbo_port }}
+Environment=NODE_ENV='production'
+ExecStart=/bin/node {{ wbo_root_dir }}/app/server/server.js
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=512M
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

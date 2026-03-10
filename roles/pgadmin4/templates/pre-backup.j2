@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eo pipefail
+
+sqlite3 {{ pga_root_dir }}/data/pgadmin4.db .dump | zstd -c > {{ pga_root_dir }}/backup/pgadmin4.sql.zst

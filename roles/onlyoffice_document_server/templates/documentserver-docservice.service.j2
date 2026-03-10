@@ -1,0 +1,24 @@
+[Unit]
+Description=Only Office document service
+Requires=rabbitmq-server.service
+
+[Service]
+Type=simple
+ExecStart=/var/www/onlyoffice/documentserver/server/DocService/docservice
+WorkingDirectory=/var/www/onlyoffice/documentserver/server/DocService/
+User=ds
+Group=ds
+Environment=NODE_ENV=oods
+Environment=NODE_CONFIG_DIR=/etc/onlyoffice/documentserver
+Environment=NODE_DISABLE_COLORS=1
+Restart=always
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+SyslogIdentifier=oods-docservice
+MemoryLimit=600M
+
+[Install]
+WantedBy=multi-user.target

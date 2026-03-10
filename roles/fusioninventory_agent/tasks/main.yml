@@ -1,0 +1,24 @@
+---
+
+- include: install_{{ ansible_os_family }}.yml
+
+- name: Deploy FusionInventory Agent config
+  template: src=agent.cfg.j2 dest=/etc/fusioninventory/agent.cfg mode=640
+  notify: restart fusioninventory-agent
+  tags: inventory
+
+- name: Check if the first inventory has been done
+  stat: path=/var/lib/fusioninventory-agent/FusionInventory-Agent.dump
+  register: first_inventory
+  tags: inventory
+
+- name: First Fusion Inventory report
+  command: /usr/bin/fusioninventory-agent
+  when: not first_inventory.stat.exists
+  tags: inventory
+
+- name: Start FusionInventory Agent
+  service: name=fusioninventory-agent state=started enabled=yes
+  tags: inventory
+
+...

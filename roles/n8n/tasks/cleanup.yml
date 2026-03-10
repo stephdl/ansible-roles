@@ -1,0 +1,7 @@
+---
+
+- name: Remove tmp and unused files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ n8n_root_dir }}/archives/{{ n8n_current_version }}"
+  tags: n8n

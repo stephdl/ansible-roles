@@ -1,0 +1,6 @@
+include /etc/onlyoffice/documentserver/nginx/includes/http-common.conf;
+server {
+  listen 0.0.0.0:80;
+  server_name {{ oo_ds_vhost }};
+  include /etc/onlyoffice/documentserver/nginx/includes/ds-docservice.conf;
+}

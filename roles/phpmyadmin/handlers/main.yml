@@ -1,0 +1,3 @@
+---
+- include: ../httpd_common/handlers/main.yml
+- include: ../httpd_php/handlers/main.yml

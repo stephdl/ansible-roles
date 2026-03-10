@@ -1,0 +1,24 @@
+---
+
+# Version to deploy
+synadm_version: 0.8.3
+# URL of the tarball
+synadm_archive_url: https://github.com/Awesome-Technologies/synapse-admin/releases/download/{{ synadm_version }}/synapse-admin-{{ synadm_version }}.tar.gz
+# Expected sha1 of the archive
+synadm_archive_sha1: f74676ec618b664d2409032d10c15c1f310222fc
+
+# Shoulad ansible handle upgrades, or just initial install ?
+synadm_manage_upgrade: True
+
+# Root dir where synadm will be installed
+synadm_root_dir: /opt/matrix/synapse_admin
+
+# Should a web alilas be created, eg set it to synadm to access it from https://yourserver/synadm
+# If an alias is not defined (or set to False), you'll have to create a virtualhost pointing at {{ synadm_root_dir }}/web
+synadm_web_alias: synadm
+
+# Optional list of allowed IP address. If undefined, everyone can access it
+# synadm_src_ip: 
+#   - 12.13.14.15
+#   - 16.17.18.19
+

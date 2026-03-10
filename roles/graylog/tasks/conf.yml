@@ -1,0 +1,33 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest={{ graylog_root_dir }}/etc/{{ item }} group=graylog mode=640
+  loop:
+    - server.conf
+    - log4j2.xml
+  notify: restart graylog-server
+  tags: graylog
+
+- name: Create the mongodb user
+  mongodb_user:
+    database: "{{ item | urlsplit('path') | regex_replace('^\\/', '') }}"
+    name: "{{ graylog_mongo_user }}"
+    password: "{{ graylog_mongo_pass }}"
+    login_database: admin
+    login_host: "{{ item | urlsplit('hostname') }}"
+    login_port: "{{ item | urlsplit('port') | ternary(item | urlsplit('port'),omit) }}"
+    login_user: mongoadmin
+    login_password: "{{ mongo_admin_pass }}"
+    roles:
+      - readWrite
+  loop: "{{ graylog_mongo_url }}"
+  changed_when: False # the module is buggy and indicates a change even if there were none
+  when:
+    - graylog_mongo_url | length == 1
+    - graylog_mongo_pass is defined
+    - graylog_mongo_pass != False
+  tags: graylog
+
+- name: Deploy logrotate configuration
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/graylog
+  tags: graylog

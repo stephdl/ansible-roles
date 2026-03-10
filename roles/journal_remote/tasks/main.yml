@@ -1,0 +1,49 @@
+---
+
+- name: Install the Journal gateway
+  yum: name=systemd-journal-gateway
+  tags: logs
+
+- name: Create journal storage directory
+  file: path=/var/log/journal/remote state=directory owner=systemd-journal-remote group=systemd-journal-remote mode=700
+  tags: logs
+
+- name: Override systemd unit
+  template: src=systemd-journal-remote.service.j2 dest=/etc/systemd/system/systemd-journal-remote.service
+  notify: restart journal-remote
+  register: journal_remote_unit
+  tags: logs
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: journal_remote_unit.changed
+  tags: logs
+
+- name: Deploy journal-remote configuration
+  template: src=journal-remote.conf.j2 dest=/etc/systemd/journal-remote.conf
+  notify: restart journal-remote
+  tags: logs
+
+- name: Create dehydrated hook dir
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/ state=directory
+  tags: logs
+
+- name: Deploy dehydrated hooks
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/20journal-remote.sh mode=755
+  tags: logs
+
+- name: Handle journal-remote ports
+  iptables_raw:
+    name: journal_remote_ports
+    state: "{{ (journal_remote_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ journal_remote_port }} -s {{ journal_remote_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,logs]
+
+- name: Disable journal-remote socket
+  service: name=systemd-journal-remote.socket state=stopped enabled=False
+  tags: logs
+
+- name: Start journal-remote
+  service: name=systemd-journal-remote state=started enabled=True
+  tags: logs

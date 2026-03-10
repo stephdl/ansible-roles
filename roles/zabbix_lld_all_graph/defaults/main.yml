@@ -1,0 +1,5 @@
+---
+
+#zabbix_lld_all_graph_api_user: zabbixapi
+#zabbix_lld_all_graph_api_pass: secret
+#zabbix_lld_all_graph_api_url: https://zbxapi.example.org/json_rpc.php

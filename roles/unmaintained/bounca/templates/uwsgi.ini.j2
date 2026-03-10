@@ -1,0 +1,17 @@
+[uwsgi]
+plugin = python3
+thread = 4
+master = 1
+processes = 30
+vacuum = true
+http11-socket = 0.0.0.0:{{ bounca_port }}
+chdir = {{ bounca_root_dir }}/app
+home = {{ bounca_root_dir }}
+module = bounca.wsgi
+check-static = {{ bounca_root_dir }}/app/media
+static-skip-ext = .php
+static-skip-ext = .cgi
+static-skip-ext = .py
+offload-threads = 4
+cache2 = name=bounca,items=200
+static-cache-paths = 300

@@ -1,0 +1,7 @@
+---
+dependencies:
+  - role: repo_lemonldap_ng
+  - role: httpd_mod_perl
+    when: llng_server == 'httpd'
+  - role: mysql_server
+    when: llng_db_server in ['localhost','127.0.0.1']

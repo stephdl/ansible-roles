@@ -1,0 +1,9 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item.src }} dest={{ item.dest }} group={{ mayan_user }} mode=640
+  loop:
+    - src: env.j2
+      dest: "{{ mayan_root_dir }}/config/.env"
+  notify: restart mayan-edms
+  tags: mayan

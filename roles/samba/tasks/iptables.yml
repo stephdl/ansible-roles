@@ -1,0 +1,27 @@
+---
+
+- name: Handle DNS ports
+  iptables_raw:
+    name: samba_dns_ports
+    state: "{{ (samba_dns_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ samba_dns_ports | join(',') }} -s {{ samba_dns_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p udp -m multiport --dports {{ samba_dns_ports | join(',') }} -s {{ samba_dns_src_ip | join(',') }} -j ACCEPT"
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba,firewall
+
+- name: Handle DC services ports
+  iptables_raw:
+    name: samba_dc_ports
+    state: "{{ (samba_dc_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ samba_dc_tcp_ports | join(',') }} -s {{ samba_dc_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p udp -m multiport --dports {{ samba_dc_udp_ports | join(',') }} -s {{ samba_dc_src_ip | join(',') }} -j ACCEPT"
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba,firewall
+
+- name: Handle other ports
+  iptables_raw:
+    name: samba_file_ports
+    state: "{{ (samba_file_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ samba_file_tcp_ports | join(',') }} -s {{ samba_file_src_ip | join(',') }} -j ACCEPT\n
+            -A INPUT -m state --state NEW -p udp -m multiport --dports {{ samba_file_udp_ports | join(',') }} -s {{ samba_file_src_ip | join(',') }} -j ACCEPT"
+  tags: samba,firewall

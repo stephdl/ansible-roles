@@ -1,0 +1,39 @@
+---
+
+# Version to install
+gitea_version: 1.17.1
+# URL to the binary
+gitea_bin_url: https://dl.gitea.io/gitea/{{ gitea_version }}/gitea-{{ gitea_version }}-linux-amd64
+# sha256 of the binary
+gitea_bin_sha256: eafd476ee2a303d758448314272add00898d045439ab0d353ff4286c5e63496f
+# Handle updates. If set to false, ansible will only install
+# Gitea and then won't touch an existing installation
+gitea_manage_upgrade: True
+# Root directory of the gitea
+gitea_root_dir: /opt/gitea
+
+# The domain name will be used to build GIT URL in the UI
+gitea_domain: "{{ inventory_hostname }}"
+# Used to build ssh URL. Can be different from gitea_domain, if using a reverse proxy for example
+gitea_ssh_domain: "{{ gitea_domain }}"
+# Set to the public URL where gitea will be available
+gitea_public_url: 'http://%(DOMAIN)s:%(HTTP_PORT)s/'
+# Port of the web interface (plain text http)
+gitea_web_port: 3280
+# Port for SSH access
+gitea_ssh_port: 22
+# Used to restrict access to the web interface
+gitea_web_src_ip: []
+# If set, will read username from the following HTTP header
+# use when behind a reverse proxy
+# gitea_username_header: Auth-User
+
+# Enable user registration
+gitea_registration: False
+
+# Database settings
+gitea_db_server: "{{ mysql_server | default('localhost') }}"
+gitea_db_name: gitea
+gitea_db_user: gitea
+# A random pass will be created if not set here
+# gitea_db_pass: xxxxx

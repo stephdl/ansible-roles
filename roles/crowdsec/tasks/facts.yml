@@ -1,0 +1,84 @@
+---
+
+- name: Set initial facts
+  block:
+    - set_fact: cs_install_mode='none'
+    - set_fact: cs_current_version=''
+  tags: cs
+
+- name: Check if crowdsec is installed
+  stat: path=/usr/local/bin/crowdsec
+  register: cs_bin
+  tags: cs
+
+- name: Check installed version
+  shell: |
+    crowdsec -version 2>&1 | perl -ne 'm/version: v(\d+(\.\d+)*)/ && print $1'
+  register: cs_current_version
+  changed_when: False
+  when: cs_bin.stat.exists
+  tags: cs
+
+- name: Set install mode
+  set_fact: cs_install_mode='install'
+  when: not cs_bin.stat.exists
+  tags: cs
+
+- name: Set upgrade mode
+  set_fact: cs_install_mode='upgrade'
+  when:
+    - cs_bin.stat.exists
+    - cs_current_version.stdout != cs_version
+  tags: cs
+
+# Create a random db password if needed
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "/etc/crowdsec/meta/ansible_db_pass"
+        - complex: False
+    - set_fact: cs_db_pass={{ rand_pass }}
+  when:
+    - cs_db_pass is not defined
+    - cs_lapi_enabled
+  tags: cs
+
+# Check if local API credentials are available in the meta dir
+- name: Check local API credential files
+  stat: path=/etc/crowdsec/meta/lapi_pass
+  register: cs_lapi_pass_file
+  tags: cs
+
+- name: Read the local API pass
+  block:
+    - slurp: src=/etc/crowdsec/meta/lapi_pass
+      register: cs_lapi_pass_meta
+    - set_fact: cs_lapi_pass={{ cs_lapi_pass_meta.content | b64decode | trim }}
+  when: cs_lapi_pass is not defined and cs_lapi_pass_file.stat.exists
+  tags: cs
+
+# Check if central API credentials are available in the meta dir
+- name: Check central API credential files
+  block: 
+    - stat: path=/etc/crowdsec/meta/capi_user
+      register: cs_capi_user_file
+    - stat: path=/etc/crowdsec/meta/capi_pass
+      register: cs_capi_pass_file
+  tags: cs
+
+- name: Read the central API user
+  block:
+    - slurp: src=/etc/crowdsec/meta/capi_user
+      register: cs_capi_user_meta
+    - set_fact: cs_capi_user={{ cs_capi_user_meta.content | b64decode | trim }}
+  when: cs_capi_user is not defined and cs_capi_user_file.stat.exists
+  tags: cs
+
+- name: Read the central API pass
+  block:
+    - slurp: src=/etc/crowdsec/meta/capi_pass
+      register: cs_capi_pass_meta
+    - set_fact: cs_capi_pass={{ cs_capi_pass_meta.content | b64decode | trim }}
+  when: cs_capi_pass is not defined and cs_capi_pass_file.stat.exists
+  tags: cs
+

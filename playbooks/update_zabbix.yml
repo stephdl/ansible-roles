@@ -1,0 +1,42 @@
+---
+- name: Update Zabbix
+  hosts: '*'
+  tasks:
+    - yum:
+        name:
+          - zabbix-agent
+          - zabbix-agent-addons
+        state: latest
+      when: ansible_os_family == 'RedHat'
+      notify: restart zabbix-agent
+    - apt:
+        name:
+          - zabbix-agent
+        update_cache: True
+        state: latest
+      when: ansible_os_family == 'Debian'
+      notify: restart zabbix-agent
+    - git:
+        repo: https://git.fws.fr/fws/zabbix-agent-addons.git
+        dest: /var/lib/zabbix/addons
+      register: zabbix_agent_addons_git
+      when: ansible_os_family == 'Debian'
+      notify: restart zabbix-agent
+    - shell: cp -af /var/lib/zabbix/addons/{{ item.src }}/* {{ item.dest }}/
+      with_items:
+        - { src: zabbix_conf,    dest: /etc/zabbix/zabbix_agentd.conf.d }
+        - { src: zabbix_scripts, dest: /var/lib/zabbix/bin }
+        - { src: lib,            dest: /usr/local/lib/site_perl }
+      when:
+        - zabbix_agent_addons_git.changed
+        - ansible_os_family == 'Debian'
+    - shell: chmod +x /var/lib/zabbix/bin/*
+      args:
+        warn: False
+      when:
+        - zabbix_agent_addons_git.changed
+        - ansible_os_family == 'Debian'
+
+  handlers:
+    - name: restart zabbix-agent
+      service: name=zabbix-agent state=restarted

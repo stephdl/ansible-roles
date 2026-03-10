@@ -1,0 +1,6 @@
+---
+
+gitea_packages:
+  - git
+  - git-lfs
+gitea_scl_cmd: ''

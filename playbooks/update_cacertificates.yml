@@ -1,0 +1,6 @@
+---
+- name: Update ca-certificates
+  hosts: '*'
+  tasks:
+    - name: Update ca-certificates
+      package: name=ca-certificates state=latest

@@ -1,0 +1,17 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: pma_{{ pma_id }}
+    - php_version: "{{ pma_php_version }}"
+    - php_fpm_pool: "{{ pma_php_fpm_pool | default('') }}"
+  tags: pma
+
+- name: Deploy sso scripts
+  template: src=sso.php.j2 dest={{ pma_root_dir }}/web/sso.php group={{ pma_php_user }} mode=640
+  tags: pma
+
+- name: Deploy phpMyAdmin config
+  template: src=config.inc.php.j2 dest={{ pma_root_dir }}/web/config.inc.php group={{ pma_php_user }} mode=640
+  tags: pma
+

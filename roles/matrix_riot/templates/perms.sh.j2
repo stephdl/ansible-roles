@@ -1,0 +1,5 @@
+#!/bin/sh
+
+chown -R root:root {{ riot_root_dir }}
+find {{ riot_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ riot_root_dir }}/web -type d -exec chmod 755 "{}" \;

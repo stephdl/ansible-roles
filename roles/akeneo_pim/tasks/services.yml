@@ -1,0 +1,8 @@
+---
+
+- name: Start services
+  service: name={{ item }} state=started enabled=True
+  loop:
+    - akeneo-pim_{{ pim_id }}-jobs
+    - akeneo-pim_{{ pim_id }}-events-api
+  tags: pim

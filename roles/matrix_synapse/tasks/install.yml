@@ -1,0 +1,113 @@
+---
+
+- name: Install system dependencies
+  yum: name={{ synapse_packages }}
+  tags: matrix
+
+- name: Check if pg_config is available
+  stat: path=/bin/pg_config
+  register: synapse_pg_config
+  tags: matrix
+
+- name: Setup pg_config
+  alternatives:
+    name: psql-pg_config
+    link: /bin/pg_config
+    path: /usr/pgsql-14/bin/pg_config
+  when: not synapse_pg_config.stat.exists
+  tags: matrix
+
+- name: Wipe pip cache
+  file: path=/root/.cache/pip state=absent
+  when: synapse_old_venv.stat.exists
+  tags: matrix
+
+- name: Wipe the venv during upgrades
+  file: path={{ synapse_root_dir }}/venv state=absent
+  when: synapse_install_mode == 'upgrade'
+  tags: matrix
+
+- name: Install or update dependencies in the virtual env
+  pip:
+    state: "{{ (synapse_install_mode == 'upgrade') | ternary('latest','present') }}"
+    virtualenv: "{{ synapse_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+    name:
+      - bleach
+      - matrix-synapse-ldap3
+      - psycopg2
+      - txacme
+      - Jinja2
+      - lxml
+      - pysaml2
+      - mock
+      - six
+      - authlib
+      - twisted
+  notify: restart synapse
+  tags: matrix
+
+- name: Install or update synapse in a virtualenv
+  pip:
+    virtualenv: "{{ synapse_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+    name:
+      - matrix-synapse
+    version: "{{ synapse_version }}"
+  notify: restart synapse
+  tags: matrix
+
+- name: Install the service unit file
+  template: src=matrix-synapse.service.j2 dest=/etc/systemd/system/matrix-synapse.service
+  register: synapse_service_unit
+  notify: restart synapse
+  tags: matrix
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: synapse_service_unit.changed
+  tags: matrix
+
+- name: Install REST auth module
+  get_url:
+    url: https://raw.githubusercontent.com/ma1uta/matrix-synapse-rest-password-provider/master/rest_auth_provider.py
+    dest: "{{ synapse_root_dir }}/venv/lib/python3.6/site-packages/"
+  tags: matrix
+
+- name: Create the PostgreSQL role
+  postgresql_user:
+    db: postgres
+    name: "{{ synapse_pg_db_user }}"
+    password: "{{ synapse_pg_db_pass }}"
+    login_host: "{{ synapse_pg_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: matrix
+
+- name: Create the PostgreSQL database
+  postgresql_db:
+    name: "{{ synapse_pg_db_name }}"
+    encoding: UTF-8
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ synapse_pg_db_user }}"
+    login_host: "{{ synapse_pg_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ pg_admin_pass }}"
+  tags: matrix
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/matrix_synapse.sh mode=750
+  loop:
+    - pre
+    - post
+  tags: matrix
+
+- name: Reset SELinux contexts
+  command: restorecon -R {{ synapse_root_dir }}
+  changed_when: False
+  when: ansible_selinux.status == 'enabled'
+  tags: matrix

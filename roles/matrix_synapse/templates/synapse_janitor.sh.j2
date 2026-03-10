@@ -1,0 +1,7 @@
+#!/bin/sh
+
+PGPASSWORD={{ synapse_pg_db_pass }} /usr/bin/psql \
+  --user={{ synapse_pg_db_user }} \
+  --host={{ synapse_pg_db_server }} \
+  --port={{ synapse_pg_db_port }} \
+  {{ synapse_pg_db_name }} < {{ synapse_root_dir }}/res/synapse_janitor.sql

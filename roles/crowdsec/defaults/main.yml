@@ -1,0 +1,97 @@
+---
+
+# Version to install
+cs_version: 1.1.1
+# URL of the archive
+cs_archive_url: https://github.com/crowdsecurity/crowdsec/releases/download/v{{ cs_version }}/crowdsec-release.tgz
+# Expected sha1 of the archive
+cs_archive_sha1: e128534e1fc5529441512451753ecb79c2cdcb85
+
+# Crowdsec usually should run as root to be able to access all your logs
+# but in some situations, when all your logs are readable by a less privileged user, you can run
+# crowdsec as another user account, for better security
+cs_user: root
+
+# Directory where data will be stored
+cs_root_dir: /opt/crowdsec
+
+# Can be sqlite or mysql
+cs_db_engine: sqlite
+# This is for mysql backend
+cs_db_server: "{{ mysql_server | default('localhost') }}"
+cs_db_port: 3306
+cs_db_name: crowdsec
+cs_db_user: crowdsec
+# If not defined, a random one will be generated and store in /etc/crowdsec/meta/ansible_dbpass
+# cs_db_pass: S3cr3t.
+
+# You can disable the Local API, if using a remote one for example
+cs_lapi_enabled: True
+# Set to true if Local API is enabled, and you intend to use it through a trusted reverse proxy
+cs_use_forwarded_headers: False
+# Port on which the Local API will listen
+cs_lapi_port: 8080
+# List of IP/CIDR allowed to access cs_lapi_port
+cs_lapi_src_ip: []
+
+# Address of the Local API server
+# The default config will make it standalone
+cs_lapi_url: http://localhost:{{ cs_lapi_port }}/
+cs_lapi_user: "{{ inventory_hostname }}"
+# On installation, ansible will register this host on the Local API
+# And will then validate the registration on the following server.
+# So set it to your own Local API server so ansible will delegate the task
+cs_lapi_server: "{{ inventory_hostname }}"
+
+# Use the central API, to share your banned IP, and received list of IP to ban
+# Requires cs_lapi_enabled to be true too
+cs_capi_enabled: False
+# You can either register manuelly and the the user/pass with those variable
+# Else, ansible will register and configure the credentials
+# cs_capi_user: 123456789
+# cs_capi_pass: azertyuiop
+
+# Port on which the prometheus metric endpoint will bind to
+cs_prometheus_port: 6060
+# List of IP/CIDR allowed to access the prometheus port
+cs_prometheus_src_ip: []
+
+# Default duration of a ban
+cs_trusted_countries:
+  - FR
+# Duration of bans for attacks from trusted countries
+cs_ban_trusted_duration: 15m
+# Default duration of a ban
+cs_ban_duration: 2h
+
+# List of parsers to install from the hub
+cs_parsers:
+  - crowdsecurity/syslog-logs
+  - crowdsecurity/geoip-enrich
+  - crowdsecurity/dateparse-enrich
+  - crowdsecurity/whitelists
+  - crowdsecurity/sshd-logs
+  - crowdsecurity/iptables-logs
+# List of scenarios to install from the hub
+cs_scenarios:
+  - crowdsecurity/ban-defcon-drop_range
+  - crowdsecurity/ssh-bf
+# List of postoverflows to install from the hub
+cs_postoverflows:
+  - crowdsecurity/cdn-whitelist
+  - crowdsecurity/rdns
+  - crowdsecurity/seo-bots-whitelist
+
+# If not set, crowdsec will look for yaml files in /etc/crowdsec/acquis/
+# The default will only read syslog using journalctl
+# If defined, only acquisition set by ansible will be used
+# cs_aquis:
+#   - journalctl_filter:
+#       - '_SYSTEMD_UNIT=sshd.service'
+#     labels:
+#       type: syslog
+#
+#   - filename:
+#       - /var/log/nginx/access.log
+#     labels:
+#       type: nginx

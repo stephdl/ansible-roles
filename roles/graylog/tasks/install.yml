@@ -1,0 +1,100 @@
+---
+
+- name: Uninstall RPM
+  yum:
+    name:
+      - graylog-server
+    state: absent
+  tags: graylog
+
+- name: Install packages
+  yum:
+    name:
+      - java-1.8.0-openjdk
+      - mongodb-org-tools
+  tags: graylog
+
+- name: Download graylog archive
+  get_url:
+    url: "{{ graylog_archive_url }}"
+    dest: "{{ graylog_root_dir }}/tmp/"
+    checksum: sha1:{{ graylog_archive_sha1 }}
+  when: graylog_install_mode != 'none'
+  tags: graylog
+
+- name: Extract graylog archive
+  unarchive:
+    src: "{{ graylog_root_dir }}/tmp/graylog-{{ graylog_version }}.tgz"
+    dest: "{{ graylog_root_dir }}/tmp"
+    remote_src: True
+  when: graylog_install_mode != 'none'
+  tags: graylog
+
+- name: Deploy graylog app
+  synchronize:
+    src: "{{ graylog_root_dir }}/tmp/graylog-{{ graylog_version }}/"
+    dest: "{{ graylog_root_dir }}/app/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: graylog_install_mode != 'none'
+  notify: restart graylog-server
+  tags: graylog
+
+- name: Install plugins
+  get_url:
+    url: "{{ graylog_plugins[item].url }}"
+    dest: "{{ graylog_root_dir }}/app/plugin"
+    checksum: sha1:{{ graylog_plugins[item].sha1 }}
+  when: item in graylog_plugins_to_install
+  loop: "{{ graylog_plugins.keys() | list }}"
+  notify: restart graylog-server
+  tags: graylog
+
+- name: Remove old plugins
+  shell: find {{ graylog_root_dir }}/app/plugin -name graylog-plugin-{{ item }}\* -a \! -name \*{{ graylog_plugins[item].version }}.jar -exec rm -f "{}" \;
+  when: graylog_plugins[item] is defined
+  changed_when: False
+  loop: "{{ graylog_plugins_to_install }}"
+  tags: graylog
+
+- name: List installed plugins
+  shell: find {{ graylog_root_dir }}/app/plugin/ -type f -name graylog-plugin-\*.jar
+  register: graylog_plugins_installed
+  changed_when: False
+  tags: graylog
+
+- name: Remove unwanted plugins
+  file: path={{ item }} state=absent
+  when: item | basename | regex_replace('graylog\-plugin\-(.+)\-\d(\.\d+)+\.jar','\\1') not in graylog_plugins_core + graylog_plugins_to_install
+  notify: restart graylog-server
+  loop: "{{ graylog_plugins_installed.stdout_lines }}"
+  tags: graylog
+
+- name: Deploy systemd service unit
+  template: src=graylog-server.service.j2 dest=/etc/systemd/system/graylog-server.service
+  register: graylog_unit
+  notify: restart graylog-server
+  tags: graylog
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: graylog_unit.changed
+  tags: graylog
+
+- name: Deploy pre/post backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/graylog mode=750
+  loop:
+    - pre
+    - post
+  tags: graylog
+
+- name: Deploy dehydrated hook
+  template: src=dehydrated_deploy_hook.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/graylog mode=755
+  when: graylog_letsencrypt_cert is defined
+  tags: graylog
+
+- name: Remove dehydrated hook
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/graylog state=absent
+  when: graylog_letsencrypt_cert is not defined
+  tags: graylog

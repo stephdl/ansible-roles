@@ -1,0 +1,21 @@
+[Unit]
+Description=FreeRADIUS high performance RADIUS server.
+After=syslog.target network.target ipa.service dirsrv.target krb5kdc.service
+
+[Service]
+Type=simple
+PIDFile=/var/run/radiusd/radiusd.pid
+ExecStartPre=/usr/sbin/radiusd -C
+ExecStart=/usr/sbin/radiusd -f -d /etc/radius
+ExecReload=/usr/sbin/radiusd -C
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=256M
+
+[Install]
+WantedBy=multi-user.target

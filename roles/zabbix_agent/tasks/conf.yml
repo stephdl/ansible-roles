@@ -1,0 +1,17 @@
+---
+- name: Deploy Zabbix Agent configuration
+  template: src=zabbix_agentd.conf.j2 dest=/etc/zabbix/zabbix_agentd.conf
+  notify: restart zabbix-agent
+  tags: zabbix
+
+- name: Detect if vfs.dev.discovery is supported natively
+  shell: zabbix_agentd -t vfs.dev.discovery -c /dev/null | grep -q ZBX_NOTSUPPORTED
+  register: zabbix_dev_disco
+  failed_when: False
+  changed_when: False
+  tags: zabbix
+
+- name: Handle block dev discovery config
+  template: src=block_devices.conf.j2 dest=/etc/zabbix/zabbix_agentd.conf.d/block_devices.conf
+  notify: restart zabbix-agent
+  tags: zabbix

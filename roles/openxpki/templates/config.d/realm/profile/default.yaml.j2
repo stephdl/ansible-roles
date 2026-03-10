@@ -1,0 +1,69 @@
+key:
+  alg:
+    - rsa
+    - ec
+    - dsa
+
+  enc:
+    - aes256
+
+  generate: both
+
+  rsa:
+    key_length:
+      - 2048
+      - 4096
+
+  ec:
+    curve_name:
+      - prime256v1
+      - secp384r1
+      - secp521r1
+
+  dsa:
+    key_length:
+      - 2048
+      - 4096
+
+  validity:
+    notafter: +01
+
+digest: sha256
+increasing_serials: 1
+randomized_serial_bytes: 8
+
+publish:
+  - disk
+
+extensions:
+  basic_constraints:
+    critical: 1
+    ca: 0
+    path_length: 0
+
+  subject_key_identifier:
+    critical: 0
+    hash: 1
+
+  authority_key_identifier:
+    critical: 0
+    keyid:  1
+    issuer: 0
+
+  issuer_alt_name:
+    critical: 0
+    copy: 0
+
+  crl_distribution_points:
+    critical: 0
+    uri:
+      - {{ pki_base_url }}{{ (pki_base_url is search('/^')) | ternary('','/') }}pub/[% ISSUER.CN.0 %]/crl
+
+  authority_info_access:
+    critical: 0
+    ca_issuers: {{ pki_base_url }}{{ (pki_base_url is search('/^')) | ternary('','/') }}pub/[% ISSUER.CN.0 %]/ca
+    ocsp: {{ pki_base_url }}
+
+  policy_identifier:
+    critical: 0
+

@@ -1,0 +1,20 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - targetcli
+  tags: iscsi
+
+- name: Handle iSCSI ports in the firewall
+  iptables_raw:
+    name: iscsi_ports
+    state: "{{ (iscsi_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -p tcp -m multiport --dports {{ iscsi_ports | join(',') }} {% if iscsi_bind_interface is defined %}-i {{ iscsi_bind_interface }} {% endif %}-s {{ iscsi_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,iscsi]
+
+- name: Enable target service
+  service: name=target state=started enabled=True
+  when: iscsi_enabled == True
+  tags: iscsi

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+TO=$1
+MESSAGE=$2
+
+if [[ $TO =~ ^@ ]]; then
+  # This is a matrix user. We need to create a room before we can send
+  # But first check if we haven't already one
+  if [ -e ~/.matrix_zabbix/$TO ]; then
+    # We already have a room for this user, just send it there
+    TO=$(cat ~/.matrix_zabbix/$TO)
+  else
+    # Create a new room, invite the user, and grant him admin privileges
+    USER=$TO
+    TO=$(patrix --create-room --name="Zabbix Alerter for $TO" --topic='Alerts' --invite=$TO)
+    patrix --modify-room --room=$TO --user-perm "$USER=100"
+    echo $TO > ~/.matrix_zabbix/$USER
+  fi
+fi
+# Check we now have a room ID or alias
+if [[ $TO =~ ^[\!\#] ]]; then
+  echo "$MESSAGE" | patrix --room=$TO
+else
+  echo "Can't send to $TO"
+  exit 1
+fi

@@ -1,0 +1,9 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: mkdir
+  - role: httpd_php
+  - role: mysql_server
+    when: itop_db_server in [ 'localhost', '127.0.0.1' ]
+

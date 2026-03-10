@@ -1,0 +1,6 @@
+---
+
+- name: Install FusionInventory Agent
+  yum: name=fusioninventory-agent
+  tags: inventory
+

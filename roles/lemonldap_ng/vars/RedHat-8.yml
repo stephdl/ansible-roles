@@ -1,0 +1,26 @@
+---
+
+llng_common_packages:
+  - lemonldap-ng-conf
+  - perl-Cache-Cache
+  - lemonldap-ng-fastcgi-server
+  - python3-mysql
+
+llng_portal_packages:
+  - python3-passlib
+  - lemonldap-ng-portal
+  - lemonldap-ng-doc
+  - lasso
+  - lasso-perl
+  - perl-Authen-Captcha
+  - perl-Auth-Yubikey_WebClient
+
+llng_manager_packages:
+  - lemonldap-ng-manager
+  - lemonldap-ng-doc
+
+llng_mysql_packages:
+  - perl-DBD-MySQL
+  - python3-mysql
+  - mariadb
+  - perl-Apache-Session-Browseable

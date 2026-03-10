@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ itop_root_dir }}"
+    - version: "{{ itop_version }}"
+  tags: itop
+

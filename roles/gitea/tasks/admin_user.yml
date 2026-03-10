@@ -1,0 +1,30 @@
+---
+- name: Check if admin user exists
+  command: "mysql --host={{ gitea_db_server }} --user={{ gitea_db_user }} --password='{{ gitea_db_pass }}' {{ gitea_db_name }} -ss -e \"select count(*) from user where lower_name='gitadmin'\""
+  register: gitea_admin
+  changed_when: False
+  retries: 10 # first time gitea starts, it'll take some time to create the tables
+  delay: 10
+  until: gitea_admin.rc == 0
+  tags: gitea
+
+  # The user table is created before the email_address. So on first run, we might have an error when creating the
+  # admin account. Here, we just ensure the email_address table exists before we can continue
+- name: Check if the email_address table exists
+  command: "mysql --host={{ gitea_db_server }} --user={{ gitea_db_user }} --password='{{ gitea_db_pass }}' {{ gitea_db_name }} -ss -e \"select count(*) from email_address\""
+  register: gitea_email_table
+  changed_when: False
+  retries: 10
+  delay: 10
+  until: gitea_email_table.rc == 0
+  when: gitea_admin.stdout != "1"
+  tags: gitea
+
+- name: Create the admin account
+  command: "{{ gitea_root_dir }}/bin/gitea admin user create --name gitadmin --admin --password admin --email admin@example.net --config {{ gitea_root_dir }}/etc/app.ini"
+  args:
+    chdir: "{{ gitea_root_dir }}"
+  become_user: gitea
+  when: gitea_admin.stdout != "1"
+  tags: gitea
+

@@ -1,0 +1,12 @@
+---
+
+- name: restart zabbix-server
+  service: name=zabbix-server state=restarted
+  when: not zabbix_server_started.changed # Do not restart if the server has just started
+
+- name: restart zabbix-java-gateway
+  service:
+    name: zabbix-java-gateway
+    state: "{{ (zabbix_server_conf['StartJavaPollers'] is defined and zabbix_server_conf['StartJavaPollers'] > 0) | ternary('restarted','stopped') }}"
+  tags: zabbix
+...

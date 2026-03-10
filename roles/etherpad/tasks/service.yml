@@ -1,0 +1,7 @@
+---
+
+- name: Start and enable the service
+  service: name=etherpad_{{ etherpad_id }} state=started enabled=True
+  register: etherpad_started
+  tags: etherpad
+

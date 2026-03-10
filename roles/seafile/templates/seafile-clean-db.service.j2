@@ -1,0 +1,7 @@
+[Unit]
+Description=Seafile DB cleaner service
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+ExecStart={{ seafile_root_dir }}/bin/clean_db.sh

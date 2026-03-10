@@ -1,0 +1,31 @@
+---
+
+fpbx_packages:
+  - asterisk
+  - asterisk-voicemail
+  - asterisk-pjsip
+  - asterisk-sip
+  - asterisk-mysql
+  - asterisk-ael
+  - asterisk-iax2
+  - asterisk-dahdi
+  - asterisk-fax
+  - asterisk-ldap
+  - asterisk-mp3
+  - asterisk-odbc
+  - mariadb-connector-odbc
+  - mpg123
+#  - lame
+  - opus
+  - nmap
+  - nodejs
+  - tar
+  - mariadb
+  - python3-mysql
+  - acl
+  - gcc-c++ # needed for ucp
+  - icu
+  - libicu-devel
+  - patch
+  - vsftpd
+

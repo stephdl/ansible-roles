@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ papermerge_root_dir }}/tmp/papermerge-{{ papermerge_version }}"
+    - "{{ papermerge_root_dir }}/tmp/papermerge-{{ papermerge_version }}.tar.gz"
+  tags: ged

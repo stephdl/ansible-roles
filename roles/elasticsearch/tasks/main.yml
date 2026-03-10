@@ -1,0 +1,10 @@
+---
+
+- include: install.yml
+- include: directories.yml
+- include: conf.yml
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: services.yml
+- include: backup.yml
+

@@ -1,0 +1,95 @@
+---
+
+ampache_id: "1"
+ampache_manage_upgrade: True
+
+ampache_version: '5.1.1'
+ampache_config_version: 58
+ampache_zip_url: https://github.com/ampache/ampache/releases/download/{{ ampache_version }}/ampache-{{ ampache_version }}_all.zip
+ampache_zip_sha1: a5347181297ab188fe95b3875f75b7838d581974
+
+ampache_root_dir: /opt/ampache_{{ ampache_id }}
+
+ampache_php_user: php-ampache_{{ ampache_id }}
+ampache_php_version: 74
+
+# If you prefer using a custom PHP FPM pool, set it's name.
+# You might need to adjust ampache_php_user
+# ampache_php_fpm_pool: php56
+
+
+ampache_mysql_server: "{{ mysql_server | default('localhost') }}"
+# ampache_mysql_port: 3306
+ampache_mysql_db: ampache_{{ ampache_id }}
+ampache_mysql_user: ampache_{{ ampache_id }}
+# If not defined, a random pass will be generated and stored in the meta directory
+# ampache_mysql_pass: ampache
+
+# ampache_alias: ampache
+# ampache_allowed_ip:
+#   - 192.168.7.0/24
+#   - 10.2.0.0/24
+
+ampache_local_web_path: "http://ampache.{{ ansible_domain }}/"
+ampache_auth_methods:
+  - mysql
+
+ampache_ldap_url: "{{ ad_auth | default(False) | ternary('ldap://' + ad_realm | default(samba_realm) | lower,ldap_uri) }}"
+ampache_ldap_starttls: True
+ampache_ldap_search_dn: "{{ ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | regex_replace('\\.',',DC=')), ldap_base) }}"
+ampache_ldap_username: ""
+ampache_ldap_password: ""
+ampache_ldap_objectclass: "{{ ad_auth | default(False) | ternary('user','inetOrgPerson') }}"
+ampache_ldap_filter: "{{ ad_auth | default(False) | ternary('(&(objectCategory=person)(objectClass=user)(primaryGroupId=513)(sAMAccountName=%v))','(uid=%v)') }}"
+ampache_ldap_email_field: mail
+ampache_ldap_name_field: cn
+
+ampache_admin_users:
+  - admin
+
+#ampache_logout_redirect: https://sso.domain.org
+
+ampache_metadata_order: 'getID3,filename'
+
+ampache_lastfm_api_key: 697bad201ee93391630d845c7b3f9610
+ampache_lastfm_api_secret: 5f5fe59aa2f9c60220f04e94aa59c209
+
+ampache_max_bit_rate: 192
+ampache_min_bit_rate: 64
+
+# allowed, required or false
+ampache_transcode_m4a: required
+ampache_transcode_flac: required
+ampache_transcode_mpc: required
+ampache_transcode_ogg: required
+ampache_transcode_oga: required
+ampache_transcode_wav: required
+ampache_transcode_wma: required
+ampache_transcode_aif: required
+ampache_transcode_aiff: required
+ampache_transcode_ape: required
+ampache_transcode_shn: required
+ampache_transcode_mp3: allowed
+ampache_transcode_avi: required
+ampache_transcode_mkv: required
+ampache_transcode_mpg: required
+ampache_transcode_mpeg: required
+ampache_transcode_m4v: required
+ampache_transcode_mp4: required
+ampache_transcode_mov: required
+ampache_transcode_wmv: required
+ampache_transcode_ogv: required
+ampache_transcode_divx: required
+ampache_transcode_m2ts: required
+ampache_transcode_webm: required
+ampache_transcode_flv: allowed
+ampache_transcode_player_api_mp3: required
+ampache_encode_player_api_target: mp3
+ampache_encode_player_webplayer: mp3
+ampache_encode_target: mp3
+ampache_encode_video_target: webm
+
+# If defined, will be printed on the login page. HTML can be used, eg
+# ampache_motd: '<a href="/sso.php">Use central authentication</a>'
+
+...

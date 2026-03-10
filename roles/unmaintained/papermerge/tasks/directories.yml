@@ -1,0 +1,27 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ papermerge_root_dir }}"
+      owner: "{{ papermerge_user }}"
+      group: nginx
+      mode: 750
+    - dir: "{{ papermerge_root_dir }}/app"
+      owner: "{{ papermerge_user }}"
+      group: nginx
+      mode: 750
+    - dir: "{{ papermerge_root_dir }}/data"
+      owner: "{{ papermerge_user }}"
+      mode: 700
+    - dir: "{{ papermerge_root_dir }}/input"
+      owner: "{{ papermerge_user }}"
+      mode: 700
+    - dir: "{{ papermerge_root_dir }}/tmp"
+      owner: "{{ papermerge_user }}"
+      mode: 700
+    - dir: "{{ papermerge_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ papermerge_root_dir }}/archives"
+      mode: 700
+  tags: ged

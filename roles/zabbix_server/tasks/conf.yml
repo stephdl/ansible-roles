@@ -1,0 +1,90 @@
+---
+
+- name: Deploy patrix configuration file
+  template: src=patrixrc.j2 dest=/var/lib/zabbix/.patrixrc owner=zabbix group=zabbix mode=600
+  when: (zabbix_server_matrix_user is defined and zabbix_server_matrix_pass is defined) or zabbix_server_matrix_access_token is defined
+  tags: zabbix
+
+- name: Deploy PHP configuration
+  template: src=php.conf.j2 dest=/etc/opt/remi/php{{ zabbix_server_php_version }}/php-fpm.d/zabbix_server.conf
+  when: zabbix_server_php_fpm_pool is not defined
+  notify: restart php-fpm
+  tags: zabbix
+
+- name: Remove PHP configuration from other versions
+  file: path=/etc/opt/remi/php{{ item }}/php-fpm.d/zabbix_server.conf state=absent
+  with_items: "{{ httpd_php_versions | difference([ zabbix_server_php_version ]) }}"
+  notify: restart php-fpm
+  tags: zabbix
+
+- name: Remove PHP configuration (using a custom pool)
+  file: path=/etc/opt/remi/php{{ zabbix_server_php_version }}/php-fpm.d/zabbix_server.conf state=absent
+  when: zabbix_server_php_fpm_pool is defined
+  notify: restart php-fpm
+  tags: zabbix
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ zabbix_server_db_name }}"
+    - db_user: "{{ zabbix_server_db_user }}"
+    - db_server: "{{ zabbix_server_db_server }}"
+    - db_pass: "{{ zabbix_server_db_pass }}"
+    - db_encoding: utf8
+    - db_collation: utf8_bin
+  tags: zabbix
+
+- name: Check if database is initialized
+  command: mysql -h'{{ zabbix_server_db_server }}' -u'{{ zabbix_server_db_user }}' -p'{{ zabbix_server_db_pass }}' '{{ zabbix_server_db_name }}' -e 'select mandatory,optional from dbversion'
+  register: zabbix_server_db_init
+  changed_when: False
+  failed_when: False
+  tags: zabbix
+
+- name: Check Zabbix version
+  shell: rpm -q --qf "%{version}" zabbix-server-mysql
+  args:
+    warn: False
+  register: zabbix_server_version
+  changed_when: False
+  tags: zabbix
+
+- when: zabbix_server_db_init.rc != 0
+  tags: zabbix
+  block:
+    - name: Uncompress Zabbix schema file
+      shell: gzip -dc /usr/share/doc/zabbix-server-mysql/create.sql.gz > /tmp/zabbix.sql
+
+    - name: Load DB schema
+      mysql_db:
+        name: "{{ zabbix_server_db_name }}"
+        state: import
+        target: /tmp/zabbix.sql
+        login_host: "{{ zabbix_server_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ mysql_admin_pass }}"
+
+    - name: Remove schema file
+      file: path=/tmp/zabbix.sql state=absent
+
+- name: Deploy zabbix server config
+  template: src=zabbix_server.conf.j2 dest=/etc/zabbix/zabbix_server.conf group=zabbix mode=640
+  notify: restart zabbix-server
+  tags: zabbix
+
+- name: Deploy java gateway configuration
+  template: src=zabbix_java_gateway.conf.j2 dest=/etc/zabbix/zabbix_java_gateway.conf
+  notify: restart zabbix-java-gateway
+  tags: zabbix
+
+- name: Deploy zabbix web config
+  template: src=zabbix.conf.php.j2 dest=/etc/zabbix/web/zabbix.conf.php group=apache mode=640
+  tags: zabbix
+
+- name: Deploy httpd config
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/zabbix_server.conf
+  notify: reload httpd
+  tags: zabbix
+
+- name: Deploy server scripts
+  copy: src=scripts/ dest=/var/lib/zabbix/bin/ mode=755
+  tags: zabbix

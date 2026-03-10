@@ -1,0 +1,81 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - unzip
+      - tar
+      - acl
+  tags: kanboard
+
+- name: Download Kanboard
+  get_url:
+    url: "{{ kanboard_zip_url }}"
+    dest: "{{ kanboard_root_dir }}/tmp/kanboard-v{{ kanboard_version }}.zip"
+    checksum: "sha1:{{ kanboard_zip_sha1 }}"
+  when: kanboard_install_mode != 'none'
+  tags: kanboard
+
+- name: Extract kanboard archive
+  unarchive:
+    src: "{{ kanboard_root_dir }}/tmp/kanboard-v{{ kanboard_version }}.zip"
+    dest: "{{ kanboard_root_dir }}/tmp/"
+    remote_src: yes
+  when: kanboard_install_mode != 'none'
+  tags: kanboard
+
+- name: Move the content of kanboard to the correct top directory
+  synchronize:
+    src: "{{ kanboard_root_dir }}/tmp/kanboard-{{ kanboard_version }}/"
+    dest: "{{ kanboard_root_dir }}/web/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: kanboard_install_mode != 'none'
+  tags: kanboard
+
+- name: Check if ReverseProxyLdap plugin needs to be enabled
+  set_fact:
+    kanboard_plugin_proxy_ldap_enabled: True
+  when: kanboard_ldap_auth and kanboard_proxy_auth
+  tags: kanboard
+
+- name: Check if ReverseProxyLdap plugin needs to be disabled
+  set_fact:
+    kanboard_plugin_proxy_ldap_enabled: False
+  when: not kanboard_ldap_auth or not kanboard_proxy_auth
+  tags: kanboard
+
+- name: Download plugins
+  get_url:
+    url: https://github.com/kanboard/plugin-{{ item }}/releases/download/v{{ kanboard_plugins[item].version }}/{{ kanboard_plugins[item].name }}-{{ kanboard_plugins[item].version }}.zip
+    dest: "{{ kanboard_root_dir }}/tmp/"
+    checksum: "sha1:{{ kanboard_plugins[item].zip_sha1 }}"
+  when:
+    - kanboard_install_mode != 'none'
+    - (item != 'reverse-proxy-ldap' and (kanboard_plugins[item].enabled | default(True))) or kanboard_plugin_proxy_ldap_enabled
+  with_items: "{{ kanboard_plugins.keys() | list }}"
+  tags: kanboard
+
+- name: Extract plugins
+  unarchive:
+    src: "{{ kanboard_root_dir }}/tmp/{{ kanboard_plugins[item].name }}-{{ kanboard_plugins[item].version }}.zip"
+    dest: "{{ kanboard_root_dir }}/web/plugins/"
+    remote_src: yes
+  when:
+    - kanboard_install_mode != 'none'
+    - (item != 'reverse-proxy-ldap' and (kanboard_plugins[item].enabled | default(True))) or kanboard_plugin_proxy_ldap_enabled
+  with_items: "{{ kanboard_plugins.keys() | list }}"
+  tags: kanboard
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ kanboard_mysql_db }}"
+    - db_user: "{{ kanboard_mysql_user }}"
+    - db_server: "{{ kanboard_mysql_server }}"
+    - db_pass: "{{ kanboard_mysql_pass }}"
+  tags: kanboard
+
+- name: Deploy cron task
+  template: src=cron.j2 dest=/etc/cron.d/kanboard_{{ kanboard_id }} mode=644
+  tags: kanboard

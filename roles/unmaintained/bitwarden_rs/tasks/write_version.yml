@@ -1,0 +1,10 @@
+---
+
+- name: Write versions
+  copy: content={{ item.version }} dest={{ bitwarden_root_dir }}/meta/{{ item.file }}
+  loop:
+    - version: "{{ bitwarden_version }}"
+      file: ansible_version
+    - version: "{{ bitwarden_web_version }}"
+      file: ansible_web_version
+  tags: bitwarden

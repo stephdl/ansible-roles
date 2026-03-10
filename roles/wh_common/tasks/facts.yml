@@ -1,0 +1,15 @@
+---
+- name: Build a list of Zimbra domains
+  set_fact: wh_mail_domains={{ wh_clients | selectattr('mail', 'defined') | selectattr('mail.enabled', 'equalto', True) | selectattr('mail.domain', 'defined') | map(attribute='mail.domain') | list }}
+  tags: mail
+
+- name: Build a list of Zimbra domain aliases
+  set_fact: wh_mail_aliases={{ wh_mail_aliases | default([]) + item.mail.domain_aliases }}
+  loop: "{{ wh_clients }}"
+  when:
+    - item.mail is defined
+    - item.mail.enabled is defined
+    - item.mail.enabled
+    - item.mail.domain_aliases is defined
+    - item.mail.domain_aliases | length > 0
+  tags: mail

@@ -1,0 +1,74 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - tar
+      - zstd
+  tags: cs
+
+- when: cs_install_mode != 'none'
+  block:
+    - name: Download crowdsec
+      get_url:
+        url: "{{ cs_archive_url }}"
+        dest: /tmp/
+        checksum: sha1:{{ cs_archive_sha1 }}
+
+    - name: Extract crowdsec
+      unarchive:
+        src: /tmp/crowdsec-release.tgz
+        dest: /tmp/
+        remote_src: True
+
+    - name: Install or upgrade crowdsec
+      command: ./wizard.sh --bin{{ cs_install_mode }} --force
+      args:
+        chdir: /tmp/crowdsec-v{{ cs_version }}/
+      notify: restart crowdsec
+
+  tags: cs
+
+- name: Update crowdsec hub
+  command: cscli hub update
+  changed_when: False
+  tags: cs
+
+- name: Create the systemd unit snippet dir
+  file: path=/etc/systemd/system/crowdsec.service.d state=directory
+  tags: cs
+
+- name: Make the service restart on failure
+  copy:
+    content: |
+      [Service]
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=30
+    dest: /etc/systemd/system/crowdsec.service.d/restart.conf
+  register: crodwsec_unit_restart
+  notify: restart crowdsec
+  tags: cs
+
+- name: Set user account which runs the service
+  copy:
+    content: |
+      [Service]
+      User={{ cs_user }}
+      Group={{ cs_user }}
+    dest: /etc/systemd/system/crowdsec.service.d/user.conf
+  register: crodwsec_unit_user
+  notify: restart crowdsec
+  tags: cs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: crodwsec_unit_restart.changed or crodwsec_unit_user.changed
+  tags: cs
+
+- name: Install pre and post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/crowdsec mode=700
+  loop:
+    - pre
+    - post
+  tags: cs

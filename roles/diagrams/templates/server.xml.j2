@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Server port="{{ diagrams_port | int + 1 }}" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="off" />
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+  <Service name="Catalina">
+    <Connector port="{{ diagrams_port }}" protocol="HTTP/1.1"
+               connectionTimeout="20000" />
+    <Engine name="Catalina" defaultHost="diagrams">
+      <Host name="diagrams"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+        <Context path="" docBase="draw"></Context>
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="diagrams_access_log." suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+    </Engine>
+  </Service>
+</Server>

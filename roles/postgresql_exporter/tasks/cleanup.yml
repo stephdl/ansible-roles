@@ -1,0 +1,9 @@
+---
+
+- name: Remove tmp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ pg_exporter_root_dir }}/tmp/postgres_exporter_v{{ pg_exporter_version }}_linux-amd64"
+    - "{{ pg_exporter_root_dir }}/tmp/postgres_exporter_v{{ pg_exporter_version }}_linux-amd64.tar.gz"
+  tags: pg
+

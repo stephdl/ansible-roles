@@ -1,0 +1,8 @@
+PerlOptions +GlobalRequest
+PerlRequire Lemonldap/NG/Handler.pm
+
+<Location /lm-reload>
+  Require ip {{ llng_reload_ip | join(' ') }}
+  PerlHeaderParserHandler Lemonldap::NG::Handler->refresh
+</Location>
+

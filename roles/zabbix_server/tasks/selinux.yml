@@ -1,0 +1,40 @@
+---
+
+- name: Copy SELinux policy
+  copy: src=zabbix_server.te dest=/etc/selinux/targeted/local/
+  register: zabbix_server_selinux_policy
+  tags: zabbix
+
+- name: Install needed packages
+  yum:
+    name: policycoreutils
+  tags: zabbix
+
+- name: Compile SELinux policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o zabbix_server.mod zabbix_server.te
+    semodule_package -o zabbix_server.pp -m zabbix_server.mod
+  when: zabbix_server_selinux_policy.changed
+  tags: zabbix
+
+- name: Load policy for Zabbix Proxy
+  command: semodule -i /etc/selinux/targeted/local/zabbix_server.pp
+  when: zabbix_server_selinux_policy.changed
+  tags: zabbix
+
+- name: Set SELinux context
+  sefcontext:
+    target: '/var/lib/zabbix/sessions(/.*)?'
+    setype: httpd_var_lib_t
+    state: present
+  tags: zabbix
+
+- name: Restore SELinux context
+  command: restorecon -R /var/lib/zabbix/
+  changed_when: False
+  tags: zabbix
+
+- name: Allow network connections in SELinux
+  seboolean: name=zabbix_can_network state=True persistent=True
+  tags: zabbix

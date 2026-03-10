@@ -1,0 +1,42 @@
+---
+
+# Should iptables be managed
+iptables_manage: yes
+
+# Default rules
+iptables_default_head: |
+  -P INPUT DROP
+  -P FORWARD DROP
+  -P OUTPUT ACCEPT
+  -N LOGDENY
+  -A LOGDENY -m limit --limit 10/s -j LOG --log-prefix 'Firewall: '
+  -A LOGDENY -j REJECT
+  -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+  -A INPUT -m state --state INVALID -j DROP
+  -A INPUT -i lo -j ACCEPT
+  -A INPUT -m state --state NEW -p tcp --dport 22 -s {{ trusted_ip | default(['0.0.0.0/0']) | join(',') }} -j ACCEPT
+  -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+  -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+  -A FORWARD -m state --state INVALID -j DROP
+
+iptables_default_tail: |
+  -A INPUT -j LOGDENY
+  -A FORWARD -j LOGDENY
+
+iptables_custom_rules: []
+# Example:
+# iptables_custom_rules:
+#   - name: open_port_12345 # 'iptables_custom_rules_' will be prepended to this
+#     rules: "-A INPUT -p tcp --dport 12345 -j ACCEPT"
+#     state: present
+#     weight: 40
+#     ipversion: 4
+#     table: filter
+#
+# NOTE: 'name', 'rules' and 'state' are required, others are optional.
+
+# By default this role deletes all iptables rules which are not managed by Ansible.
+# Set this to 'yes', if you want the role to keep unmanaged rules.
+iptables_keep_unmanaged: no
+
+...

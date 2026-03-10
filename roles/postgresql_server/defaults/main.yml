@@ -1,0 +1,73 @@
+---
+
+# If you want to install newer PG than available in the default
+# repo, specify the branch here, eg 96, 10, 11
+pg_version: default
+# Command to compress dumps. Will read from stdin and write to stdout. Set to False to disable compression
+pg_compress_cmd: zstd -T0 -c
+pg_remove_dump_after_backup: True
+# can be text or custom (or a raw format name supported by pg_dump)
+pg_dump_format: text
+
+pg_port: 5432
+pg_src_ip: []
+
+# List of directives which can be expressed as a % and
+# will be determined from the host available memory
+pg_pct_mem_directives:
+  - shared_buffers
+  - effective_cache_size
+  - maintenance_work_mem
+  - wal_buffers
+  - work_mem
+
+# postgresql.conf directives
+pg_base_conf:
+  listen_addresses:
+    - 0.0.0.0
+  max_connections: 100
+  shared_buffers: 10%
+  log_timezone: "{{ system_tz | default('Europe/Paris') }}"
+  timezone: "{{ system_tz | default('Europe/Paris') }}"
+  log_destination: syslog
+  datestyle: 'iso, dmy'
+  lc_messages: fr_FR.UTF-8
+  lc_monetary: fr_FR.UTF-8
+  lc_numeric: fr_FR.UTF-8
+  lc_time: fr_FR.UTF-8
+
+pg_extra_conf: {}
+pg_conf: "{{ pg_base_conf | combine(pg_extra_conf, recursive=True) }}"
+
+
+# Databases and roles to create
+# Eg
+# pg_databases
+#   - name: odoo
+#     encoding: UTF-8
+#     owner: odoo
+# pg_roles:
+#   - name: odoo
+#     pass: very_secret
+#     flags:
+#       - SUPERUSER
+#       - CREATEDB
+#       - CREATEROLE
+# pg_privs:
+#   - database: dbname
+#     state: present
+#     privs: SELECT,INSERT,DELETE,UPDATE
+#     objs: ALL_IN_SCHEMA
+#     type: table
+#     schema: public
+#     role: reportuser
+
+#
+pg_databases: []
+pg_roles: []
+pg_privs: []
+
+# Databases and roles to remove
+pg_databases_to_remove: []
+pg_roles_to_remove: []
+...

@@ -1,0 +1,27 @@
+---
+
+- name: Configure IPv4 Forwarding
+  sysctl: name="net.ipv4.ip_forward" value={{ net_ipv4_forward | ternary('1', '0') }} sysctl_file=/etc/sysctl.d/network.conf sysctl_set=yes state=present reload=yes
+  when: ansible_virtualization_type != 'systemd-nspawn'
+
+- name: Deploy /etc/hosts
+  template: src=hosts.j2 dest=/etc/hosts
+
+- name: Prevent PVE from changing /etc/hosts
+  copy: content='' dest=/etc/.pve-ignore.hosts
+  when: ansible_virtualization_type == 'lxc'
+
+- name: Merge interface settings with defaults
+  set_fact: net_if_conf={{ net_if_conf | default([]) + [ net_if_defaults | combine(item, recursive=True) ] }}
+  with_items: "{{ net_if }}"
+  tags: net,conf
+- set_fact: net_if={{ net_if_conf | default([]) }}
+  tags: net,conf
+
+- name: Deploy interface configuration
+  template: src=ifcfg.j2 dest=/etc/sysconfig/network-scripts/ifcfg-{{ item.name }}
+  loop: "{{ net_if }}"
+  notify: reload network
+  tags: net,conf
+
+...

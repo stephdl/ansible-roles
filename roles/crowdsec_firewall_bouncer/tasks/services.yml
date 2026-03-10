@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable the service
+  service: name=cs-firewall-bouncer state=started enabled=True
+  tags: cs

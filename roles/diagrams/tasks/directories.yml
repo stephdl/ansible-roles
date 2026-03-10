@@ -1,0 +1,38 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ diagrams_root_dir }}/"
+      group: tomcat
+    - dir: "{{ diagrams_root_dir }}/webapps"
+      group: tomcat
+      mode: 770
+    - dir: "{{ diagrams_root_dir }}/conf"
+      group: tomcat
+    - dir: "{{ diagrams_root_dir }}/conf/Catalina"
+      owner: tomcat
+      mode: 700
+    - dir: "{{ diagrams_root_dir }}/tmp"
+      group: tomcat
+      mode: 770
+    - dir: "{{ diagrams_root_dir }}/logs"
+      owner: tomcat
+      mode: 700
+    - dir: "{{ diagrams_root_dir }}/work"
+      owner: tomcat
+      mode: 700
+    - dir: "{{ diagrams_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ diagrams_root_dir }}/archives"
+      mode: 700
+  tags: diagrams
+
+- name: Create symlinks
+  file: state=link src={{ item.src }} dest={{ item.dest }}
+  loop:
+    - src: /usr/share/tomcat/bin/
+      dest: "{{ diagrams_root_dir }}/bin"
+    - src: /usr/share/java/tomcat
+      dest: "{{ diagrams_root_dir }}/lib"
+  tags: diagrams

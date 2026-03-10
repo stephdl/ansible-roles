@@ -1,0 +1,23 @@
+{% for log in ['ccnet','controller','elasticsearch_deprecation','elasticsearch_index_indexing_slowlog','elasticsearch_index_search_slowlog','file_updates_sender','gunicorn_error','index','seafdav','seafile','seahub_email_sender','virus_scan'] %}
+{{ seafile_root_dir }}/logs/{{ log }}.log
+{% endfor %}
+{% for log in ['seafile_slow_rpc','seafile_slow_storage'] %}
+{{ seafile_root_dir }}/logs/slow_logs/{{ log }}.log
+{% endfor %}
+{
+  daily
+  rotate 365
+  compress
+  missingok
+  copytruncate
+  su seafile seafile
+}
+{{ seafile_root_dir }}/logs/seaf-fuse.log
+{
+  daily
+  rotate 365
+  compress
+  missingok
+  copytruncate
+  su root seafile
+}

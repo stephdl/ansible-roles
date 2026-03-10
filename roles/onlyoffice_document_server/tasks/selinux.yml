@@ -1,0 +1,27 @@
+---
+
+- name: Set correct context for binaries
+  sefcontext:
+    target: "{{ item }}"
+    setype: bin_t
+  loop:
+    - /var/www/onlyoffice/documentserver/server/FileConverter/converter
+    - /var/www/onlyoffice/documentserver/server/DocService/docservice
+    - /var/www/onlyoffice/documentserver/server/Metrics/metrics
+  register: oo_bin_context
+  notify: restart documentserver
+  tags: oo
+
+- name: Reset SELinux context
+  command: restorecon -R /var/www/onlyoffice/documentserver/server/ /var/lib/onlyoffice/
+  when: oo_bin_context.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: oo
+
+- name: Remove useless SELinux policy
+  file: path=/etc/selinux/targeted/local/{{ item }} state=absent
+  loop:
+    - onlyoffice_docserver.te
+    - onlyoffice_docserver.mod
+    - onlyoffice_docserver.pp
+  tags: oo
+

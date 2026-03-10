@@ -1,0 +1,54 @@
+---
+
+- name: Install dependencies
+  yum: name={{ pma_packages }}
+  tags: pma
+
+- when:  pma_install_mode != 'none'
+  block:
+
+    - name: Download phpMyAdmin
+      get_url:
+        url: "{{ pma_archive_url }}"
+        dest: "{{ pma_root_dir }}/tmp/"
+        checksum: "sha256:{{ pma_archive_sha256 }}"
+    
+    - name: Extract pma archive
+      unarchive:
+        src: "{{ pma_root_dir }}/tmp/phpMyAdmin-{{ pma_version }}-all-languages.zip"
+        dest: "{{ pma_root_dir }}/tmp"
+        remote_src: yes
+    
+    - name: Move files to the correct directory
+      synchronize:
+        src: "{{ pma_root_dir }}/tmp/phpMyAdmin-{{ pma_version }}-all-languages/"
+        dest: "{{ pma_root_dir }}/web/"
+        compress: False
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+
+  tags: pma
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ pma_db_name }}"
+    - db_user: "{{ pma_db_user }}"
+    - db_server: "{{ pma_db_server }}"
+    - db_pass: "{{ pma_db_pass }}"
+  tags: pma
+
+- name: Prepare SQL file to create tables
+  replace: path={{ pma_root_dir }}/web/sql/create_tables.sql regexp='phpmyadmin' replace={{ pma_db_name }}
+  tags: pma
+
+- name: Create tables
+  mysql_db:
+    name: "{{ pma_db_name }}"
+    state: import
+    target: "{{ pma_root_dir }}/web/sql/create_tables.sql"
+    login_host: "{{ pma_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when: db_created.changed
+  tags: pma
+

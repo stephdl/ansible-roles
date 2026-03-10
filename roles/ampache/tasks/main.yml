@@ -1,0 +1,213 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - unzip
+      - acl
+      - git
+      - ffmpeg
+      - mariadb
+  tags: ampache
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: "{{ ampache_php_user }}"
+    - comment: "PHP FPM for ampache {{ ampache_id }}"
+  tags: ampache
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ ampache_root_dir }}"
+    - version: "{{ ampache_version }}"
+  tags: ampache
+- set_fact: ampache_install_mode={{ (install_mode == 'upgrade' and not ampache_manage_upgrade) | ternary('none',install_mode) }}
+  tags: ampache
+- set_fact: ampache_current_version={{ current_version | default('') }}
+  tags: ampache
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ ampache_root_dir }}"
+    - version: "{{ ampache_current_version }}"
+    - db_name: "{{ ampache_mysql_db }}"
+  when: ampache_install_mode == 'upgrade'
+  tags: ampache
+
+- name: Create directory structure
+  file: path={{ item }} state=directory
+  with_items:
+    - "{{ ampache_root_dir }}"
+    - "{{ ampache_root_dir }}/web"
+    - "{{ ampache_root_dir }}/tmp"
+    - "{{ ampache_root_dir }}/sessions"
+    - "{{ ampache_root_dir }}/meta"
+    - "{{ ampache_root_dir }}/logs"
+    - "{{ ampache_root_dir }}/data"
+    - "{{ ampache_root_dir }}/data/metadata"
+    - "{{ ampache_root_dir }}/data/music"
+    - "{{ ampache_root_dir }}/data/video"
+    - "{{ ampache_root_dir }}/backup"
+  failed_when: False # Don't fail when a fuse FS is mount on /music for example
+  tags: ampache
+
+- when: ampache_install_mode != 'none'
+  block:
+    - name: Create tmp dir
+      file: path={{ ampache_root_dir }}/tmp/ampache state=directory
+
+    - name: Download Ampache
+      get_url:
+        url: "{{ ampache_zip_url }}"
+        dest: "{{ ampache_root_dir }}/tmp/"
+        checksum: "sha1:{{ ampache_zip_sha1 }}"
+    
+    - name: Extract ampache archive
+      unarchive:
+        src: "{{ ampache_root_dir }}/tmp/ampache-{{ ampache_version }}_all.zip"
+        dest: "{{ ampache_root_dir }}/tmp/ampache"
+        remote_src: yes
+    
+    - name: Move files to the correct directory
+      synchronize:
+        src: "{{ ampache_root_dir }}/tmp/ampache/"
+        dest: "{{ ampache_root_dir }}/web/"
+        delete: True
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+  tags: ampache
+
+- name: Check if htaccess files needs to be moved
+  stat: path={{ ampache_root_dir }}/web/public/{{ item }}/.htaccess.dist
+  with_items:
+    - channel
+    - play
+    - rest
+  register: htaccess
+  tags: ampache
+
+- name: Rename htaccess files
+  command: mv -f {{ ampache_root_dir }}/web/public/{{ item.item }}/.htaccess.dist {{ ampache_root_dir }}/web/public/{{ item.item }}/.htaccess
+  with_items: "{{ htaccess.results }}"
+  when: item.stat.exists
+  tags: ampache
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ ampache_root_dir }}/meta/key.txt"
+  tags: ampache
+- set_fact: ampache_key={{ rand_pass }}
+  tags: ampache
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ampache_root_dir }}/meta/ansible_dbpass"
+  when: ampache_mysql_pass is not defined
+  tags: ampache
+- set_fact: ampache_mysql_pass={{ rand_pass }}
+  when: ampache_mysql_pass is not defined
+  tags: ampache
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ ampache_mysql_db }}"
+    - db_user: "{{ ampache_mysql_user }}"
+    - db_server: "{{ ampache_mysql_server }}"
+    - db_pass: "{{ ampache_mysql_pass }}"
+  tags: ampache
+
+- name: Inject SQL structure
+  mysql_db:
+    name: "{{ ampache_mysql_db }}"
+    state: import
+    target: "{{ ampache_root_dir }}/web/sql/ampache.sql"
+    login_host: "{{ ampache_mysql_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when: ampache_install_mode == 'install'
+  tags: ampache
+
+- name: Deploy ampache configuration
+  template: src=ampache.cfg.php.j2 dest={{ ampache_root_dir }}/web/config/ampache.cfg.php group={{ ampache_php_user }} mode=640
+  tags: ampache
+
+#- name: Upgrade SQL database
+#  command: php{{ ampache_php_version }} {{ ampache_root_dir }}/web/bin/cli admin:updateDatabase
+#  become_user: "{{ ampache_php_user }}"
+#  when: ampache_install_mode == 'upgrade'
+#  tags: ampache
+
+- name: Grant admin privileges
+  command: mysql --host={{ ampache_mysql_server }} --user=sqladmin --password={{ mysql_admin_pass }} {{ ampache_mysql_db }} -e "UPDATE `user` SET `access`='100' WHERE `username`='{{ item }}'"
+  changed_when: False
+  become_user: "{{ ampache_php_user }}"
+  with_items: "{{ ampache_admin_users }}"
+  tags: ampache
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: ampache_{{ ampache_id }}
+    - php_version: "{{ ampache_php_version }}"
+    - php_fpm_pool: "{{ ampache_php_fpm_pool | default('') }}"
+  tags: ampache
+
+- name: Deploy motd
+  template: src=motd.php.j2 dest={{ ampache_root_dir }}/web/config/motd.php
+  when: ampache_motd is defined
+  tags: ampache
+
+- name: Remove motd
+  file: path={{ ampache_root_dir }}/web/config/motd.php state=absent
+  when: ampache_motd is not defined
+  tags: ampache
+
+- name: Deploy cron scripts
+  template: src={{ item }}.j2 dest={{ ampache_root_dir }}/web/bin/{{ item }}
+  with_items:
+    - cron.sh
+  tags: ampache
+
+- name: Enable cronjob
+  cron:
+    name: ampache_{{ ampache_id }}
+    special_time: daily
+    user: "{{ ampache_php_user }}"
+    job: "/bin/sh {{ ampache_root_dir }}/web/bin/cron.sh"
+    cron_file: ampache_{{ ampache_id }}
+  tags: ampache
+
+- name: Deploy sso script
+  template: src=sso.php.j2 dest={{ ampache_root_dir }}/web/sso.php
+  tags: ampache
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/ampache_{{ ampache_id }} mode=750
+  loop:
+    - pre
+    - post
+  tags: ampache
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ ampache_root_dir }}"
+    - version: "{{ ampache_current_version }}"
+  when: ampache_install_mode == 'upgrade'
+  tags: ampache
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ ampache_root_dir }}"
+    - version: "{{ ampache_version }}"
+  tags: ampache
+
+- name: Remove temp and obsolete files
+  file: path={{ item }} state=absent
+  with_items:
+    - "{{ ampache_root_dir }}/tmp/ampache-{{ ampache_version }}_all.zip"
+    - "{{ ampache_root_dir }}/tmp/ampache/"
+    - "{{ ampache_root_dir }}/db_dumps"
+    - /etc/backup/pre.d/ampache_{{ ampache_id }}_dump_db
+    - /etc/backup/post.d/ampache_{{ ampache_id }}_rm_dump
+  tags: ampache
+
+...

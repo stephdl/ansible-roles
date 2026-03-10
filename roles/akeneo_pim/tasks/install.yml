@@ -1,0 +1,95 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - make
+      - ghostscript
+      - aspell
+  tags: pim
+
+- when: pim_install_mode == 'upgrade'
+  block:
+    - name: Wipe install on upgrades
+      file: path={{ pim_root_dir }}/app state=absent
+
+    - name: Create app subdir
+      file: path={{ pim_root_dir }}/app state=directory owner={{ pim_user }} group={{ pim_user }}
+
+    - name: Link the var directory 
+      file: src={{ pim_root_dir }}/data dest={{ pim_root_dir }}/app/var state=link
+
+  tags: pim
+
+- when: pim_install_mode != 'none'
+  block:
+    - name: Deploy composer.json
+      template: src=composer.json.j2 dest={{ pim_root_dir }}/app/composer.json owner={{ pim_user }}
+      become_user: root
+
+    - name: Install Akeneo with Composer
+      composer:
+        working_dir: "{{ pim_root_dir }}/app"
+        executable: /bin/php{{ pim_php_version }}
+        command: install
+      become_user: "{{ pim_user }}"
+
+    - name: Install yarn globaly
+      npm:
+        name: yarn
+        path: "{{ pim_root_dir }}/app"
+        global: True
+        state: latest
+
+    - name: Install typescript globaly
+      npm:
+        name: typescript
+        path: "{{ pim_root_dir }}/app"
+        global: True
+        state: latest
+
+  tags: pim
+
+  # the PIM makefile has /usr/local/bin/composer hardcoded
+- name: Link composer in /usr/local/bin
+  file: src=/bin/composer dest=/usr/local/bin/composer state=link
+  tags: pim
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ pim_db_name }}"
+    - db_user: "{{ pim_db_user }}"
+    - db_server: "{{ pim_db_server }}"
+    - db_pass: "{{ pim_db_pass }}"
+  tags: pim
+
+- name: Set correct SELinux context
+  sefcontext:
+    target: "{{ pim_root_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  when: ansible_selinux.status == 'enabled'
+  tags: pim
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/pim_{{ pim_id }} mode=700
+  loop:
+    - pre
+    - post
+  tags: pim
+
+- name: Install job consumer and events api service units
+  template: src={{ item.src }} dest=/etc/systemd/system/{{ item.dest }}
+  loop:
+    - src: akeneo-pim-jobs.service.j2
+      dest: akeneo-pim_{{ pim_id }}-jobs.service
+    - src: akeneo-pim-events-api.service.j2
+      dest: akeneo-pim_{{ pim_id }}-events-api.service
+  register: pim_job_unit
+  notify: restart akeneo-pim
+  tags: pim
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pim_job_unit.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: pim

@@ -1,0 +1,148 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Mail::IMAPClient;
+use MIME::Parser;
+use Getopt::Long;
+use Data::Dumper;
+
+# Hide args from process list
+$0 = 'imap-sa-learn';
+
+my ($all,$list) = undef;
+my $server      = $ENV{IMAP_SA_LEARN_SERVER};
+my $port        = $ENV{IMAP_SA_LEARN_PORT};
+my $user        = $ENV{IMAP_SA_LEARN_USER};
+my $password    = $ENV{IMAP_SA_LEARN_PASSWORD};
+my $spamdir     = $ENV{IMAP_SA_LEARN_SPAMDIR}    || 'Spam';
+my $hamdir      = $ENV{IMAP_SA_LEARN_HAMDIR}     || 'Ham';
+my $security    = $ENV{IMAP_SA_LEARN_SECURITY}   || 'tls';
+my $attachment  = $ENV{IMAP_SA_LEARN_ATTACHMENT} || 0;
+my $debug       = $ENV{IMAP_SA_LEARN_DEBUG}      || 0;
+my $need_sync   = 0;
+
+GetOptions(
+  'server=s'   => \$server,
+  'security=s' => \$security,
+  'port=i'     => \$port,
+  'user=s'     => \$user,
+  'password=s' => \$password,
+  'spamdir=s'  => \$spamdir,
+  'hamdir=s'   => \$hamdir,
+  'attachment' => \$attachment,
+  'all'        => \$all,
+  'list'       => \$list,
+  'debug+'     => \$debug
+);
+
+
+# Set ssl and starttls based on security value
+my $ssl      = (lc $security eq 'tls' or lc $security eq 'ssl') ? 1 : 0;
+my $starttls = (lc $security eq 'starttls' or lc $security eq 'start_tls') ? 1 : 0;
+
+# Unless port is explicitely given, set the default based on SSL being enabled
+$port ||= ($ssl) ? '993' : '143';
+
+# Check required args are given
+if (not defined $server or not defined $user or not defined $password){
+  die "You must provide server, user and password";
+}
+
+# Check for mutual exclusive options
+if ($ssl and $starttls){
+  die "ssl and starttls are mutually exclusive";
+}
+
+# Create the imap client
+my $imap = Mail::IMAPClient->new(
+  Server   => $server,
+  User     => $user,
+  Password => $password,
+  Port     => $port,
+  Ssl      => $ssl,
+  Starttls => $starttls,
+);
+if ($@){
+  die "Can't connect to imap server: $@\n";
+}
+
+# If --list is given, just print the list of folders available and exit
+# This can be used to check how some special characters are encoded so
+# you can just copy/past it later
+if ($list){
+  print $_ . "\n" foreach (@{$imap->folders});
+  exit 0;
+}
+
+if (defined $spamdir){
+  crawl_imap_dir($spamdir,'spam');
+}
+if (defined $hamdir){
+  crawl_imap_dir($hamdir,'ham');
+}
+
+if ($need_sync){
+  qx(sa-learn --sync);
+}
+
+$imap->close;
+exit 0;
+
+sub crawl_imap_dir {
+  my $dir = shift;
+  my $type = shift;
+  $imap->select($dir);
+  debug("Crawling in folder $dir\n");
+
+  # Default is to only process unseen emails
+  my @list = $imap->unseen;
+  # Unless --all is given, in which case we process also seen ones
+  push @list, $imap->seen if ($all);
+
+  foreach my $id (@list){
+    debug("Found mail id $id", 2);
+    my $raw_mail = $imap->message_string($id);
+
+    # When --attachment is passed, we expect spam/ham to be attached as
+    # message/rfc822. Extract the first matching attachment and feed it to sa-learn
+    # Note that there's no support for nested attachment, but it shouldn't be needed
+    if ($attachment) {
+      my $parser      = MIME::Parser->new;
+      my $entity      = $parser->parse_data($raw_mail);
+      my $inner_found = 0;
+      foreach my $part ($entity->parts) {
+        if ($part->effective_type eq 'message/rfc822'){
+          # Remove the first 3 lines which presents the raw mail, but as an attachment
+          my @lines = split /\n/, $part->stringify;
+          splice @lines,0,3;
+          sa_learn(join("\n", @lines), $type);
+	  $inner_found = 1;
+        }
+      }
+      if (not $inner_found){
+        debug("Couldn't find a message/rfc822 attachment. Are you sure --attachment is needed ?");
+      }
+    } else {
+      sa_learn($raw_mail, $type);
+    }
+  }
+}
+
+sub sa_learn {
+  my $data = shift;
+  my $type = shift;
+  open SALEARN, "| sa-learn --no-sync --$type";
+  print SALEARN $data;
+  close SALEARN;
+  $need_sync = 1;
+}
+
+sub debug {
+  my $msg = shift;
+  my $level = shift;
+  $level ||= 1;
+  if ($debug ge $level){
+    print "$msg\n";
+  }
+}

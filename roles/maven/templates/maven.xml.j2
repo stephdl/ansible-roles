@@ -1,0 +1,15 @@
+<settings>
+{% if system_proxy is defined and system_proxy != '' %}
+  <proxies>
+    <proxy>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>{{ system_proxy | urlsplit('hostname') }}</host>
+      <port>{{ system_proxy | urlsplit('port') }}</port>
+{% if system_proxy_no_proxy is defined and system_proxy_no_proxy | length > 0 %}
+      <nonProxyHosts>{{ system_proxy_no_proxy | join('|') }}</nonProxyHosts>
+{% endif %}
+    </proxy>
+  </proxies>
+{% endif %}
+</settings>

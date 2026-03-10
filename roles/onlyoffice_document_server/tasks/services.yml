@@ -1,0 +1,11 @@
+---
+
+- name: Stop and disable supervisord
+  systemd: name=supervisord state=stopped enabled=False masked=True
+  tags: oo
+
+- name: Start and enable documentserver services
+  service: name={{ item }} state=started enabled=True
+  loop: "{{ oo_services }}"
+  tags: oo
+

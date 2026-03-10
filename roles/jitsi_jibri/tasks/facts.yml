@@ -1,0 +1,43 @@
+---
+
+- name: Generate a random pass for jibri
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jibri_xmpp_pass"
+    - set_fact: jitsi_jibri_xmpp_pass={{ rand_pass }}
+  when: jitsi_jibri_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Generate a random pass for recorder
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jibri_recorder_xmpp_pass"
+    - set_fact: jitsi_jibri_recorder_xmpp_pass={{ rand_pass }}
+  when: jitsi_jibri_recorder_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Check if jibri is built
+  stat: path={{ jitsi_root_dir }}/jibri/jibri.jar
+  register: jitsi_jibri_jar
+  tags: jitsi
+
+- name: Check latest version of ChromeDriver
+  uri:
+    url: https://chromedriver.storage.googleapis.com/LATEST_RELEASE
+    return_content: True
+  register: jitsi_jibri_chromedriver_latest_version
+  tags: jitsi
+
+- name: Check if ChromeDriver is installed
+  stat: path=/usr/local/bin/chromedriver
+  register: jitsi_jibri_chromedriver_bin
+  tags: jitsi
+
+- name: Detect ChromeDriver version
+  shell: chromedriver --version | perl -pe 's/ChromeDriver (\d+(\.\d+)+).*/$1/'
+  register: jitsi_jibri_chromedriver_current_version
+  when: jitsi_jibri_chromedriver_bin.stat.exists
+  changed_when: False
+  tags: jitsi

@@ -1,0 +1,41 @@
+fields:
+  source: {{ inventory_hostname }}
+fields_under_root: True
+logging.files:
+  rotateeverybytes: 5242880
+  keepfiles: 2
+filebeat.config.inputs:
+  path: /etc/filebeat/ansible_inputs.d/*.yml
+  reload.enabled: True
+  reload.period: 30s
+filebeat.config.modules:
+  path: /etc/filebeat/ansible_modules.d/*.yml
+  reload.enabled: True
+  reload.period: 30s
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+output.{{ filebeat_output_type }}:
+  hosts:
+{% for host in filebeat_output_hosts %}
+    - {{ host }}
+{% endfor %}
+{% if filebeat_output_ssl is defined %}
+  ssl: 
+{% if filebeat_output_ssl.enabled is defined %}
+    enabled: {{ filebeat_output_ssl.enabled }}
+{% endif %}
+{% if filebeat_output_ssl.cert_authorities is defined %}
+    certificate_authorities:
+{% for ca in filebeat_output_ssl.cert_authorities %}
+      - {{ ca }}
+{% endfor %}
+{% endif %}
+{% if filebeat_output_ssl.client_cert is defined and filebeat_output_ssl.client_key is defined %}
+    certificate: {{ filebeat_output_ssl.client_cert }}
+    key: {{ filebeat_output_ssl.client_key }}
+{% endif %}
+{% if filebeat_output_ssl.client_key_passphrase is defined %}
+    key_passphrase: {{ filebeat_output_ssl.client_key_passphrase | quote }}
+{% endif %}
+{% endif %}

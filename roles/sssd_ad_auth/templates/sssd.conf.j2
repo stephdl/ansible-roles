@@ -1,0 +1,66 @@
+[sssd]
+services = nss, pam, pac
+config_file_version = 2
+domains = {{ ad_realm | upper }}{% for domain in ad_trusted_domains %}, {{ domain.name | upper }}{% endfor %}
+
+default_domain_suffix = {{ ad_realm | upper }}
+
+[nss]
+shell_fallback = /bin/false
+
+[pam]
+
+[domain/{{ ad_realm | upper }}]
+id_provider = ad
+access_provider = ad
+ad_hostname = {{ ansible_hostname }}.{{ ad_realm | lower }}
+fallback_homedir = /home/%d/%u
+default_shell = {{ ad_default_shell }}
+cache_credentials = true
+krb5_store_password_if_offline = true
+ad_access_filter = {{ ad_access_filter }}
+{% if ad_ldap_user_search_base is defined %}
+ldap_user_search_base = {{ ad_ldap_user_search_base }}
+{% endif %}
+{% if ad_ldap_group_search_base is defined %}
+ldap_group_search_base = {{ ad_ldap_group_search_base }}
+{% endif %}
+{% if ad_samba_secrets.stat.exists %}
+# Membership password is updated with net ads
+ad_maximum_machine_account_password_age = 0
+{% endif %}
+{% if ad_enumerate %}
+enumerate = true
+{% endif %}
+ad_gpo_access_control = {{ ad_gpo_access_control }}
+{% if not ad_dyndns_update %}
+dyndns_update = false
+{% endif %}
+{% if ad_private_groups %}
+auto_private_groups = true
+{% endif %}
+
+{% for domain in ad_trusted_domains %}
+
+
+[domain/{{ domain.name | upper }}]
+id_provider = ad
+access_provider = ad
+fallback_homedir = /home/%d/%u
+default_shell = /bin/false
+cache_credentials = true
+krb5_store_password_if_offline = true
+ldap_krb5_keytab = /var/lib/sss/keytabs/{{ domain.name | upper }}.keytab
+krb5_keytab = /var/lib/sss/keytabs/{{ domain.name | upper }}.keytab
+{% if domain.enumerate %}
+enumerate = true
+{% endif %}
+ad_access_filter = {{ domain.access_filter }}
+{% if domain.ldap_user_search_base is defined and domain.ldap_user_search_base %}
+ldap_user_search_base = {{ domain.ldap_user_search_base }}
+{% endif %}
+{% if domain.ldap_group_search_base is defined and domain.ldap_group_search_base %}
+ldap_group_search_base = {{ domain.ldap_group_search_base }}
+{% endif %}
+ad_gpo_access_control = {{ domain.ad_gpo_access_control | default(ad_gpo_access_control) }}
+{% endfor %}

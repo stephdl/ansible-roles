@@ -1,0 +1,10 @@
+[Unit]
+Description=Jibri Recordings Cleaner
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+User={{ jitsi_jibri_user }}
+Group={{ jitsi_jibri_user }}
+ExecStart={{ jitsi_root_dir }}/jibri/clean_records.sh
+

@@ -1,0 +1,7 @@
+---
+
+- name: restart ntpd
+  service: name={{ ntp_ntpd_service }} state=restarted
+
+- name: restart chrony
+  service: name={{ ntp_chrony_service }} state=restarted

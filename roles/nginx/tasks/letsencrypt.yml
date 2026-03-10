@@ -1,0 +1,95 @@
+---
+- name: Create dehydrated hook dir
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/ state=directory
+  tags: web
+
+- name: Deploy dehydrated deploy hook
+  copy: src=dehydrated_deploy_hook dest=/etc/dehydrated/hooks_deploy_cert.d/11nginx.sh mode=755
+  tags: web
+
+- name: Check if Let's Encrypt cert for the default vhost exists
+  stat: path=/var/lib/dehydrated/certificates/certs/{{ nginx_letsencrypt_cert }}/fullchain.pem
+  register: nginx_letsencrypt_default_cert
+  when: nginx_letsencrypt_cert is defined
+  tags: web
+
+- name: Create directory for the default certificate
+  file: path=/var/lib/dehydrated/certificates/certs/{{ nginx_letsencrypt_cert }}/ state=directory
+  when: nginx_letsencrypt_cert is defined
+  tags: web
+
+- name: Link certificate to the self signed default one
+  file: src=/etc/nginx/ssl/{{ item.src }}.pem dest=/var/lib/dehydrated/certificates/certs/{{ nginx_letsencrypt_cert }}/{{ item.dest }}.pem state=link
+  with_items:
+    - src: cert
+      dest: fullchain
+    - src: key
+      dest: privkey
+  when:
+    - nginx_letsencrypt_cert is defined
+    - nginx_letsencrypt_default_cert.stat is defined
+    - not nginx_letsencrypt_default_cert.stat.exists
+  tags: web
+
+- name: Check if Let's Encrypt's cert exist
+  stat: path=/var/lib/dehydrated/certificates/certs/{{ item.ssl.letsencrypt_cert }}/fullchain.pem
+  register: nginx_letsencrypt_certs
+  with_items: "{{ nginx_vhosts }}"
+  when: item.ssl.letsencrypt_cert is defined
+  tags: web
+
+- name: Create directories for missing Let's Encrypt cert
+  file: path=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }} state=directory
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt cert to the default one
+  file: src={{ nginx_cert_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }}/fullchain.pem state=link
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt key to the default one
+  file: src={{ nginx_key_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }}/privkey.pem state=link
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Check if Let's Encrypt's cert exist (auto certificates)
+  stat: path=/var/lib/dehydrated/certificates/certs/{{ item.name }}/fullchain.pem
+  register: nginx_letsencrypt_certs
+  with_items: "{{ nginx_vhosts }}"
+  when: item.ssl.cert is not defined and item.ssl.letsencrypt_cert is not defined and nginx_auto_letsencrypt_cert
+  tags: web
+
+- name: Create directories for missing Let's Encrypt cert (auto certificates)
+  file: path=/var/lib/dehydrated/certificates/certs/{{ item.item.name }} state=directory
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt cert to the default one (auto certificates)
+  file: src={{ nginx_cert_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.name }}/fullchain.pem state=link
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+
+- name: Link missing Let's Encrypt key to the default one (auto certificates)
+  file: src={{ nginx_key_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.name }}/privkey.pem state=link
+  with_items: "{{ nginx_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: web
+

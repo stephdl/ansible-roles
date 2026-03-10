@@ -1,0 +1,23 @@
+---
+
+- name: Create the archive dir
+  file: path={{ miniflux_root_dir }}/archives/{{ miniflux_current_version }} state=directory
+  tags: miniflux
+
+- name: Backup previous version
+  copy: src={{ miniflux_root_dir }}/bin/miniflux dest={{ miniflux_root_dir }}/archives/{{ miniflux_current_version }}/ remote_src=True
+  tags: miniflux
+
+- name: Backup the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ miniflux_db_server }}
+    --port={{ miniflux_db_port }}
+    --username={{ miniflux_db_user }}
+    {{ miniflux_db_name }}
+    --file={{ miniflux_root_dir }}/archives/{{ miniflux_current_version }}/{{ miniflux_db_name }}.sql
+  environment:
+    - PGPASSWORD: "{{ miniflux_db_pass }}"
+  tags: miniflux

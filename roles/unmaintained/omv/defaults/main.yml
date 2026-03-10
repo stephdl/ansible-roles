@@ -1,0 +1,24 @@
+---
+
+# For source IP filtering
+omv_http_src_ip:
+  - 0.0.0.0/0
+omv_rsyncd_src_ip:
+  - 0.0.0.0/0
+omv_smb_src_ip:
+  - 0.0.0.0/0
+omv_ftp_src_ip:
+  - 0.0.0.0/0
+omv_nfs_src_ip:
+  - 0.0.0.0/0
+
+# Define services ports
+omv_http_ports: [80,443]
+omv_rsyncd_ports: [873]
+omv_smb_ports: [139,445]
+omv_ftp_ports: [21]
+omv_nfs_ports: [111,2049]
+
+# If enabled, will patch the login routine to get auth username from the HTTP_AUTH_USER header
+# Role can be passed in HTTP_OMV_ROLE (can be 'admin', or any other value will be mapped to a simple user)
+omv_auth_http: False

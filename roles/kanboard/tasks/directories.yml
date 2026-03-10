@@ -1,0 +1,13 @@
+---
+
+- name: Create directory structure
+  file: path={{ item }} state=directory
+  with_items:
+    - "{{ kanboard_root_dir }}"
+    - "{{ kanboard_root_dir }}/web"
+    - "{{ kanboard_root_dir }}/tmp"
+    - "{{ kanboard_root_dir }}/sessions"
+    - "{{ kanboard_root_dir }}/data"
+    - "{{ kanboard_root_dir }}/cache"
+    - "{{ kanboard_root_dir }}/meta"
+  tags: kanboard

@@ -1,0 +1,56 @@
+---
+
+- name: Install postfix
+  yum:
+    name:
+      - postfix
+      - cyrus-sasl-plain
+  when: ansible_os_family == 'RedHat'
+  tags: postfix
+
+- name: Install postfix
+  apt:
+    name:
+      - postfix
+      - libsasl2-modules
+  when: ansible_os_family == 'Debian'
+  tags: postfix
+
+- name: Checck if mailman is installed
+  stat: path={{ mailman_root_dir | default('/opt/mailman') }}
+  register: postfix_mailman
+  tags: postfix
+
+- name: Deploy configuration
+  template: src=main.cf.j2 dest=/etc/postfix/main.cf mode=644 owner=root group=root
+  notify: restart postfix
+  tags: postfix
+
+- name: Deploy Relay authentication map
+  template: src=relay_auth.j2 dest=/etc/postfix/relay_auth mode=600 owner=root group=root
+  register: relay_auth_file
+  tags: postfix
+
+- name: Check if relay_auth has been hashed
+  stat: path=/etc/postfix/relay_auth.db
+  register: relay_auth_hashed
+  tags: postfix
+
+- name: Rehash postfix relay auth
+  command: postmap /etc/postfix/relay_auth
+  when: relay_auth_file.changed or not relay_auth_hashed.stat.exists
+  tags: postfix
+
+- name: Handle postfix port
+  iptables_raw:
+    name: postfix_ports
+    state: "{{ (postfix_src_ip is defined and postfix_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ postfix_ports | default(['25']) | join(',') }} -s {{ postfix_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: postfix
+
+- name: start and enable the service
+  service: name=postfix state=started enabled=True
+  tags: postfix
+
+...

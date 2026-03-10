@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump --user={{ dolibarr_db_user }} \
+                   --password={{ dolibarr_db_pass | quote }} \
+                   --host={{ dolibarr_db_server }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ dolibarr_db_name }} | zstd -c > {{ dolibarr_root_dir }}/db_dumps/{{ dolibarr_db_name }}.sql.zst

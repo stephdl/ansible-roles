@@ -1,0 +1,22 @@
+[Unit]
+Description=Journal Remote Upload Service
+After=network.target
+
+[Service]
+ExecStart=/lib/systemd/systemd-journal-upload \
+          --save-state
+User=systemd-journal-upload
+PrivateTmp=yes
+PrivateDevices=yes
+WatchdogSec=20min
+Restart=always
+RestartSec=10min
+TimeoutStopSec=10
+
+# If there are many split up journal files we need a lot of fds to
+# access them all and combine
+LimitNOFILE=16384
+
+[Install]
+WantedBy=multi-user.target
+

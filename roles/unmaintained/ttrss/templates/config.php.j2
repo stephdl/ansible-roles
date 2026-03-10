@@ -1,0 +1,43 @@
+<?php
+
+define('DB_TYPE', "mysql");
+define('DB_HOST', "{{ ttrss_mysql_server }}");
+define('DB_USER', "{{ ttrss_mysql_user }}");
+define('DB_NAME', "{{ ttrss_mysql_db }}");
+define('DB_PASS', "{{ ttrss_mysql_pass }}");
+define('DB_PORT', "{{ ttrss_mysql_port | default('') }}");
+define('MYSQL_CHARSET', 'UTF8');
+define('SELF_URL_PATH', '{{ ttrss_public_url }}');
+define('FEED_CRYPT_KEY', '');
+define('SINGLE_USER_MODE', false);
+define('SIMPLE_UPDATE_MODE', false);
+define('PHP_EXECUTABLE', '{{ ttrss_php_bin }}');
+define('LOCK_DIRECTORY', '{{ ttrss_root_dir }}/tmp/');
+define('CACHE_DIR', '{{ ttrss_root_dir }}/cache');
+define('ICONS_DIR', "{{ ttrss_root_dir }}/data/icons");
+define('ICONS_URL', "feed-icons");
+define('AUTH_AUTO_CREATE', true);
+define('AUTH_AUTO_LOGIN', true);
+define('FORCE_ARTICLE_PURGE', 0);
+define('ENABLE_REGISTRATION', false);
+define('SESSION_COOKIE_LIFETIME', 0);
+define('SMTP_FROM_NAME', 'Tiny Tiny RSS');
+define('SMTP_FROM_ADDRESS', 'noreply@{{ ansible_domain }}');
+define('DIGEST_SUBJECT', '[tt-rss] New headlines for last 24 hours');
+define('SMTP_SERVER', 'localhost:25');
+define('PLUGINS', 'auth_remote, auth_internal, note');
+define('LOG_DESTINATION', 'syslog');
+
+define('SPHINX_SERVER', 'localhost:9312');
+define('SPHINX_INDEX', 'ttrss, delta');
+define('REG_NOTIFY_ADDRESS', 'user@your.domain.dom');
+define('REG_MAX_USERS', 1);
+define('SMTP_LOGIN', '');
+define('SMTP_PASSWORD', '');
+define('SMTP_SECURE', '');
+define('CHECK_FOR_UPDATES', false);
+define('ENABLE_GZIP_OUTPUT', false);
+
+define('CONFIG_VERSION', 26);
+
+?>

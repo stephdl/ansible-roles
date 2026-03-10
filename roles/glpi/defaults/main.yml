@@ -1,0 +1,96 @@
+---
+
+glpi_id: 1
+glpi_manage_upgrade: True
+glpi_version: 9.5.5
+glpi_zip_url: https://github.com/glpi-project/glpi/releases/download/{{ glpi_version }}/glpi-{{ glpi_version }}.tgz
+glpi_zip_sha1: 4a3408d3485b3813251e5c3f567283767bd76847
+glpi_root_dir: /opt/glpi_{{ glpi_id }}
+glpi_php_user: php-glpi_{{ glpi_id }}
+# If set, will use the following custom PHP FPM pool, which must be created
+# glpi_php_fpm_pool: php70
+glpi_php_version: 74
+glpi_mysql_server: "{{ mysql_server | default('localhost') }}"
+glpi_mysql_db: glpi_{{ glpi_id }}
+glpi_mysql_user: glpi_{{ glpi_id }}
+# If unset, a random one will be created and stored in the meta directory
+# glpi_mysql_pass: glpi
+
+# glpi_alias: glpi
+# glpi_src_ip:
+#   - 192.168.7.0/24
+#   - 10.2.0.0/24
+
+glpi_plugins:
+  fusioninventory:
+    version: '9.5+3.0'
+    sha1: ecfd38bb31600d6806cb32a8a5af2db24bac8145
+    url: https://github.com/fusioninventory/fusioninventory-for-glpi/releases/download/glpi9.5%2B3.0/fusioninventory-9.5+3.0.tar.bz2
+  reports:
+    version: 1.14.0
+    sha1: 0e2c8912c43360b1140f972e70e3509e4e6e3c0d
+    url: https://forge.glpi-project.org/attachments/download/2317/glpi-plugin-reports-1.14.0.tar.gz
+  pdf:
+    version: 2.0.0
+    sha1: c1eee0ab488852265c6a920510894551424b3f3e
+    url: https://forge.glpi-project.org/attachments/download/2335/glpi-pdf-2.0.0.tar.gz
+  behaviors:
+    version: 2.5.0
+    sha1: 972e06027835d9da1e2eb2523caff40382389f81
+    url: https://forge.glpi-project.org/attachments/download/2336/glpi-behaviors-2.5.0.tar.gz
+  manufacturersimports:
+    version: 2.3.1
+    sha1: a6c3fd696665221ab5f1cf4cada18dd6481a1f31
+    url: https://github.com/InfotelGLPI/manufacturersimports/releases/download/2.3.1/glpi-manufacturersimports-2.3.1.tar.gz
+  domains:
+    version: 2.2.1
+    sha1: 298b459f5a132a20b3e3427921485c201f68ea78
+    url: https://github.com/InfotelGLPI/domains/releases/download/2.2.1/glpi-domains-2.2.1.tar.gz
+  formcreator:
+    version: 2.11.2
+    sha1: f8a51ee17296602d9f17daacbc4470e1b26c743c
+    url: https://github.com/pluginsGLPI/formcreator/releases/download/v2.11.2/glpi-formcreator-2.11.2.tar.bz2
+  tag:
+    version: 2.8.1
+    sha1: 9e88086bd54f41c67ddbd915020be0d558d05668
+    url: https://github.com/pluginsGLPI/tag/releases/download/2.8.1/glpi-tag-2.8.1.tar.bz2
+  mreporting:
+    version: 1.7.2
+    sha1: 9e9498b11dd59707b16501a1fb341839642eb4a6
+    url: https://github.com/pluginsGLPI/mreporting/releases/download/1.7.2/glpi-mreporting-1.7.2.tar.bz2
+  fields:
+    version: 1.12.4
+    sha1: 6415badd849dcb5d3b51d6cb256c7cb3040aaff1
+    url: https://github.com/pluginsGLPI/fields/releases/download/1.12.4/glpi-fields-1.12.4.tar.bz2
+  webapplications:
+    version: 3.0.0
+    sha1: c5fe2ce301e02469b0fe66e302dedcf0a564e1ae
+    url: https://github.com/InfotelGLPI/webapplications/releases/download/3.0.0/glpi-webapplications-3.0.0.tar.gz
+  genericobject:
+    version: 2.10.1
+    sha1: a8a27acfb0055f5880715bcd5931134bcd690542
+    url: https://github.com/pluginsGLPI/genericobject/releases/download/2.10.1/glpi-genericobject-2.10.1.tar.bz2
+  mantis:
+    version: 4.4.0
+    sha1: 1686f9a944d16e86b74eab9689e61bf64f4cf144
+    url: https://github.com/pluginsGLPI/mantis/releases/download/4.4.0/glpi-mantis-4.4.0.tar.bz2
+  archimap:
+    version: 2.2.1
+    sha1: a9dfac68dfad5af7230e36b76199391a7fee0c04
+    url: https://github.com/ericferon/glpi-archimap/releases/download/v2.2.1/archimap-v2.2.1.tar.gz
+  dashboard:
+    version: 1.0.2
+    sha1: c98a504f18c9914b57deda0340c19dbfad08440f
+    url: https://forge.glpi-project.org/attachments/download/2323/glpi-dashboard-1.0.2.zip
+    rename_from: glpi-dashboard-1.0.2
+
+glpi_plugins_to_install: []
+
+# You can customize the logo, ansible will download the logo
+# This one is at the top left on every page. Should be 100x55
+# glpi_logo: https://img.example.org/logos/glpi/fd_glpi.png
+
+# This one is on the login page. It should be 145x80
+# glpi_login_logo: https://img.example.org/logos/glpi/login_logo_glpi.png
+
+...

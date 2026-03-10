@@ -1,0 +1,16 @@
+---
+
+- name: Remove unused and tmp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ synapse_root_dir }}/lib"
+    - "{{ synapse_root_dir }}/lib64"
+    - "{{ synapse_root_dir }}/include"
+    - "{{ synapse_root_dir }}/bin"
+    - "{{ synapse_root_dir }}/db_dumps"
+    - "{{ synapse_root_dir }}/res/synapse_janitor.sql"
+    - "{{ synapse_root_dir }}/venv/bin/synapse_janitor.sh"
+    - /etc/cron.d/matrix_synapse
+    - "{{ synapse_root_dir }}/archives/{{ synapse_current_version }}"
+  tags: matrix
+

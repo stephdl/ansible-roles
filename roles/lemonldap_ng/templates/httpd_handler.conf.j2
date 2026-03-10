@@ -1,0 +1,14 @@
+PerlOptions +GlobalRequest
+PerlModule Lemonldap::NG::Handler::ApacheMP2
+
+# ErrorDocument 403 https://{{ llng_portal_vhost }}/?lmError=403
+# ErrorDocument 404 https://{{ llng_portal_vhost }}/?lmError=404
+# ErrorDocument 500 https://{{ llng_portal_vhost }}/?lmError=500
+# ErrorDocument 502 https://{{ llng_portal_vhost }}/?lmError=502
+# ErrorDocument 503 https://{{ llng_portal_vhost }}/?lmError=503
+
+<Location /llng-reload>
+  Require ip {{ llng_reload_src_ip | join(' ') }}
+  SetHandler perl-script
+  PerlResponseHandler Lemonldap::NG::Handler::ApacheMP2->reload
+</Location>

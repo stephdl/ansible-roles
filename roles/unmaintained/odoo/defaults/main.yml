@@ -1,0 +1,18 @@
+---
+
+odoo_root_dir: /opt/odoo
+odoo_version: 11.0
+odoo_build: 20180301
+odoo_manage_upgrade: True
+odoo_archive_url: https://nightly.odoo.com/11.0/nightly/src/odoo_{{ odoo_version }}.{{ odoo_build }}.tar.gz
+odoo_user: odoo
+odoo_db_server: "{{ pg_server | default('localhost') }}"
+odoo_db_name: odoo
+odoo_db_user: odoo
+# odoo_db_pass: secret
+odoo_workers: 4
+odoo_src_ip: []
+odoo_xmlrpc_port: 8069
+odoo_longpolling_port: 8072
+odoo_ports: [ "{{ odoo_xmlrpc_port }}","{{ odoo_longpolling_port }}" ]
+odoo_email: "{{ system_admin_email | default('admin' + ansible_domain ) }}"

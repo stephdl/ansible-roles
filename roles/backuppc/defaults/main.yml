@@ -1,0 +1,19 @@
+---
+
+# You can choose either 3 or 4
+bpc_major_version: 3
+
+# Auth to access BackupPC. Can be basic, lemonldap, lemonldap2 or none
+bpc_auth: basic
+
+# List of IP address allowed
+bpc_src_ip: []
+
+# Should backuppc be started on boot ?
+# You might want to turn this off if for example you must unlock
+# the device on which you have your backup, and manually start backuppc after that
+bpc_enabled: True
+
+# Should /BackupPC aliases be added on the main vhost ?
+# You might want to, but you can also disable this and grant access only through a dedicated vhost
+bpc_alias_on_main_vhost: True

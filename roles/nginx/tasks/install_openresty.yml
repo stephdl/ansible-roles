@@ -1,0 +1,69 @@
+---
+
+- name: Check if nginx is installed
+  stat: path=/lib/systemd/system/nginx.service
+  register: nginx_nginx_service
+  tags: web
+
+- name: Stop nginx
+  service: name=nginx state=stopped
+  when: nginx_nginx_service.stat.exists
+  tags: web
+
+- name: Create the nginx user account
+  user:
+    name: nginx
+    system: True
+    shell: /sbin/nologin
+    home: /var/lib/nginx
+  tags: web
+
+- name: Prepare directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /var/lib/nginx/tmp
+      owner: nginx
+      group: nginx
+      mode: '700'
+    - dir: /var/cache/nginx
+      owner: nginx
+      group: nginx
+      mode: '700'
+    - dir: /var/log/nginx
+      owner: nginx
+      group: nginx
+      mode: '700'
+    - dir: /usr/share/nginx
+    - dir: /etc/nginx
+    - dir: /usr/local/openresty/nginx
+  tags: web
+
+  # Create links so openresty uses nginx compatible paths
+- name: Prepare links
+  file: src={{ item.src }} dest={{ item.dest }} state=link
+  loop:
+    - src: /etc/nginx
+      dest: /usr/local/openresty/nginx/conf
+    - src: /var/log/nginx
+      dest: /usr/local/openresty/nginx/logs
+    - src: /usr/share/nginx
+      dest: /usr/local/openresty/nginx/html
+  tags: web
+
+- name: Remove nginx
+  yum:
+    name:
+      - nginx
+    state: absent
+  tags: web
+
+- name: Install packages
+  yum:
+    name:
+      - openresty
+  tags: web
+
+- name: Add a link to nginx in /sbin
+  file: src=/usr/local/openresty/nginx/sbin/nginx dest=/sbin/nginx state=link
+  tags: web
+

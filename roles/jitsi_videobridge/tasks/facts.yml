@@ -1,0 +1,15 @@
+---
+
+- name: Generate a random pass for videobridge
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_videobridge_xmpp_pass"
+    - set_fact: jitsi_videobridge_xmpp_pass={{ rand_pass }}
+  when: jitsi_videobridge_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Check if videobridge is built
+  stat: path={{ jitsi_root_dir }}/videobridge/jvb.sh
+  register: jitsi_videobridge_script
+  tags: jitsi

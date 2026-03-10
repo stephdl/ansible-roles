@@ -1,0 +1,70 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - ipset
+  tags: cs
+
+- when: cs_fw_install_mode != 'none'
+  block:
+
+    - name: Download the bouncer
+      get_url:
+        url: "{{ cs_fw_archive_url }}"
+        dest: /tmp
+        checksum: sha1:{{ cs_fw_archive_sha1 }}
+
+    - name: Extract the archive
+      unarchive:
+        src: /tmp/cs-firewall-bouncer.tgz
+        dest: /tmp
+        remote_src: True
+
+    - name: Install or upgrade
+      command: ./{{ cs_fw_install_mode }}.sh
+      args:
+        chdir: /tmp/cs-firewall-bouncer-v{{ cs_fw_version }}
+      notify: restart cs-firewall-bouncer
+
+  tags: cs
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/cs-firewall-bouncer.service.d state=directory
+  tags: cs
+
+- name: Create iptables snippet dir
+  file: path=/etc/systemd/system/{{ cs_iptables_service }}.service.d state=directory
+  tags: cs
+
+- name: Create ipsets before iptables starts
+  copy:
+    content: |
+      [Service]
+      ExecStartPre=/usr/sbin/ipset -exist create crowdsec-blacklists nethash timeout 300
+      ExecStartPre=/usr/sbin/ipset -exist create crowdsec6-blacklists nethash timeout 300 family inet6
+    dest: /etc/systemd/system/{{ cs_iptables_service }}.service.d/cs-ipset.conf
+  register: cs_iptable_unit
+  tags: cs
+
+- name: Tune cs-firewall-bouncer service
+  copy:
+    content: |
+      [Unit]
+      # The bouncer should start after crowdsec to be able to register on the API
+      After=crowdsec.service
+
+      [Service]
+      # Restart on failure
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=30
+    dest: /etc/systemd/system/cs-firewall-bouncer.service.d/ansible.conf
+  register: crodwsec_fw_unit
+  notify: restart cs-firewall-bouncer
+  tags: cs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: crodwsec_fw_unit.changed or cs_iptable_unit.changed
+  tags: cs

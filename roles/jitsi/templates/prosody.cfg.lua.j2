@@ -1,0 +1,118 @@
+
+muc_mapper_domain_base = "{{ jitsi_domain }}";
+admins = { "{{ jitsi_jicofo_xmpp_user }}@{{ jitsi_auth_domain }}" };
+http_default_host = "{{ jitsi_domain }}";
+
+{% if jitsi_turn_secret is defined %}
+turncredentials_secret = "{{ jitsi_turn_secret }}";
+{% endif %}
+
+turncredentials = {
+{% for stun in jitsi_stun_servers %}
+  {
+    type = "{{ stun | urlsplit('scheme') }}",
+    host = "{{ stun | regex_replace('(turns?|stun):([^:]+)(:\d+)?.*', '\\2') }}",
+{% if stun | regex_replace('(turns?|stun):.+:(\d+)?.*', '\\2') | int > 0 and stun | regex_replace('(turns?|stun):.+:(\d+)?.*', '\\2') | int < 65535 %}
+    port = "{{ stun | regex_replace('(turns?|stun):.+:(\d+)?.*', '\\2') }}",
+{% endif %}
+{% if stun | urlsplit('query') is search('transport=') %}
+    transport = "{{ stun | urlsplit('query') | regex_replace('.*transport=(udp|tcp).*', '\\1') }}"
+{% endif %}
+  },
+{% endfor %}
+};
+
+cross_domain_bosh = false;
+cross_domain_websocket = true;
+consider_bosh_secure = true;
+
+VirtualHost "{{ jitsi_domain }}"
+{% if jitsi_auth == 'ldap' %}
+  authentication = "ldap"
+  ldap_base = "{{ jitsi_ldap_base }}"
+  ldap_server = "{{ jitsi_ldap_servers | join(' ') }}"
+{% if jitsi_ldap_bind_dn is defined and jitsi_ldap_bind_pass is defined %}
+  ldap_rootdn = "{{ jitsi_ldap_bind_dn }}"
+  ldap_password = "{{ jitsi_ldap_bind_pass }}"
+{% endif %}
+  ldap_filter = "{{ jitsi_ldap_filter }}"
+  ldap_scope = "subtree"
+  ldap_tls = {{ jitsi_ldap_starttls | ternary('true','false') }}
+{% else %}
+  authentication = "anonymous"
+{% endif %}
+  ssl = {
+    key = "{{ jitsi_key_path }}";
+    certificate = "{{ jitsi_cert_path }}";
+  }
+
+  modules_enabled = {
+    "bosh";
+    "pubsub";
+    "ping";
+    "websocket";
+    "turncredentials";
+    "speakerstats";
+    "conference_duration";
+    "muc_lobby_rooms";
+    "participant_metadata";
+  }
+  c2s_require_encryption = false
+  allow_unencrypted_plain_auth = true
+  speakerstats_component = "speakerstats.{{ jitsi_domain }}"
+  conference_duration_component = "conferenceduration.{{ jitsi_domain }}"
+  lobby_muc = "lobby.{{ jitsi_domain }}"
+  main_muc = "conference.{{ jitsi_domain }}"
+  muc_lobby_whitelist = { "recorder.{{ jitsi_domain }}" }
+
+{% if jitsi_auth == 'ldap' %}
+-- Guest virtual domain
+VirtualHost "guest.{{ jitsi_domain }}"
+  authentication = "anonymous"
+  c2s_require_encryption = false
+  modules_enabled = {
+    "participant_metadata";
+  }
+{% endif %}
+
+VirtualHost "{{ jitsi_auth_domain }}"
+  ssl = {
+    key = "{{ jitsi_key_path }}";
+    certificate = "{{ jitsi_cert_path }}";
+  }
+  authentication = "internal_hashed"
+  c2s_require_encryption = false
+
+VirtualHost "recorder.{{ jitsi_domain }}"
+  modules_enabled = { "ping"; }
+  authentication = "internal_hashed"
+  c2s_require_encryption = false
+
+Component "conference.{{ jitsi_domain }}" "muc"
+  storage = "memory"
+  modules_enabled = {
+    "ping";
+    "jibri_bypass_pwd";
+  }
+  muc_room_locking = false
+  muc_room_default_public_jids = true
+
+Component "internal.{{ jitsi_auth_domain }}" "muc"
+  storage = "memory"
+  modules_enabled = { "ping"; }
+  muc_room_cache_size = 1000
+
+Component "focus.{{ jitsi_domain }}" "client_proxy"
+  target_address = "{{ jitsi_jicofo_xmpp_user }}@{{ jitsi_auth_domain }}"
+
+Component "speakerstats.{{ jitsi_domain }}" "speakerstats_component"
+  muc_component = "conference.{{ jitsi_domain }}"
+
+Component "conferenceduration.{{ jitsi_domain }}" "conference_duration_component"
+  muc_component = "conference.{{ jitsi_domain }}"
+
+Component "lobby.{{ jitsi_domain }}" "muc"
+  storage = "memory"
+  restrict_room_creation = true
+  muc_room_locking = false
+  muc_room_default_public_jids = true

@@ -1,0 +1,38 @@
+---
+
+- name: Install dependencies
+  apt:
+    name:
+      - libnet-route-perl
+      - libnet-address-ip-local-perl
+      - libarray-diff-perl
+      - libdata-validate-ip-perl
+      - liblogger-syslog-perl
+
+- name: Deploy Online.net integration script
+  copy: src=pve-online dest=/usr/local/bin/pve-online mode=755
+
+- name: Deploy Online.net integration conf
+  template: src=pve-online.conf.j2 dest=/etc/pve-online.conf mode=600
+
+- name: Create hook directory on local storage
+  file: path=/var/lib/vz/snippets state=directory
+
+- name: Deploy Online hook
+  copy: src=online_hook.pl dest=/var/lib/vz/snippets/online_hook.pl mode=755
+
+- name: Ensure /etc/systemd/system/ exists
+  file: path=/etc/systemd/system/ state=directory
+
+- name: Disable pve-online-gre service
+  service: name=pve-online-gre state=stopped enabled=False
+  failed_when: False
+
+- name: Remove pve-online-gre service unit
+  file: path=/etc/systemd/system/pve-online-gre.service state=absent
+  register: pve_gre_unit
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pve_gre_unit.changed
+

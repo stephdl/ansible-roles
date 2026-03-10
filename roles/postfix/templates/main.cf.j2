@@ -1,0 +1,52 @@
+# {{ ansible_managed }}
+
+setgid_group = postdrop
+mail_owner = postfix
+
+myhostname = {{ inventory_hostname }}
+{% if postfix_mydomain is defined %}
+mydomain = {{ postfix_mydomain }}
+{% endif %}
+
+myorigin = $mydomain
+
+inet_interfaces = all
+inet_protocols = ipv4
+
+mydestination = {{ postfix_mydestination | default(['$myhostname', 'localhost.$mydomain', 'localhost']) | join(', ') }}
+
+mynetworks = {{ postfix_mynetworks | default([ '127.0.0.0/8' ]) | join (', ') }}
+smtpd_recipient_restrictions = permit_mynetworks,reject
+
+{% if postfix_relay_host is defined %}
+relayhost = {{ postfix_relay_host }}
+{% if postfix_relay_user is defined and postfix_relay_pass is defined %}
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/relay_auth
+{% endif %}
+{% if postfix_relay_transport | default('starttls') == 'starttls' or postfix_relay_transport | default('starttls') == 'tls' %}
+{% if postfix_relay_transport | default('starttls') == 'starttls' %}
+smtp_use_tls = yes
+{% elif postfix_relay_transport | default('starttls') == 'tls' %}
+smtp_tls_wrappermode = yes
+{% endif %}
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
+smtp_tls_note_starttls_offer = yes
+smtp_tls_CApath = {{ postfix_relay_ca_path | default( (ansible_os_family == 'Debian') | ternary('/etc/ssl/cert/ca-certificate.pem','/etc/pki/tls/certs')) }}
+{% endif %}
+{% endif %}
+
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+debug_peer_level = 2
+
+{% if postfix_mailman.stat.exists %}
+recipient_delimiter = +
+unknown_local_recipient_reject_code = 550
+owner_request_special = no
+transport_maps = hash:{{ mailman_root_dir | default('/opt/mailman') }}/data/data/postfix_lmtp
+local_recipient_maps = hash:{{ mailman_root_dir | default('/opt/mailman') }}/data/data/postfix_lmtp
+relay_domains = hash:{{ mailman_root_dir | default('/opt/mailman') }}/data/data/postfix_domains
+{% endif %}

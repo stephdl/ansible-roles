@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mongodump \
+{% if graylog_mongo_url | length == 1 and graylog_mongo_pass is defined and graylog_mongo_pass != False %}
+{% set graylog_mongo = graylog_mongo_url[0] | urlsplit %}
+  --uri {{ graylog_mongo['scheme'] }}://{{ graylog_mongo_user }}:{{ graylog_mongo_pass | urlencode | regex_replace('/','%2F') }}@{{ graylog_mongo['hostname'] }}{% if graylog_mongo['port'] %}:{{ graylog_mongo['port'] }}{% endif %}{{ graylog_mongo['path'] }}?{{ graylog_mongo['query'] }} \
+{% else %}
+  --uri {{ graylog_mongo_url[0] }} \
+{% endif %}
+  --quiet --out {{ graylog_root_dir }}/backup/mongo

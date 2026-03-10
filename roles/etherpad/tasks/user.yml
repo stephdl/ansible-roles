@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    user: "{{ etherpad_user }}"
+    home: "{{ etherpad_root_dir }}"
+  tags: etherpad

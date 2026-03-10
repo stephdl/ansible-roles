@@ -1,0 +1,36 @@
+---
+
+- name: Configure Zimbra's sendmail as alternative to sendmail
+  alternatives:
+    name: mta
+    link: /usr/sbin/sendmail
+    path: /opt/zimbra/common/sbin/sendmail
+    priority: 90
+  tags: zcs
+
+- name: Set zimbra's sendmail as the default sendmail
+  command: update-alternatives --set mta /opt/zimbra/common/sbin/sendmail
+  changed_when: False
+  tags: zcs
+
+- name: Override zmpostfixpolicyd to support recipient delimiter
+  copy: src=zmpostfixpolicyd dest=/opt/zimbra/libexec/zmpostfixpolicyd
+  notify: restart zimbra
+  tags: zcs
+
+- name: Handle Zimbra mta ports
+  iptables_raw:
+    name: zcs_mta_ports
+    state: present
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports 25,465,587 -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs
+
+- name: Enable always_bcc
+  lineinfile:
+    dest: /opt/zimbra/common/conf/main.cf
+    regexp: '^always_bcc =.*'
+    line: always_bcc = {{ zcs_always_bcc }}
+  when: zcs_always_bcc is defined
+  notify: restart zimbra
+  tags: zcs

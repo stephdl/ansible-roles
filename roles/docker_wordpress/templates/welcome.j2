@@ -1,0 +1,41 @@
+Bonjour,
+Vous disposez désormais d'un site Wordpress sur notre plateforme d’hébergement web.
+
+Informations technique :
+  - Accès au Wordpress : https://{{ item.wh_docker_url }}/
+  - Accès à la configuration du Wordpress : https://{{ item.wh_docker_url }}/wp-admin/
+  (Vous recevrez vos identifiants dans un autre email)
+
+
+L'accès à l'espace d'hébergement s'effectue par le protocole SFTP ou SSH.
+Vous avez la possibilité d'agir directement sur le système pour en changer la configuration et envoyer vos fichiers.
+Il est possible par exemple de s'authentifier avec le logiciel WinSCP (sous Windows).
+
+Paramètres de connexion :
+  - Serveur : {{ item.wh_docker_url }}
+  - Port :
+  - Identifiant : "{{ item.wh_docker_db_user }}"
+  - Mot de passe : "{{ item.wh_docker_db_pass }}"
+
+L'arborescence du système comprend :
+
+  - /var/www/html : Ce répertoire est celui exposé sur le web. C'est ici que Wordpress est déployé.
+  - /var/www/backups : Ce répertoire contiendra les archives du site et de la DB créées automatiquement chaque semaine.
+  - /usr/local/etc/php/conf.d/custom.ini : Votre configuration de PHP personalisée, la création d'un fichier info.php vous permet de consulter la configuration.
+
+/!\ Attention, ces éléments sont les seuls persistents. Si nécessaires, merci de nous transmettre vos besoins personalisés.
+
+Votre Wordpress utilise également une base de donnée mis a votre disposition.
+
+Paramètres de connexion :
+  Nom de la DB : "{{ item.wh_docker_db_name }}"
+  Accès : https://db.{{ item.wh_docker_url }}/
+  Identifiant : "{{ item.wh_docker_db_user }}"
+  Mot de passe : "{{ item.wh_docker_db_pass }}"
+
+
+Si besoin, vous pouvez utiliser votre propre base de données, il vous faudra nous transmettre les paramètres de connexion a cette dernière pour la reconfiguration de Wordpress.
+
+Un certificat SSL est fourni et automatiquement renouvelé de façon régulière. Tous les accès au site se font avec le protocole sécurisé HTTPS.
+
+À votre disposition pour tout complément d'information,

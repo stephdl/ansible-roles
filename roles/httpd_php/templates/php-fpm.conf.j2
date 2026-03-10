@@ -1,0 +1,9 @@
+
+include = /etc/opt/remi/php{{ item }}/php-fpm.d/*.conf
+
+[global]
+pid = /run/php-fpm/php{{ item }}-fpm.pid
+error_log = syslog
+syslog.facility = daemon
+syslog.ident = php{{ item }}-fpm
+

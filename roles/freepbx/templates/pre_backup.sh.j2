@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+  --quick --single-transaction \
+{% if fpbx_db_server not in ['127.0.0.1', 'localhost'] %}
+  --user={{ fpbx_db_user }} \
+  --password={{ fpbx_db_pass | quote }} \
+  --host={{ fpbx_db_server }} \
+{% endif %}
+  --add-drop-table {{ fpbx_db_name }} | zstd -T0 -c > {{ fpbx_root_dir }}/backup/{{ fpbx_db_name }}.sql.zst
+/usr/bin/mysqldump \
+  --quick --single-transaction \
+{% if fpbx_db_server not in ['127.0.0.1', 'localhost'] %}
+  --user={{ fpbx_db_user }} \
+  --password={{ fpbx_db_pass | quote }} \
+  --host={{ fpbx_db_server }} \
+{% endif %}
+  --add-drop-table {{ fpbx_cdr_db_name }} | zstd -T0 -c > {{ fpbx_root_dir }}/backup/{{ fpbx_cdr_db_name }}.sql.zst

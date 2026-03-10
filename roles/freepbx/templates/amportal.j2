@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+scl enable php{{ fpbx_php_version }} -- /var/lib/asterisk/bin/amportal "$@"

@@ -1,0 +1,13 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: pim_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: write_version.yml
+- include: archive_post.yml
+  when: pim_install_mode == 'upgrade'
+- include: cleanup.yml

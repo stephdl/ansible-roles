@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ wp_root_dir }}"
+    - version: "{{ wp_current_version }}"
+  tags: wp

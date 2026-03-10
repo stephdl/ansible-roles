@@ -1,0 +1,20 @@
+---
+
+# Session tables used with the database backend
+# to store the various type of sessions
+llng_session_tables:
+  global:
+    name: sessions
+    index: ipAddr _whatToTrace user _session_kind _utime _httpSessionType
+  persistent: 
+    name: psessions
+    index: ipAddr _whatToTrace _session_kind _httpSessionType _session_uid
+  saml:
+    name: samlsessions
+    index: _session_kind _utime _saml_id
+  oidc:
+    name: oidcsessions
+    index: _session_kind _utime
+  cas:
+    name: cassessions
+    index: _session_kind _utime _cas_id

@@ -1,0 +1,9 @@
+---
+
+- name: Handle PBS port
+  iptables_raw:
+    name: pbs_port
+    state: "{{ (pbs_src_ip | length > 0) | ternary('present', 'absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport 8007 -s {{ pbs_src_ip | flatten | join(',') }} -j ACCEPT"
+  tags: pbs,firewall
+

@@ -1,0 +1,3 @@
+Defaults:backuppc !requiretty
+Cmnd_Alias BACKUPPC = /usr/bin/rsync, /bin/tar, /bin/gtar, /usr/local/bin/pre-backup, /usr/local/bin/post-backup, /usr/bin/virt-backup
+backuppc ALL=(root) NOPASSWD: BACKUPPC

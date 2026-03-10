@@ -1,0 +1,78 @@
+---
+
+# Version to deploy
+bookstack_version: '21.11.2'
+# URL of the arhive
+bookstack_archive_url: https://github.com/BookStackApp/BookStack/archive/v{{ bookstack_version }}.tar.gz
+# Expected sha1 of the archive
+bookstack_archive_sha1: c9e8a0da936f7a2840c416dde70451f046e2b7f3
+
+# Should ansible handle bookstack upgrades or just the inintial install
+bookstack_manage_upgrade: True
+
+# We can deploy several bookstack instance on a single host
+# each one can have a different ID which can be a simple number
+# or a short string
+bookstack_id: 1
+# Where to install bookstack
+bookstack_root_dir: /opt/bookstack_{{ bookstack_id }}
+# User under which the app will be executed
+bookstack_php_user: php-bookstack_{{ bookstack_id }}
+# Version of PHP used
+bookstack_php_version: 80
+# Or you can specify here the name of a custom PHP FPM pool. See the httpd_php role
+# bookstack_php_fpm_pool: custom_bookstack
+
+# If defined, an alias will be added in httpd's config to access bookstack
+# Else, you'll have to defined a vhost to make bookstack accessible. See httpd_common role
+bookstack_web_alias: /bookstack_{{ bookstack_id }}
+
+# You can restrict access to bookstack. If not defined or empty,
+# no restriction will be made
+bookstack_src_ip: "{{ httpd_ssl_src_ip | default(httpd_src_ip) | default([]) }}"
+
+# List of trusted proxies from which we can trust the X-Forwarded-For header
+# Useful to get real client IP when BookStack is running behind a reverse proxy
+# bookstack_trusted_proxies:
+#   - 10.99.2.10
+# The default value is to use the same as bookstack_src_ip if it's not empty and doesn't contain 0.0.0.0/0
+bookstack_trusted_proxies: "{{ (bookstack_src_ip | length > 0 and '0.0.0.0/0' not in bookstack_src_ip) | ternary(bookstack_src_ip, []) }}"
+
+# MySQL Database
+bookstack_db_server: "{{ mysql_server | default('locaclhost') }}"
+bookstack_db_port: 3306
+bookstack_db_user: bookstack_{{ bookstack_id }}
+bookstack_db_name: bookstack_{{ bookstack_id }}
+# If no pass is defined, a random one will be created and stored in meta/ansible_dbpass
+# bookstack_db_pass: S3cr3t.
+
+# Application key. If not defined, a random one will be generated and store in meta/ansible_app_key
+# bookstack_app_key: base64:H/zDPBqtK2BjOkgCrMMGGH+sSjOBrBs/ibcD4ozQc90=
+
+# Public URL of the app
+bookstack_public_url: http://{{ inventory_hostname }}/bookstack_{{ bookstack_id }}
+
+# Email settings. Default will use local postfix installation
+bookstack_email_name: BookStack
+bookstack_email_from: no-reply@{{ ansible_domain }}
+bookstack_email_server: localhost
+bookstack_email_port: 25
+# You can set user and pass if needed
+# bookstack_email_user: user@example.org
+# bookstack_email_pass: S3cR3t.
+# Encryption can be tls, ssl or null
+bookstack_email_encryption: 'null'
+
+# Default lang
+bookstack_default_lang: fr
+
+# Session lifetime, in minutes
+bookstack_session_lifetime: 480
+
+# You can set custom directive with this:
+# bookstack_settings:
+#   AUTH_METHOD: saml2
+#   SAML2_NAME: SSO
+#   SAML2_EMAIL_ATTRIBUTE: email
+bookstack_settings: {}
+

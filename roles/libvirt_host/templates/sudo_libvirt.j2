@@ -1,0 +1,1 @@
+lbkp ALL=(root) NOPASSWD: {{ libvirt_sudo_backup_commands | default (['/usr/bin/virt-backup']) | join(',') }}

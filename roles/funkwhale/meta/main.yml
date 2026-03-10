@@ -1,0 +1,13 @@
+---
+allow_duplicates: true
+dependencies:
+  - role: repo_rpmfusion # for ffmpeg
+  - role: repo_xsendfile # mod_xsendfile is not available in base repo for EL8
+    when:
+      - ansible_os_family == 'RedHat'
+      - ansible_distribution_major_version is version('8','>=')
+  - role: httpd_common
+  - role: redis_server
+    when: funkwhale_redis_url | urlsplit('hostname') == 'localhost' or funkwhale_redis_url | urlsplit('hostname') == '127.0.0.1'
+  - role: postgresql_server
+    when: funkwhale_db_server == 'localhost' or funkwhale_db_server == '127.0.0.1'

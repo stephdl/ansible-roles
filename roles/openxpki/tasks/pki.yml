@@ -1,0 +1,211 @@
+---
+
+- name: Create global certificates
+  command: >
+    openssl req
+    -config {{ pki_root_dir }}/etc/openssl.cnf
+    -extensions v3_ca
+    -x509
+    -newkey rsa:{{ pki_realm_conf.keysize * 2 }}
+    -keyout {{ pki_root_dir }}/etc/ssl/root/{{ item.name }}-key-1.pem
+    -out {{ pki_root_dir }}/etc/ssl/root/{{ item.name }}-cert-1.pem
+    -sha256
+    -days {{ pki_realm_conf.validity * 2 }}
+    -subj '/C={{ pki_realm_conf.subj_c }}/ST={{ pki_realm_conf.subj_st }}/L={{ pki_realm_conf.subj_l }}/O={{ pki_realm_conf.subj_o }}/OU={{ pki_realm_conf.subj_ou }}/CN={{ item.cn }}'
+    -passout stdin
+  args:
+    creates:  "{{ pki_root_dir }}/etc/ssl/root/{{ item.name }}-cert-1.pem"
+    stdin: "{{ pki_secret }}"
+  with_items:
+    - name: signer
+      cn: "{{ pki_root_ca_cn }}"
+    - name: vault
+      cn: "{{ pki_vault_cn }}"
+    - name: scep
+      cn: "{{ pki_scep_cn }}"
+  register: pki_root_created
+  tags: pki
+
+- name: Check if the index file for the root CA exists
+  stat: path={{ pki_root_dir }}/etc/ssl/root/index.txt
+  register: pki_root_ca_index
+  tags: pki
+
+- name: Create the index file
+  file: path={{ pki_root_dir }}/etc/ssl/root/index.txt state=touch
+  when: not pki_root_ca_index.stat.exists
+  tags: pki
+
+- name: Create the serial file
+  shell: echo 1000 > {{ pki_root_dir }}/etc/ssl/root/serial
+  args:
+    creates: "{{ pki_root_dir }}/etc/ssl/root/serial"
+  tags: pki
+
+- name: Import the certificates in the global namespace of OpenXPKI DB
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm certificate import
+    --file {{ pki_root_dir }}/etc/ssl/root/{{ item.item.name }}-cert-1.pem
+    --config={{ pki_root_dir }}/etc/config.d/
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  with_items: "{{ pki_root_created.results }}"
+  #no_log: True
+  when: item.changed
+  tags: pki
+
+  # Vault and SCEP certificates are global, so just link them from the root dir in every realm dir
+- name: Link vault and SCEP keys from the root to the realms
+  file: src=../root/{{ item.1 }}-key-1.pem dest={{ pki_root_dir }}/etc/ssl/{{ item.0.name }}/{{ item.1 }}-key-1.pem state=link
+  with_nested:
+    - "{{ pki_realms }}"
+    - [vault,scep]
+  tags: pki
+
+  # For each realm, we create only the signer CA. Vault and SCEP will use the global ones
+- name: Create issuing CA's private keys
+  command: >
+    openssl genrsa
+    -out {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-key-1.pem
+    -aes256
+    -passout stdin
+    {{ item.keysize }}
+  args:
+    creates: "{{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-key-1.pem"
+    stdin: "{{ pki_secret }}"
+  with_items: "{{ pki_realms }}"
+  #no_log: True
+  tags: pki
+
+- name: Create issuing CA's CSR
+  command: >
+    openssl req
+    -config {{ pki_root_dir }}/etc/openssl.cnf
+    -new
+    -sha256
+    -key {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-key-1.pem
+    -out {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-csr-1.pem
+    -subj '/C={{ item.subj_c | default(pki_realm_conf.subj_c) }}/ST={{ item.subj_st | default(pki_realm_conf.subj_st) }}/L={{ item.subj_l | default(pki_realm_conf.subj_l) }}/O={{ item.subj_o | default(pki_realm_conf.subj_o) }}/OU={{ item.subj_ou | default(pki_realm_conf.subj_ou) }}/CN={{ item.name }}'
+    -extensions v3_intermediate_ca
+    -passin stdin
+  args:
+    creates: "{{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-csr-1.pem"
+    stdin: "{{ pki_secret }}"
+  with_items: "{{ pki_realms }}"
+  #no_log: True
+  tags: pki
+
+  # Now we create issuing CA. First, iterate over those who do not have a parent defined. Which means they are a child of the root CA
+- name: Sign intermediate CA with the Root CA
+  command: >
+    openssl ca
+    -config {{ pki_root_dir }}/etc/openssl.cnf
+    -keyfile {{ pki_root_dir }}/etc/ssl/root/signer-key-1.pem
+    -cert {{ pki_root_dir }}/etc/ssl/root/signer-cert-1.pem
+    -in {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-csr-1.pem
+    -out {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-cert-1.pem
+    -passin stdin
+    -extensions v3_intermediate_ca
+    -days {{ item.validity | default('3650') }}
+    -notext
+    -batch
+  args:
+    creates: "{{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-cert-1.pem"
+    stdin: "{{ pki_secret }}"
+  when: item.parent is not defined
+  register: pki_ca_issuing_created
+  with_items: "{{ pki_realms }}"
+  #no_log: True
+  tags: pki
+
+- name: Import certificates for CA signed by the Root CA in OpenXPKI DB
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm certificate import
+    --file {{ pki_root_dir }}/etc/ssl/{{ item.item.name }}/signer-cert-1.pem
+    --realm {{ item.item.name }}
+    --token certsign
+    --config={{ pki_root_dir }}/etc/config.d/
+  when: item.changed
+  with_items: "{{ pki_ca_issuing_created.results }}"
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  #no_log: True
+  tags: pki
+
+  # And now the same with intermediate CA
+- name: Sign intermediate CA with their parent CA
+  command: >
+    openssl ca
+    -config {{ pki_root_dir }}/etc/openssl.cnf
+    -keyfile {{ pki_root_dir }}/etc/ssl/{{ item.parent }}/signer-key-1.pem
+    -cert {{ pki_root_dir }}/etc/ssl/{{ item.parent }}/signer-cert-1.pem
+    -in {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-csr-1.pem
+    -out {{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-cert-1.pem
+    -passin stdin
+    -extensions v3_intermediate_ca
+    -days {{ item.validity | default('3650') }}
+    -notext
+    -batch
+  args:
+    creates: "{{ pki_root_dir }}/etc/ssl/{{ item.name }}/signer-cert-1.pem"
+    stdin: "{{ pki_secret }}"
+  when: item.parent is defined
+  register: pki_ca_intermediate_created
+  with_items: "{{ pki_realms }}"
+  tags: pki
+
+  # Once added in the DB, each certs gets an ID. We need to get this ID for
+  # the two global certs (vault and scep) so we can create an alias for each realm
+- name: Get ID of the global vault certificate
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm certificate id
+    --file {{ pki_root_dir }}/etc/ssl/root/vault-cert-1.pem
+    --config={{ pki_root_dir }}/etc/config.d/
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  register: pki_global_vault_id
+  changed_when: False
+  tags: pki
+
+- name: Get ID of the global scep certificate
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm certificate id
+    --file {{ pki_root_dir }}/etc/ssl/root/scep-cert-1.pem
+    --config={{ pki_root_dir }}/etc/config.d/
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  register: pki_global_scep_id
+  changed_when: False
+  tags: pki
+
+- name: Create an alias for the vault
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm alias --realm {{ item.item.name }}
+    --token datasafe --identifier {{ pki_global_vault_id.stdout }}
+    --config {{ pki_root_dir }}/etc/config.d/
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  with_items: "{{ pki_ca_issuing_created.results + pki_ca_intermediate_created.results }}"
+  when: item.changed
+  tags: pki
+
+- name: Create an alias for the scep certificate
+  command: >
+    {{ pki_root_dir }}/bin/openxpkiadm alias --realm {{ item.item.name }}
+    --token scep --identifier {{ pki_global_scep_id.stdout }}
+    --config {{ pki_root_dir }}/etc/config.d/
+  environment:
+    - PERL5LIB: "{{ pki_root_dir }}/lib/perl5"
+  with_items: "{{ pki_ca_issuing_created.results + pki_ca_intermediate_created.results }}"
+  #no_log: True
+  when: item.changed
+  tags: pki
+
+- name: Deploy permission script
+  template: src=perms.sh.j2 dest={{ pki_root_dir }}/bin/perms.sh mode=755
+  tags: pki
+
+- name: Fix permissions on key files
+  command: "{{ pki_root_dir }}/bin/perms.sh }}"
+  changed_when: False
+  tags: pki

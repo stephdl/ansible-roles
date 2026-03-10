@@ -1,0 +1,20 @@
+; {{ ansible_managed }}
+
+[all]
+{% if llng_conf_backend == 'soap' %}
+globalStorage=Lemonldap::NG::Common::Apache::Session::SOAP
+globalStorageOptions={ 'proxy' => '{{ llng_soap_uri | regex_replace('config$','sessions') }}' }
+{% endif %}
+
+[configuration]
+{% if llng_conf_backend == 'soap' %}
+type=SOAP
+proxy={{ llng_soap_uri }}
+{% if llng_soap_user is defined and llng_soap_pass is defined %}
+User={{ llng_soap_user }}
+Password={{ llng_soap_pass }}
+{% endif %}
+proxyOptions={ timeout => 5 }
+localStorage=Cache::FileCache
+localStorageOptions={ 'namespace' => 'LemonLDAPng', 'default_expires_in' => 600, 'directory_umask' => '007', 'cache_root' => '/var/cache/lemonldap-ng-handler', 'cache_depth' => 5, }
+{% endif %}

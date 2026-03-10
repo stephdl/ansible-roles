@@ -1,0 +1,4 @@
+---
+
+- name: restart navidrome
+  service: name=navidrome state=restarted

@@ -1,0 +1,9 @@
+---
+
+- name: Remove temp files
+  file: path={{ synadm_root_dir }}/tmp/{{ item }} state=absent
+  loop:
+    - synapse-admin-{{ synadm_version }}.tar.gz
+    - synapse-admin-{{ synadm_version }}
+  tags: matrix
+

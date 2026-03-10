@@ -1,0 +1,168 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - git
+      - gcc
+      - openssl-devel
+      - libffi-devel
+      - openldap-devel
+      - libjpeg-turbo-devel
+      - libpng-devel
+      - libexif
+      - ghostscript
+      - gnupg1
+      - graphviz
+      - fuse-libs
+      - file-libs
+      - libreoffice
+      - poppler-utils
+      - sane-backends
+      - tesseract
+      - tesseract-langpack-fra
+      - python3-devel
+      - python3-pip
+      - python3-virtualenv
+      - python-setuptools
+      - rabbitmq-server
+  tags: mayan
+
+- name: Install MySQL support
+  yum:
+    name:
+      - mysql-devel
+      - MySQL-python
+  when: mayan_db_engine == 'mysql'
+  tags: mayan
+
+# WHen using upstream MariaDB repo, we have to install MariaDB-shared
+- name: Install MariaDB shared libs
+  yum:
+    name:
+      - MariaDB-shared
+  when:
+    - mayan_db_engine == 'mysql'
+    - mysql_mariadb_version is defined and mysql_mariadb_version != 'default'
+  tags: mayan
+
+- name: Install PostgreSQL support
+  yum:
+    name:
+      - postgresql-devel
+      - postgresql14
+      - python-psycopg2
+  when: mayan_db_engine == 'postgresql'
+  tags: mayan
+
+- name: Wipe the venv on upgrades
+  file: path={{ mayan_root_dir }}/venv state=absent
+  when: mayan_install_mode=='upgrade'
+  tags: mayan
+
+- name: Create the venv dir
+  file: path={{ mayan_root_dir }}/venv state=directory
+  tags: mayan
+
+- name: Create the virtualenv
+  pip:
+    name:
+      - pip
+      - redis==3.5.3
+      - python-ldap
+      - django_auth_ldap
+      - "{{ (mayan_db_engine == 'mysql') | ternary('mysql','psycopg2==2.8.6') }}"
+    virtualenv: "{{ mayan_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  tags: mayan
+
+- name: Install mayan-edms wrapper
+  template: src=mayan-edms.j2 dest=/usr/local/bin/mayan-edms mode=755
+  tags: mayan
+
+- name: Install Mayan EDMS
+  pip:
+    name:
+      - mayan-edms=={{ mayan_version }}
+    virtualenv: "{{ mayan_root_dir }}/venv"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+  tags: mayan
+
+- when: mayan_db_engine == 'mysql'
+  block:
+    - import_tasks: ../includes/webapps_create_mysql_db.yml
+      vars:
+        - db_name: "{{ mayan_db_name }}"
+        - db_user: "{{ mayan_db_user }}"
+        - db_server: "{{ mayan_db_server }}"
+        - db_pass: "{{ mayan_db_pass }}"
+  tags: mayan
+
+- when: mayan_db_engine == 'postgresql'
+  block:
+    - name: Create the PostgreSQL role
+      postgresql_user:
+        db: postgres
+        name: "{{ mayan_db_user }}"
+        password: "{{ mayan_db_pass }}"
+        login_host: "{{ mayan_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+    
+    - name: Create the PostgreSQL database
+      postgresql_db:
+        name: "{{ mayan_db_name }}"
+        encoding: UTF-8
+        template: template0
+        owner: "{{ mayan_db_user }}"
+        login_host: "{{ mayan_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+  tags: mayan
+
+- name: Initialize or upgrade database
+  command: >-
+    {{ mayan_root_dir }}/venv/bin/python
+      {{ mayan_root_dir }}/venv/bin/mayan-edms.py
+      {{ (mayan_install_mode == 'install') | ternary('initialsetup','performupgrade') }}
+  environment:
+    - MAYAN_MEDIA_ROOT: "{{ mayan_root_dir }}/data"
+    - MAYAN_DATABASE_ENGINE: django.db.backends.{{ (mayan_db_engine == 'mysql') | ternary('mysql','postgresql') }}
+    - MAYAN_DATABASE_NAME: "{{ mayan_db_name }}"
+    - MAYAN_DATABASE_PASSWORD: "{{ mayan_db_pass }}"
+    - MAYAN_DATABASE_USER: "{{ mayan_db_user }}"
+    - MAYAN_DATABASE_HOST: "{{ mayan_db_server }}"
+  when: mayan_install_mode != 'none'
+  tags: mayan
+
+- name: Deploy systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - mayan-edms-web.service
+    - mayan-edms-worker-fast.service
+    - mayan-edms-worker-medium.service
+    - mayan-edms-worker-slow.service
+    - mayan-edms-beat.service
+  register: mayan_systemd_units
+  notify: restart mayan-edms
+  tags: mayan
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when:  mayan_systemd_units.results | selectattr('changed', 'equalto', True) | list | length > 0
+  tags: mayan
+
+- name: Install pre/post backup scripts
+  template: src={{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/mayan_edms.sh mode=750
+  loop:
+    - pre
+    - post
+  tags: mayan
+
+- name: Deploy auth configuration
+  template: src=auth.py.j2 dest={{ mayan_root_dir }}/data/mayan_settings/auth.py group={{ mayan_user }} mode=640
+  when: mayan_ldap_auth
+  notify: restart mayan-edms
+  tags: mayan

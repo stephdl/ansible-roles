@@ -1,0 +1,67 @@
+---
+
+# Those belong to zfs_common, they are just a reminder here
+# zfs_arc_min: 10%
+# zfs_arc_max: 50%
+
+# You can define arbitrary param here
+zfs_mod_params: {}
+
+# Under this are tuning for this role
+
+# How often to scrub pools. Can be hourly, daily, weekly, monthly, yearly
+# or any other valid systemd time expression
+zfs_scrub_freq: monthly
+
+# How often to trim pools
+zfs_trim_freq: weekly
+
+# auto snapshot param
+# How many "frequent" snapshots to keep. They are taken every 15 minutes
+zfs_snap_frequently: 8
+# How many hourly snapshots to keep
+zfs_snap_hourly: 6
+# How many daily snapshot to keep
+zfs_snap_daily: 7
+# How many weekly snapshots to keep
+zfs_snap_weekly: 2
+# How many monthly snapshot to keep
+zfs_snap_monthly: 2
+# How many yearly snapshot to keep
+zfs_snap_yearly: 0
+
+# List of ZFS volume to snapshots
+zfs_snap: []
+# You can override some freq settings here, eg
+# zfs_snap:
+#   - name: tank/files
+#     frequently: 30
+#     monthly: 0
+#   - name: tank/work
+#     frequently: 5
+#     hourly: 12
+#     weekly: 4
+
+# Send/Receive param
+# If zfs_repl_recv is True, a zfs-recv user will be created, to be used for receiving ZFS streams
+zfs_repl_recv: False
+# List of SSH keys allowed for ZFS receive
+zfs_repl_authorized_keys: []
+# List of IP addresses allowed for ZFS receive
+zfs_repl_src_ip: []
+
+# For ZFS sender, configure which vol to send
+zfs_repl: []
+# zfs_repl:
+#  - dataset: zpool
+#    dest: zfs-recv@10.33.255.253:zpool
+#    id: stor-bkp         # a uniq string id, used to name the service. It must be uniq, and one will be created if not defined
+#    force: True          # Force deletion of dest dataset if no snapshot matches
+#    compress: lz4
+#    recursive: True
+#    ssh_cipher: aes128-ctr
+#    ssh_port: 22
+#    bw_limit: 0 # eg 10m for 10 MB/sec
+#    skip_parent: True
+#    syncoid_opts: ""
+#    freq: hourly|daily|weekly|monthly (or any valid systemd-timer expression for OnCalendar)

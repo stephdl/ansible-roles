@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ paperless_root_dir }}/archives/{{ paperless_current_version }}.tar.zst --use-compress-program=zstd ./
+  args:
+    chdir: "{{ paperless_root_dir }}/archives/{{ paperless_current_version }}"
+    warn: False
+  environment:
+    ZSTD_CLEVEL: 10
+  tags: ged

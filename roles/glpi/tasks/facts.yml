@@ -1,0 +1,21 @@
+---
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ glpi_root_dir }}"
+    - version: "{{ glpi_version }}"
+  tags: glpi
+- set_fact: glpi_install_mode={{ (install_mode == 'upgrade' and not glpi_manage_upgrade) | ternary('none',install_mode) }}
+  tags: glpi
+- set_fact: glpi_current_version={{ current_version | default('') }}
+  tags: glpi
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: "{{ glpi_root_dir }}/meta/ansible_dbpass"
+  when: glpi_mysql_pass is not defined
+  tags: glpi
+- set_fact: glpi_mysql_pass={{ rand_pass }}
+  when: glpi_mysql_pass is not defined
+  tags: glpi
+

@@ -1,0 +1,107 @@
+---
+
+- name: Install common packages
+  yum: name={{ samba_common_packages }}
+  tags: samba
+
+- name: Install DC components
+  yum: name={{ samba_dc_packages }}
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+- name: Update ldb
+  yum: name=ldb-tools state=latest
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+  # sssd-libwbclient breaks DC so only install on members
+- name: Install members components
+  yum: name=sssd-libwbclient
+  when:
+    - samba_role != 'dc'
+    - samba_role != 'rodc'
+  tags: samba
+
+- name: Remove config files
+  file: path={{ item }} state=absent
+  with_items:
+    - /etc/samba/smb.conf
+    - /etc/krb5.conf
+  when:
+    - samba_role == 'dc' or samba_role == 'rodc'
+    - not samba_dc_sysvol.stat.exists
+  tags: samba
+
+- name: Stop samba services
+  service: name={{ item }} state=stopped
+  with_items:
+    - samba
+    - smb
+    - nmb
+  when:
+    - samba_role == 'dc' or samba_role == 'rodc'
+    - not samba_dc_sysvol.stat.exists
+  tags: samba
+
+  # We need to have our correct hostname before joining the domain !!
+- name: Set system hostname
+  hostname: name={{ system_hostname | default(inventory_hostname | regex_replace('^([^\.]+)\..*','\\1')) }}
+  tags: samba
+
+- name: Try to join the domain (as DC)
+  command: >-
+    samba-tool domain join {{ samba_realm }} DC
+      --dns-backend SAMBA_INTERNAL
+      --realm {{ samba_realm }}
+      -U Administrator
+      --password={{ samba_dc_admin_pass | quote }}
+  when:
+    - samba_role == 'dc'
+    - not samba_dc_sysvol.stat.exists
+  register: samba_dc_join
+  environment:
+    LDB_MODULES_PATH: /usr/lib64/samba/ldb
+  ignore_errors: True
+  tags: samba
+
+  # If we're not the primary domain, and we can't join the domain
+  # and we haven't done it yet, we must fail
+- name: Fail if not the primary DC and joining the domain failed
+  fail: msg="Failed to join the domaine"
+  when:
+    - samba_dc_join is defined
+    - samba_dc_join.rc is defined
+    - samba_dc_join.rc != 0
+    - not samba_i_am_primary_dc == True
+    - not samba_dc_sysvol.stat.exists
+  tags: samba
+
+- name: Provision the domain
+  command: >-
+    samba-tool domain provision --server-role=dc
+      --dns-backend SAMBA_INTERNAL --realm {{ samba_realm }}
+      --domain {{ samba_domain }} --use-rfc2307
+      --adminpass={{ samba_dc_admin_pass | quote }}
+  when:
+    - not samba_dc_sysvol.stat.exists
+    - samba_i_am_primary_dc == True
+    - samba_dc_join.rc != 0
+  environment:
+    LDB_MODULES_PATH: /usr/lib64/samba/ldb
+  tags: samba
+
+- name: Join the domain (as RODC)
+  command: >-
+    samba-tool domain join {{ samba_realm }} RODC
+      --dns-backend SAMBA_INTERNAL
+      --realm {{ samba_realm }}
+      -U Administrator
+      --password={{ samba_dc_admin_pass | quote }}
+  no_log: True
+  when:
+    - samba_role == 'rodc'
+    - not samba_dc_sysvol.stat.exists
+  environment:
+    LDB_MODULES_PATH: /usr/lib64/samba/ldb
+  tags: samba
+

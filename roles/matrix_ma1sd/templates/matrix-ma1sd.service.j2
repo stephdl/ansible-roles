@@ -1,0 +1,20 @@
+[Unit]
+Description=Matrix Identity Service Daemon
+
+[Service]
+Type=simple
+User={{ ma1sd_user }}
+Group={{ ma1sd_user }}
+ExecStart=/usr/bin/java -cp "{{ ma1sd_root_dir }}/app/lib/*" io.kamax.mxisd.MxisdStandaloneExec -c {{ ma1sd_root_dir }}/etc/ma1sd.yaml
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit={{ ma1sd_max_mem }}M
+SyslogIdentifier=matrix-ma1sd
+Restart=on-failure
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

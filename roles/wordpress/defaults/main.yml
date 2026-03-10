@@ -1,0 +1,51 @@
+---
+
+# Uniq ID of this instance
+wp_id: 1
+
+# Root dir where wordpress will be installed
+wp_root_dir: /opt/wordpress_{{ wp_id }}
+
+# Should ansible handle upgrades or just initial install
+wp_manage_upgrade: True
+
+# Version of PHP to use
+wp_php_version: 74
+
+# Unix account which will run PHP scripts
+wp_php_user: php-wp_{{ wp_id }}
+
+# Default language to install
+wp_locale: fr_FR
+
+# If defined, an alias will be configured in apache conf. Else, you need to
+# define a vhost to access it
+wp_alias: /wordpress_{{ wp_id }}
+
+# Public URL of wordpress
+wp_public_url: http://{{ inventory_hostname }}{{ wp_alias | default('/') }}
+
+# Restrict web access by IP address. If empty, no restriction
+wp_src_ip: []
+
+# Max size of attachments
+wp_upload_max_filesize: 100M
+
+# A php fpm pool will be configured. Alternatively, you can create your own pool
+# and use it by setting wp_php_fpm_pool
+# wp_php_fpm_pool: php74
+
+# Database settings
+wp_db_server: "{{ mysql_server | default('localhost') }}"
+wp_db_port: 3306
+wp_db_name: wordpress_{{ wp_id }}
+wp_db_user: wordpress_{{ wp_id }}
+# If not defined, a random password will be generated
+# wp_db_pass: S3Cr3t.
+wp_table_prefix: wp_
+
+# Initial admin account to create
+wp_admin_user: wpadmin
+wp_admin_email: "{{ system_admin_email | default('root@' + ansible_domain) }}"
+wp_admin_pass: password
+

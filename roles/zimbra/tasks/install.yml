@@ -1,0 +1,36 @@
+---
+
+- name: Create temp dir
+  file: path=/tmp/zimbra state=directory
+  tags: zcs
+
+- name: Download Zimbra
+  get_url:
+    url: "{{ zcs_archive_url }}"
+    dest: /tmp/zimbra
+    checksum: "sha1:{{ zcs_archive_sha1 }}"
+  tags: zcs
+
+- name: Extract Zimbra archive
+  unarchive:
+    src: /tmp/zimbra/{{ zcs_archive_name }}
+    dest: /tmp/zimbra
+    remote_src: True
+  tags: zcs
+
+- name: Upload installation scripts
+  template: src={{ item }}.j2 dest=/tmp/zimbra/{{ item }}
+  loop:
+    - zcs_install_answers
+    - zcs_init_config
+  tags: zcs
+
+- name: Install Zimbra
+  shell: ./install.sh -s < /tmp/zimbra/zcs_install_answers
+  args:
+    chdir: /tmp/zimbra/{{ zcs_archive_name | splitext | first }}
+  tags: zcs
+
+- name: Provision initial configuration
+  shell: /opt/zimbra/libexec/zmsetup.pl -c /tmp/zimbra/zcs_init_config
+  tags: zcs

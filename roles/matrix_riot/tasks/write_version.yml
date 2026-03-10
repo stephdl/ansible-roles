@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ riot_root_dir }}"
+    - version: "{{ riot_version }}"
+  tags: matrix

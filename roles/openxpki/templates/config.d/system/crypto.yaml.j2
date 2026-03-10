@@ -1,0 +1,23 @@
+tokenapi:
+  certsign: OpenXPKI::Crypto::Backend::API
+  crlsign: OpenXPKI::Crypto::Backend::API
+  datasafe: OpenXPKI::Crypto::Backend::API
+  scep: OpenXPKI::Crypto::Tool::LibSCEP::API
+
+token:
+  default:
+    backend: OpenXPKI::Crypto::Backend::OpenSSL
+    api: OpenXPKI::Crypto::Backend::API
+    engine: OpenSSL
+    key_store: OPENXPKI
+    shell: /usr/bin/openssl
+    wrapper: ''
+    randfile: {{ pki_root_dir }}/data/rand
+
+  javaks:
+    backend: OpenXPKI::Crypto::Tool::CreateJavaKeystore
+    api: OpenXPKI::Crypto::Tool::CreateJavaKeystore::API
+    engine: OpenSSL
+    key_store: OPENXPKI
+    shell: /usr/bin/keytool
+    randfile: {{ pki_root_dir }}/data/rand

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+restorecon -R {{ fpbx_root_dir }}
+chmod 755 {{ fpbx_root_dir }}
+chown root:root {{ fpbx_root_dir }}/{meta,db_dumps}
+chmod 700 {{ fpbx_root_dir }}/{meta,db_dumps}
+setfacl -k -b {{ fpbx_root_dir }}
+setfacl -m u:asterisk:rx,u:{{ httpd_user | default('apache') }}:rx {{ fpbx_root_dir }}
+chown -R root:root {{ fpbx_root_dir }}/web
+chown -R asterisk:asterisk {{ fpbx_root_dir }}/{tmp,sessions,web}
+chmod 755 {{ fpbx_root_dir }}/provisioning
+chown -R asterisk:asterisk {{ fpbx_root_dir }}/provisioning
+setfacl -m u:phone:rX {{ fpbx_root_dir }}/provisioning/*
+setfacl -R -m u:phone:rwX {{ fpbx_root_dir }}/provisioning/{contacts,logs,overrides,licenses,bmp}
+chmod 700 {{ fpbx_root_dir }}/{tmp,sessions}
+find {{ fpbx_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ fpbx_root_dir }}/web -type d -exec chmod 755 "{}" \;
+scl enable php{{ fpbx_php_version }} -- /usr/local/bin/fwconsole chown

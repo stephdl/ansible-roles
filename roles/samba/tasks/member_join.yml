@@ -1,0 +1,10 @@
+---
+
+  # We should already be in the domain with adcli, but this is an
+  # easy way to add cifs/hostname principal to our keytab, and is needed to
+  # populate the secrets in secrets.tdb, which adcli doesn't do
+- name: Join the domain with net ads
+  command: net ads join {{ samba_realm | upper }} -U 'Administrator%{{ samba_dc_admin_pass }}'
+  no_log: True
+  tags: samba
+

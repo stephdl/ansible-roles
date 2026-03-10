@@ -1,0 +1,5 @@
+---
+
+- name: Create n8n user account
+  user: name={{ n8n_user }} home={{ n8n_root_dir }} system=True
+  tags: n8n

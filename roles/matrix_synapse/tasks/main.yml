@@ -1,0 +1,17 @@
+---
+
+- include: user.yml
+- include: directories.yml
+- include: facts.yml
+- include: archive_pre.yml
+  when: synapse_install_mode == 'upgrade'
+- include: install.yml
+- include: conf.yml
+- include: iptables.yml
+  when: iptables_manage | default(True)
+- include: service.yml
+- include: write_version.yml
+- include: archive_post.yml
+  when: synapse_install_mode == 'upgrade'
+- include: cleanup.yml
+

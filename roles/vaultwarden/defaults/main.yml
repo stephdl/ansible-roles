@@ -1,0 +1,49 @@
+---
+
+vaultwarden_version: 1.23.0
+vaultwarden_archive_url: https://github.com/dani-garcia/vaultwarden/archive/{{ vaultwarden_version }}.tar.gz
+vaultwarden_archive_sha1: 76c83155bb4e7bf7b998dcd0853145ac96202dcd
+
+vaultwarden_web_version: 2.24.1
+vaultwarden_web_archive_url: https://github.com/dani-garcia/bw_web_builds/releases/download/v{{ vaultwarden_web_version }}/bw_web_v{{ vaultwarden_web_version }}.tar.gz
+vaultwarden_web_archive_sha1: 63efb8146ef6e5482cf711eb4abdc36432b15af5
+
+vaultwarden_root_dir: /opt/vaultwarden
+vaultwarden_user: vaultwarden
+
+# Database : can be sqlite or mysql
+vaultwarden_db_engine: sqlite
+vaultwarden_db_server: "{{ mysql_server | default('localhost') }}"
+vaultwarden_db_port: 3306
+vaultwarden_db_name: vaultwarden
+vaultwarden_db_user: vaultwarden
+# A random one will be created if not defined
+# bitwaren_db_pass: S3cr3t.
+
+# Port on which vaultwarden will bind
+vaultwarden_http_port: 8000
+vaultwarden_ws_port: 8001
+# List of IP addresses (can be CIDR notation) which will be able to
+# access vaultwarden ports
+vaultwarden_src_ip: []
+vaultwarden_web_src_ip: []
+
+# Public URL on which vaultwarden will be accessible
+vaultwarden_public_url: http://{{ inventory_hostname }}:{{ vaultwarden_http_port }}
+
+# Should registration be enabled
+vaultwarden_registration: False
+# List of domain names for which registration will be accepted
+# Those domains will be accepted for registration even if vaultwarden_registration is set to False
+vaultwarden_domains_whitelist:
+  - "{{ ansible_domain }}"
+
+# Admin Token to access /admin. A random one is created if not defined
+# vaultwarden_admin_token: S3cr3t.
+
+# Or you can just disable the admin token. But you have to protect /admin yourself (eg, on a reverse proxy)
+vaultwarden_disable_admin_token: False
+
+# YubiKey settings
+# vaultwarden_yubico_client_id: XXXX
+# vaultwarden_yubico_secret_key: XXXX

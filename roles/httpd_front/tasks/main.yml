@@ -1,0 +1,134 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - mod_ssl
+      - mod_evasive
+      - mod_security
+      - mod_security_crs
+  tags: [package,web]
+
+- name: List httpd SSL ports
+  set_fact: httpd_ssl_ports={{ httpd_ssl_ports + (httpd_ansible_vhosts | selectattr('ssl','defined') | selectattr('ssl.port','defined') | map(attribute='ssl.port') | list) | unique }}
+  tags: [firewall,web]
+
+- name: Allow httpd to bind on ssl ports
+  seport: ports={{ httpd_ssl_ports | join(',') }} proto=tcp setype=http_port_t state=present
+  when: ansible_selinux.status == 'enabled'
+  tags: [firewall,web]
+
+- set_fact: httpd_cert_path={{ '/var/lib/dehydrated/certificates/certs/' + httpd_letsencrypt_cert + '/cert.pem' }}
+  when: httpd_letsencrypt_cert is defined
+  tags: [cert,web,conf]
+- set_fact: httpd_key_path={{ '/var/lib/dehydrated/certificates/certs/' + httpd_letsencrypt_cert + '/privkey.pem' }}
+  when: httpd_letsencrypt_cert is defined
+  tags: [cert,web,conf]
+- set_fact: httpd_chain_path={{ '/var/lib/dehydrated/certificates/certs/' + httpd_letsencrypt_cert + '/chain.pem' }}
+  when: httpd_letsencrypt_cert is defined
+  tags: [cert,web,conf]
+
+- name: Deploy configuration fragments
+  template: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - src: ssl.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-ssl.conf
+    - src: evasive.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-evasive.conf
+    - src: security.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-security.conf
+    - src: common_filter.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_filter.inc
+    - src: common_perf.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_perf.inc
+    - src: common_cache.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_cache.inc
+    - src: common_force_ssl.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_force_ssl.inc
+    - src: common_maintenance.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_maintenance.inc
+    - src: common_mod_security2.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_mod_security2.inc
+    - src: vhost_downtime.conf.j2
+      dest: /etc/httpd/ansible_conf.d/21-vhost_downtime.conf
+    - src: 01-front.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/01-front.conf
+    - src: 02-evasive.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/02-evasive.conf
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Check if Let's Encrypt' cert exist
+  stat: path=/var/lib/dehydrated/certificates/certs/{{ item.ssl.letsencrypt_cert }}/cert.pem
+  register: httpd_letsencrypt_certs
+  with_items: "{{ httpd_ansible_vhosts }}"
+  when:
+    - item.ssl is defined
+    - item.ssl.letsencrypt_cert is defined
+  tags: [cert,web,conf]
+
+- name: Create directories for missing Let's Encrypt cert
+  file: path=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }} state=directory
+  with_items: "{{ httpd_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: [cert,web,conf]
+
+- name: Link missing Let's Encrypt cert to the default one
+  file: src={{ httpd_cert_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }}/cert.pem state=link
+  with_items: "{{ httpd_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: [cert,web,conf]
+
+- name: Link missing Let's Encrypt key to the default one
+  file: src={{ httpd_key_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }}/privkey.pem state=link
+  with_items: "{{ httpd_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: [cert,web,conf]
+
+- name: Link missing Let's Encrypt chain to the default cert
+  file: src={{ httpd_cert_path }} dest=/var/lib/dehydrated/certificates/certs/{{ item.item.ssl.letsencrypt_cert }}/chain.pem state=link
+  with_items: "{{ httpd_letsencrypt_certs.results }}"
+  when:
+    - item.stat is defined
+    - not item.stat.exists
+  tags: [cert,web,conf]
+
+- name: Create dehydrated hooks dir
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/ state=directory
+  tags: [cert,web]
+
+- name: Deploy dehydrated hook
+  copy: src=dehydrated_deploy_hook dest=/etc/dehydrated/hooks_deploy_cert.d/10httpd.sh mode=755
+  tags: [cert,web]
+
+- name: Remove old iptables rule
+  iptables_raw:
+    name: httpd_ssl_port
+    state: absent
+  when: iptables_manage | default(True)
+  tags: [firewall,web]
+
+- name: Handle HTTPS ports
+  iptables_raw:
+    name: httpd_ssl_ports
+    state: "{{ (httpd_ssl_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p tcp -m multiport --dports {{ httpd_ssl_ports | join(',') }} -s {{ httpd_ssl_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,web]
+
+- name: Deploy the Cache cleaner configuration
+  template: src=htcacheclean.j2 dest=/etc/sysconfig/htcacheclean
+  notify: restart htcacheclean
+  tags: [conf,web]
+
+- name: Enable the htcacheclean service
+  service: name=htcacheclean state=started enabled=yes
+  tags: web
+
+...

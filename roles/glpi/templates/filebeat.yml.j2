@@ -1,0 +1,7 @@
+- type: log
+  enabled: True
+  paths:
+    - {{ glpi_root_dir }}/data/_log/*.log
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

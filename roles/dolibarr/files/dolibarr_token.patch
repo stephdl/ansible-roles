@@ -1,0 +1,10 @@
+--- /opt/dolibarr_1/web/htdocs/main.inc.php.orig	2021-08-27 11:40:42.177502730 +0200
++++ /opt/dolibarr_1/web/htdocs/main.inc.php	2021-08-27 11:41:02.821219393 +0200
+@@ -507,6 +507,7 @@
+ 	}
+ 
+ 	$sessiontokenforthisurl = (empty($_SESSION['token']) ? '' : $_SESSION['token']);
++	$_GET['token'] = $_SESSION['token']; // Tmp workaround for https://github.com/Dolibarr/dolibarr/issues/16096
+ 	// TODO Get the sessiontokenforthisurl into the array of session token
+ 	if (GETPOSTISSET('token') && GETPOST('token') != 'notrequired' && GETPOST('token', 'alpha') != $sessiontokenforthisurl) {
+ 		dol_syslog("--- Access to ".(empty($_SERVER["REQUEST_METHOD"])?'':$_SERVER["REQUEST_METHOD"].' ').$_SERVER["PHP_SELF"]." refused due to invalid token, so we disable POST and some GET parameters - referer=".$_SERVER['HTTP_REFERER'].", action=".GETPOST('action', 'aZ09').", _GET|POST['token']=".GETPOST('token', 'alpha').", _SESSION['token']=".$_SESSION['token'], LOG_WARNING);

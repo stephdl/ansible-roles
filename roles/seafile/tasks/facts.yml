@@ -1,0 +1,90 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: seafile
+
+- name: Set default install mode
+  set_fact: seafile_install_mode='none'
+  tags: seafile
+
+# Makes sur we do not have a trailing / on the public url
+- set_fact: seafile_public_url={{ seafile_public_url | regex_replace('/$','') }}
+  tags: seafile
+
+- name: Check if seafile is installed
+  stat: path={{ seafile_root_dir }}/meta/ansible_version
+  register: seafile_version_file
+  tags: seafile
+
+- name: Check installed version
+  command: cat {{ seafile_root_dir }}/meta/ansible_version
+  register: seafile_current_version
+  when: seafile_version_file.stat.exists
+  changed_when: False
+  tags: seafile
+
+- name: Set install mode to install
+  set_fact: seafile_install_mode='install'
+  when: not seafile_version_file.stat.exists
+  tags: seafile
+
+- name: Set install mode to upgrade
+  set_fact: seafile_install_mode='upgrade'
+  when:
+    - seafile_version_file.stat.exists
+    - seafile_current_version is defined
+    - seafile_current_version.stdout != seafile_version
+  tags: seafile
+
+# Needed to have consistent behaviour with the various components
+# which do not all support unix socket
+- name: Set DB server to 127.0.0.1
+  set_fact: seafile_db_server="127.0.0.1"
+  when: seafile_db_server == 'localhost'
+  tags: seafile
+
+- name: Generate an ID for seahub
+  shell: date | sha1sum | awk '{ print $1 }' > {{ seafile_root_dir }}/meta/ansible_ccnet_id
+  args:
+    creates: "{{ seafile_root_dir }}/meta/ansible_ccnet_id"
+  when: seafile_ccnet_id is not defined
+  tags: seafile
+
+- name: Read seahub ID
+  command: cat {{ seafile_root_dir }}/meta/ansible_ccnet_id
+  register: seafile_seahub_rand_id
+  when: seafile_ccnet_id is not defined
+  changed_when: False
+  tags: seafile
+
+- name: Set seahub ID
+  set_fact: seafile_ccnet_id={{ seafile_seahub_rand_id.stdout }}
+  when: seafile_ccnet_id is not defined
+  tags: seafile
+
+- name: Generate a password for the database
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ seafile_root_dir }}/meta/ansible_dbpass"
+        - complex: False
+    - set_fact: seafile_db_pass={{ rand_pass }}
+  when: seafile_db_pass is not defined
+  tags: seafile
+
+- name: Set seafile ports
+  set_fact:
+    seafile_ports: "[ {{ seafile_seafile_port }}, {{ seafile_seahub_port }} ]"
+  tags: seafile
+
+- name: Add webdav port
+  set_fact:
+    seafile_ports: "{{ seafile_ports }} + [ {{ seafile_webdav_port }} ]"
+  when: seafile_webdav == True
+  tags: seafile
+

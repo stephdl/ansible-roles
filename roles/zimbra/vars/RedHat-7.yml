@@ -1,0 +1,7 @@
+---
+
+zcs_packages:
+  - tar
+  - MySQL-python
+  - perl-JSON
+  - patch

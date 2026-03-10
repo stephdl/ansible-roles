@@ -1,0 +1,6 @@
+---
+# Can either be kmod or dkms
+zfs_mod: kmod
+
+# Can be stable or testing
+zfs_branch: "{{ ansible_distribution_version }}"

@@ -1,0 +1,11 @@
+---
+- name: Add ElasticSearch repo key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  tags: repo
+
+- name: Add ElasticSearch repository
+  apt_repository:
+    repo: deb https://artifacts.elastic.co/packages/{{ es_major_version }}.x/apt stable main
+    filename: elasticsearch
+  tags: repo

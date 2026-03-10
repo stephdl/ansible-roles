@@ -1,0 +1,8 @@
+<Location /server>
+  ProxyPass http://localhost:{{ psono_server_port }}
+{% if psono_server_src_ip | length < 1 %}
+  Require all denied
+{% else %}
+  Require ip {{ psono_server_src_ip | join(' ') }}
+{% endif %}
+</Location>

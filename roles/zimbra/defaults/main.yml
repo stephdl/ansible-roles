@@ -1,0 +1,79 @@
+---
+
+zcs_install: False
+zcs_version: 8.8.12
+zcs_archive_name: zcs-8.8.12_GA_3794.RHEL7_64.20190329045002.tgz 
+zcs_archive_url: https://files.zimbra.com/downloads/{{ zcs_version }}_GA/{{ zcs_archive_name }}
+zcs_archive_sha1: 9b1e5a13de311aab106953e321fc04970bfd3730
+
+# Primary LDAP server of the cluster
+# zcs_primary_ldap: ldap1.example.org
+
+# Zimbra components to install
+zcs_components: []
+#  - ldap
+#  - logger
+#  - mta
+#  - store
+#  - spell
+#  - memcached
+#  - proxy
+
+zcs_main_domain: "{{ ansible_domain }}"
+
+zcs_cluster_ip: []
+zcs_smtp_src_ip:
+  - 0.0.0.0/0
+zcs_http_src_ip:
+  - 0.0.0.0/0
+# Additional list of IP able to access ldap services (zcs_cluster_ip are already allowed)
+zcs_ldap_src_ip: []
+zcs_clients_src_ip:
+  - 0.0.0.0/0
+zcs_admin_src_ip: []
+zcs_mysql_src_ip: []
+
+# If we should get certificate from Let's Encrypt
+# the letsencrypt role should be deployed also on the primary LDAP server
+# Note that the certificate requested will have all the cluster members as alt names
+# so be sure all the challenges can be resolved
+zcs_letsencrypt: False
+
+# The LDAP admin password (used for other servers to join the cluster for example
+# zcs_ldap_admin_pass:
+
+# Domain and their configuration. Used to sync LDAP with Zimbra
+zcs_domains: {}
+# zcs_domains:
+#   fws.fr:
+#     public_url: https://zm.fws.fr
+#     admin_url: https://zm.fws.fr:9071
+#     ldapsync:
+#       ldap:
+#         servers:
+#           - ldap://dc1.fws.fr:389
+#         schema: ad
+#         bind_dn: CN=Zimbra,OU=Apps,DC=fws,DC=fr
+#         bind_pass: s4cr3t.
+#       users:
+#         base: OU=People,DC=fws,DC=fr
+#         filter: (mail=*)
+#       groups:
+#         base: OU=Groups,DC=fws,DC=fr
+#     cas:
+#       enabled: False
+#       server_url: https://sso.fws.fr/cas
+
+zcs_domain_defaults:
+  cas:
+    enabled: False
+
+# Additional libs needed for CAS
+zcs_cas_libs:
+  - url: https://repo1.maven.org/maven2/org/jasig/cas/client/cas-client-core/3.6.2/cas-client-core-3.6.2.jar
+    sha1: ccb636b9b8d8c048b4dd14b0b0627350def5e3a2
+  - url: https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.32/slf4j-api-1.7.32.jar
+    sha1: cdcff33940d9f2de763bc41ea05a0be5941176c3
+
+# If defined, will add an always_bcc directive on MTA servers
+# zcs_always_bcc: maillog@example.org

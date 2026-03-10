@@ -1,0 +1,104 @@
+---
+
+- name: Set if jigasi is used
+  set_fact: jitsi_jigasi={{ (jitsi_jigasi_sip_user is defined and jitsi_jigasi_sip_secret is defined) | ternary(True, False) }}
+  tags: jitsi
+
+- name: Generate a random secret for videobridge
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_videobridge_xmpp_pass"
+    - set_fact: jitsi_jvb_xmpp_pass={{ rand_pass }}
+  when: jitsi_jvb_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Generate a random password for the focus account
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jicofo_xmpp_pass"
+    - set_fact: jitsi_jicofo_xmpp_pass={{ rand_pass }}
+  when: jitsi_jicofo_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Generate a random secret for jigasi
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jigasi_xmpp_secret"
+    - set_fact: jitsi_jigasi_xmpp_secret={{ rand_pass }}
+  when: jitsi_jigasi_xmpp_secret is not defined
+  tags: jitsi
+
+- name: Generate a random password for jigasi XMPP account
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jigasi_xmpp_pass"
+    - set_fact: jitsi_jigasi_xmpp_pass={{ rand_pass }}
+  when: jitsi_jigasi_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Generate a random password for jibri XMPP account
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jibri_xmpp_pass"
+    - set_fact: jitsi_jibri_xmpp_pass={{ rand_pass }}
+  when: jitsi_jibri_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Generate a random password for recorder XMPP account
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ jitsi_root_dir }}/meta/ansible_jibri_recorder_xmpp_pass"
+    - set_fact: jitsi_jibri_recorder_xmpp_pass={{ rand_pass }}
+  when: jitsi_jibri_recorder_xmpp_pass is not defined
+  tags: jitsi
+
+- name: Set certificate path
+  set_fact: jitsi_cert_path='/etc/prosody/certs/jitsi.crt'
+  when: jitsi_cert_path is not defined
+  tags: jitsi
+
+- name: Set key path
+  set_fact: jitsi_key_path='/etc/prosody/certs/jitsi.key'
+  when: jitsi_key_path is not defined
+  tags: jitsi
+
+- name: Set anonymous domain for jitsi meet
+  block:
+    - set_fact:
+        jitsi_anonymousdomain:
+          hosts:
+           anonymousdomain: guest.{{ jitsi_domain }}
+    - set_fact: jitsi_meet_conf={{ jitsi_anonymousdomain | combine(jitsi_meet_conf, recursive=True) }}
+  when: jitsi_auth == 'ldap'
+  tags: jisti
+
+- name: Check if cert file exist
+  stat: path={{ jitsi_cert_path }}
+  register: jitsi_cert_file
+  tags: jitsi
+
+- name: Check if key file exist
+  stat: path={{ jitsi_key_path }}
+  register: jitsi_key_file
+  tags: jitsi
+
+- name: Check if jicofo is built
+  stat: path={{ jitsi_root_dir }}/jicofo/jicofo.sh
+  register: jitsi_jicofo_script
+  tags: jitsi
+
+- name: Check if jigasi is built
+  stat: path={{ jitsi_root_dir }}/jigasi/jigasi.sh
+  register: jitsi_jigasi_script
+  tags: jitsi
+
+- name: Check if meet is installed
+  stat: path={{ jitsi_root_dir }}/meet/index.html
+  register: jitsi_meet_index
+  tags: jitsi

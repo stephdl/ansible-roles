@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if sftpgo_db_server not in ['localhost', '127.0.0.1'] %}
+  --user={{ sftpgo_db_user | quote }} \
+  --password={{ sftpgo_db_pass | quote }} \
+  --host={{ sftpgo_db_server | quote }} \
+  --port={{ sftpgo_db_port }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ sftpgo_db_name }} | \
+  zstd -c > {{ sftpgo_root_dir }}/backup/{{ sftpgo_db_name }}.sql.zst
+
+cp -a {{ sftpgo_root_dir }}/etc/id_* {{ sftpgo_root_dir }}/backup/

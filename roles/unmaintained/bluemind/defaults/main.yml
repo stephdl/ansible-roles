@@ -1,0 +1,117 @@
+---
+
+bm_http_ports:
+  - 80
+  - 443
+bm_http_src_ip:
+  - 0.0.0.0/0
+
+bm_imap_ports:
+  - 143
+  - 993
+bm_imap_src_ip:
+  - 0.0.0.0/0
+
+bm_pop_ports:
+  - 110
+  - 995
+bm_pop_src_ip:
+  - 0.0.0.0/0
+
+bm_smtp_ports:
+  - 25
+  - 465
+  - 587
+bm_smtp_src_ip:
+  - 0.0.0.0/0
+
+bm_milter_ports:
+  - 2500
+bm_milter_src:ip: []
+
+bm_int_ports:
+  - 24
+  - 144
+  - 1110
+  - 1143
+  - 2000
+  - 2400
+  - 2500
+  - 4444
+  - 5280
+  - 5290
+  - 5432
+  - '5701:5715'
+  - 8021
+  - 8022
+  - 8079
+  - 8080
+  - 8082
+  - 8084
+  - 8087
+  - 9083
+  - 9086
+  - 9090
+  - 9099
+  - 9200
+  - 9300
+bm_int_src_ip: []
+
+# bm_letsencrypt_cert: bluemind.domain.tld
+
+bm_mem_alloc_base:
+  bm-core:
+    heap: 512
+    direct: 512
+    spare: 20
+  bm-node:
+    heap: 128
+    direct: 128
+    spare: 0
+  bm-eas:
+    heap: 256
+    direct: 128
+    spare: 2
+  bm-mapi:
+    heap: 512
+    direct: 256
+    spare: 10
+  bm-ips:
+    heap: 64
+    direct: 64
+    spare: 0
+  bm-hps:
+    heap: 128
+    direct: 128
+    spare: 0
+  bm-lmtpd:
+    heap: 128
+    direct: 128
+    spare: 0
+  bm-locator:
+    heap: 64
+    direct: 64
+    spare: 0
+  bm-milter:
+    heap: 64
+    direct: 64
+    spare: 0
+  bm-tika:
+    heap: 128
+    direct: 128
+    spare: 0
+  bm-xmpp:
+    heap: 32
+    direct: 32
+    spare: 0
+  bm-ysnp:
+    heap: 64
+    direct: 64
+    spare: 0
+  bm-elasticsearch:
+    heap: 512
+    direct: 512
+    spare: 20
+bm_mem_alloc: {}
+bm_mem_alloc_rules: "{{ bm_mem_alloc_base | combine(bm_mem_alloc, recursive=True) }}"
+

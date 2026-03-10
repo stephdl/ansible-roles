@@ -1,0 +1,32 @@
+---
+
+ttrss_id: "1"
+ttrss_root_dir: /opt/ttrss_{{ ttrss_id }}
+ttrss_version: master
+ttrss_git_uri: https://tt-rss.org/git/tt-rss.git
+ttrss_create_db: True
+ttrss_mysql_db: ttrss_{{ ttrss_id }}
+ttrss_mysql_user: ttrss_{{ ttrss_id }}
+ttrss_mysql_server: "{{ mysql_server | default('localhost') }}"
+# ttrss_mysql_pass: S3cr3t.P@ssw0rd
+
+# To create an alias on the main vhost. If unset, you must create a vhost pointing on
+# ttrss_root_dir
+# ttrss_alias: ttrss
+
+# User under which the PHP pool is running
+ttrss_php_user: php-ttrss_{{ ttrss_id }}
+
+# If set, will use the following PHP FPM pool. If unset, will deploy it's own pool
+# ttrss_php_fpm_pool: ttrss7.0
+
+# When using our own pool, which version of PHP should be used
+ttrss_php_version: 74
+
+# If set, access will only be allowed for the following IP
+# ttrss_src_ip:
+#   - 10.32.0.0/16
+#   - 192.168.1.0/24
+
+# Public URL to access Tiny Tiny RSS
+ttrss_public_url: https://{{ inventory_hostname }}/

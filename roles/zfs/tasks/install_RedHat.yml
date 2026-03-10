@@ -1,0 +1,10 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - zfs
+      - sanoid
+  when: ansible_os_family == 'RedHat'
+  tags: zfs
+

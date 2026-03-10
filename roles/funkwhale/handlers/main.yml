@@ -1,0 +1,7 @@
+---
+- name: restart funkwhale
+  service: name=funkwhale_{{ funkwhale_id }}-{{ item }} state=restarted
+  loop:
+    - server
+    - worker
+    - beat

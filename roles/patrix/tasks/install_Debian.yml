@@ -1,0 +1,25 @@
+---
+
+- name: Install dependencies
+  apt:
+    name:
+      - libwww-perl
+      - liblwp-protocol-https-perl
+      - libconfig-simple-perl
+      - libfile-homedir-perl
+      - libfile-mimeinfo-perl
+      - liburi-perl
+      - libjson-perl
+      - libterm-readkey-perl
+      - libhash-merge-simple-perl
+  tags: patrix
+
+- name: Install patrix
+  get_url:
+    url: https://raw.githubusercontent.com/dani/patrix/master/scripts/patrix
+    dest: /usr/local/bin/patrix
+    mode: 0755
+  environment:
+    - https_proxy: "{{ system_proxy | default('') }}"
+  tags: patrix
+

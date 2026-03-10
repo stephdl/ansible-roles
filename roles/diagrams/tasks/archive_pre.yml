@@ -1,0 +1,9 @@
+---
+
+- name: Create the archive dir
+  file: path={{ diagrams_root_dir }}/archives/{{ diagrams_current_version }} state=directory
+  tags: diagrams
+
+- name: Copy the war archive
+  copy: src={{ diagrams_root_dir }}/webapps/draw.war dest={{ diagrams_root_dir }}/archives/{{ diagrams_current_version }} remote_src=True
+  tags: diagrams

@@ -1,0 +1,5 @@
+---
+
+- name: Create bitwarden_rs user
+  user: name={{ bitwarden_user }} home={{ bitwarden_root_dir }} system=True
+  tags: bitwarden

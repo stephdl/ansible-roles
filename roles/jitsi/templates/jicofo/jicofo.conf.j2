@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+JICOFO_HOST={{ jitsi_xmpp_server }}
+JICOFO_DOMAIN={{ jitsi_domain }}
+JICOFO_USER={{ jitsi_jicofo_xmpp_user }}
+JICOFO_USERDOMAIN={{ jitsi_auth_domain }}
+JICOFO_USER_PASS='{{ jitsi_jicofo_xmpp_pass }}'
+JICOFO_OPTS=''
+JAVA_SYS_PROPS="-Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION={{ jitsi_root_dir }}/etc -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=jicofo"

@@ -1,0 +1,12 @@
+ssl_certificate {{ nginx_cert_path }};
+ssl_certificate_key {{ nginx_key_path }};
+ssl_dhparam /etc/nginx/ssl/dhparam.pem;
+ssl_ciphers {{ nginx_ssl_ciphers_modern }};
+ssl_protocols {{ nginx_ssl_protocols | join(' ') }};
+ssl_prefer_server_ciphers on;
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 1h;
+ssl_session_tickets off;
+ssl_stapling on;
+ssl_stapling_verify on;
+ssl_trusted_certificate /etc/pki/tls/cert.pem;

@@ -1,0 +1,7 @@
+---
+
+pg_packages:
+  - postgresql{{ (pg_version != 'default') | ternary(pg_version | string,'') }}
+  - postgresql{{ (pg_version != 'default') | ternary(pg_version | string,'') }}-server
+  - postgresql{{ (pg_version != 'default') | ternary(pg_version | string,'') }}-contrib
+  - python-psycopg2

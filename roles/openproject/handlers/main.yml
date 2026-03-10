@@ -1,0 +1,7 @@
+---
+
+- name: restart openproject
+  service: name={{ item }} state=restarted
+  loop:
+    - openproject
+    - openproject-worker

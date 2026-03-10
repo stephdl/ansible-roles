@@ -1,0 +1,18 @@
+---
+
+- include: ../httpd_common/handlers/main.yml
+
+# We need to stop all the pools and then start them again
+# because if we move one pool config from one version to another
+# the socket might not be removed at the correct time, depending on the
+# order of execution
+- name: restart php-fpm
+  service: name=php{{ item }}-php-fpm state=stopped enabled=True
+  with_items: "{{ httpd_php_versions }}"
+  notify: start php-fpm
+
+- name: start php-fpm
+  service: name=php{{ item }}-php-fpm state=started enabled=True
+  with_items: "{{ httpd_php_versions }}"
+
+...

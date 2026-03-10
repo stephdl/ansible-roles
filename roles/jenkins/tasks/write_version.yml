@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ jenkins_version }} dest={{ jenkins_root_dir }}/meta/ansible_version
+  tags: jenkins

@@ -1,0 +1,24 @@
+---
+
+- name: Create needed directories
+  file:
+    state: directory
+    path: "{{ synapse_root_dir }}/{{ item.dir }}"
+    mode: "{{ item.mode | default(omit) }}"
+    group: "{{ synapse_user }}"
+  with_items:
+    - dir: meta
+      mode: 700
+    - dir: media_store
+      mode: 770
+    - dir: uploads
+      mode: 770
+    - dir: tmp
+      mode: 770
+    - dir: etc
+      mode: 750
+    - dir: res/templates
+    - dir: backup
+      mode: 700
+    - dir: venv
+  tags: matrix

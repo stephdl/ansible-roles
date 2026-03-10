@@ -1,0 +1,22 @@
+---
+
+- include: facts.yml
+
+- name: List configured relay domains
+  command: pmgsh get /config/domains
+  register: wh_pmg_domains
+  changed_when: False
+  tags: mail
+- set_fact: wh_pmg_domains={{ wh_pmg_domains.stdout | from_json | map(attribute='domain') | list }}
+  tags: mail
+
+- name: Create domains in PMG relay table
+  command: pmgsh create /config/domains --domain "{{ item }}"
+  loop: "{{ wh_mail_domains_to_relay }}"
+  when: item not in wh_pmg_domains
+  tags: mail
+
+- name: Remove domains from PMG relay table
+  command: pmgsh delete /config/domains/{{ item }}
+  loop: "{{ wh_pmg_domains }}"
+  when: item not in wh_mail_domains_to_relay

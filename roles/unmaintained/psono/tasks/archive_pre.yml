@@ -1,0 +1,38 @@
+---
+
+- name: Create archive dir
+  file: path={{ psono_root_dir }}/archives/{{ item }} state=directory
+  loop:
+    - server_{{ psono_server_current_version }}
+    - client_{{ psono_client_current_version }}
+    - admin_{{ psono_admin_current_version }}
+  tags: psono
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ psono_root_dir }}/{{ item.src }}"
+    dest: "{{ psono_root_dir }}/archives/{{ item.dest }}/"
+    recursive: True
+    delete: True
+  loop:
+    - src: server
+      dest: server_{{ psono_server_current_version }}
+    - src: client
+      dest: client_{{ psono_client_current_version }}
+    - src: admin
+      dest: admin_{{ psono_admin_current_version }}
+  delegate_to: "{{ inventory_hostname }}"
+  tags: psono
+
+- name: Archive database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ psono_db_server }}
+    --port={{ psono_db_port }}
+    --username=sqladmin {{ psono_db_name }}
+    --file={{ psono_root_dir }}/archives/server_{{ psono_server_current_version }}/{{ psono_db_name }}.sql
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  tags: psono

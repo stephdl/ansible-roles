@@ -1,0 +1,24 @@
+<Directory /var/www/html/default>
+  Require all granted
+  AllowOverride None
+  Options None
+</Directory>
+<Directory /var/www/html/default/cgi-bin>
+  Require all granted
+  AllowOverride None
+  SetHandler cgi-script
+  Options ExecCGI
+</Directory>
+
+<VirtualHost *:{{ httpd_port | default('80') }}>
+  ServerName {{ httpd_default_vhost | default(inventory_hostname) }}
+  DocumentRoot /var/www/html/default
+  Include ansible_conf.d/common_letsencrypt.inc
+</VirtualHost>
+<IfModule mod_ssl.c>
+  <VirtualHost *:{{ httpd_ssl_port | default('443') }}>
+    ServerName {{ httpd_default_vhost | default(inventory_hostname) }}
+    SSLEngine On
+    DocumentRoot /var/www/html/default
+  </VirtualHost>
+</IfModule>

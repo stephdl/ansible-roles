@@ -1,0 +1,41 @@
+{% if dokuwiki_alias is defined %}
+Alias /{{ dokuwiki_alias }} {{ dokuwiki_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ dokuwiki_root_dir }}/web>
+  AllowOverride All
+  Options FollowSymLinks
+{% if dokuwiki_src_ip is defined %}
+  Require ip {{ dokuwiki_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ dokuwiki_php_fpm_pool | default('dokuwiki_' + dokuwiki_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+  <FilesMatch "^(\.ansible_version|\.git.*|README(\.md)?|LICENSE|AUTHORS|.*\.cnf|\.htaccess|_deprecated\.txt|plugin\.info\.txt)">
+    Require all denied
+  </FilesMatch>
+
+{% if httpd_src_ip is defined and httpd_src_ip | length > 0 and '0.0.0.0/0' not in httpd_src_ip and dokuwiki_auth == 'authhttpldap' %}
+  RewriteEngine On
+  RewriteCond %{HTTP:Auth-User} ^(\w+)$
+  RewriteRule .* - [E=REMOTE_USER:%1]
+{% endif %}
+</Directory>
+
+<DirectoryMatch {{ dokuwiki_root_dir }}/web/lib/plugins/\w+/conf>
+  Require all denied
+</DirectoryMatch>
+<Directory {{ dokuwiki_root_dir }}/web/conf>
+  Require all denied
+</Directory>
+<Directory {{ dokuwiki_root_dir }}/web/inc>
+  Require all denied
+</Directory>
+<Directory {{ dokuwiki_root_dir }}/web/config>
+  Require all denied
+</Directory>

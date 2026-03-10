@@ -1,0 +1,11 @@
+---
+
+- name: Stop the service
+  service: name=zabbix-proxy state=stopped
+  when: zabbix_proxy_rpm.changed
+  tags: zabbix
+
+- name: Drop the SQLite database (no schema upgrade for SQLite)
+  file: path=/var/lib/zabbix/db/proxy.sqlite state=absent
+  when: zabbix_proxy_rpm.changed
+  tags: zabbix

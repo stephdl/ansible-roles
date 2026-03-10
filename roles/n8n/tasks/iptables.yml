@@ -1,0 +1,8 @@
+---
+
+- name:  Handle n8n port in the firewall
+  iptables_raw:
+    name: n8n_port
+    state: "{{ (n8n_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ n8n_port }} -s {{ n8n_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,n8n

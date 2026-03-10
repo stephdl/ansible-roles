@@ -1,0 +1,56 @@
+# {{ ansible_managed }}
+
+{% for token in ['SECRET_KEY', 'ACTIVATION_LINK_SECRET', 'DB_SECRET', 'EMAIL_SECRET_SALT', 'PRIVATE_KEY', 'PUBLIC_KEY'] %}
+{{ token }}: '{{ psono_tokens.results | selectattr('item','equalto',token) | map(attribute='stdout') | first | string }}'
+{% endfor %}
+DEBUG: False
+{% if psono_allowed_hosts is defined and psono_allowed_hosts | length > 0 %}
+ALLOWED_HOSTS:
+{{ psono_allowed_hosts | to_nice_yaml(indent=2) }}
+{% endif %}
+{% if psono_allowed_domains is defined and psono_allowed_domains | length > 0 %}
+ALLOWED_DOMAINS:
+{{ psono_allowed_domains | to_nice_yaml(indent=2) }}
+{% endif %}
+ALLOW_REGISTRATION: {{ psono_allow_registration | ternary('True', 'False') }}
+{% if psono_email_filter is defined and psono_email_server | length > 0 %}
+REGISTRATION_EMAIL_FILTER:
+{% for domain in psono_email_filter %}
+  - {{ domain }}
+{% endfor %}
+{% endif %}
+ALLOW_LOST_PASSWORD: {{ psono_allow_lost_password | ternary('True', 'False') }}
+HOST_URL: '{{ psono_public_url }}'
+EMAIL_FROM: '{{ psono_from_email }}'
+EMAIL_HOST: 'localhost'
+CACHE_ENABLE: True
+CACHE_REDIS: True
+CACHE_REDIS_LOCATION: '{{ psono_redis_server }}'
+MANAGEMENT_ENABLED: True
+{% if ntp_servers is defined and ntp_servers | length > 0 %}
+TIME_SERVER: '{{ ntp_servers | first }}'
+{% endif %}
+DATABASES:
+    default:
+        'ENGINE': 'django.db.backends.postgresql_psycopg2'
+        'NAME': '{{ psono_db_name }}'
+        'USER': '{{ psono_db_user }}'
+        'PASSWORD': '{{ psono_db_pass }}'
+        'HOST': '{{ psono_db_server }}'
+        'PORT': '{{ psono_db_port }}'
+
+TEMPLATES: [
+    {    
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': ['{{ psono_root_dir }}/server/app/psono/templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]

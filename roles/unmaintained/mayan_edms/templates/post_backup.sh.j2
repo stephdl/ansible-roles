@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+rm -f {{ mayan_root_dir }}/backup/*
+{% for index in mayan_index_as_fuse %}
+umount {{ mayan_root_dir }}/fuse/{{ index }}
+rmdir {{ mayan_root_dir }}/fuse/{{ index }}
+{% endfor %}

@@ -1,0 +1,12 @@
+---
+
+allow_duplicates: True
+dependencies:
+  - role: mkdir
+  - role: composer
+  - role: mysql_server
+    when: pim_db_server in ['localhost','127.0.0.1']
+  - role: httpd_php
+  - role: nodejs
+  - role: elasticsearch
+    when: pim_es_server | regex_replace('(.*):\d+','\\1') in ['localhost','127.0.0.1']

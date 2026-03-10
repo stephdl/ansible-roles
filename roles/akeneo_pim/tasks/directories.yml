@@ -1,0 +1,30 @@
+---
+
+- name: Create nedded directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ pim_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ pim_root_dir }}/archives"
+      mode: 700
+    - dir: "{{ pim_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ pim_root_dir }}/data"
+      owner: "{{ pim_user }}"
+      mode: 700
+    - dir: "{{ pim_root_dir }}/app"
+      owner: "{{ pim_user }}"
+      group: "{{ pim_user }}"
+    - dir: "{{ pim_root_dir }}/tmp"
+      owner: "{{ pim_user }}"
+      group: "{{ pim_user }}"
+      mode: 700
+    - dir: "{{ pim_root_dir }}/sessions"
+      owner: "{{ pim_user }}"
+      group: "{{ pim_user }}"
+      mode: 700
+  tags: pim
+
+- name: Link the var directory to the data dir
+  file: src={{ pim_root_dir }}/data dest={{ pim_root_dir }}/app/var state=link
+  tags: pim

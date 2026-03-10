@@ -1,0 +1,32 @@
+{% if matomo_alias is defined %}
+Alias /{{ matomo_alias }} {{ matomo_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ matomo_root_dir }}/web>
+  AllowOverride All
+  Options FollowSymLinks
+{% if matomo_src_ip is defined %}
+  Require ip {{ matomo_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ matomo_php_fpm_pool | default('matomo_' + matomo_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+
+  <FilesMatch "^(\.ansible_version|\.git.*|(README|LICENSE|AUTHORS|CHANGELOG|CONTRIBUTING|LEGALNOTICE|PRIVACY|SECURITY)(\.md)?|.*\.co?nf|\.htaccess|composer\.(json|lock))">
+    Require all denied
+  </FilesMatch>
+</Directory>
+
+<Directory {{ matomo_root_dir }}/web/config>
+  Require all denied
+</Directory>
+<Directory {{ matomo_root_dir }}/web/inc>
+  Require all denied
+</Directory>
+<Directory {{ matomo_root_dir }}/web/config>
+  Require all denied
+</Directory>

@@ -1,0 +1,7 @@
+{% for share in nas_shares %}
+{% if share.protocols.nfs.enabled %}
+{{ share.path | default(nas_root_dir + '/data/' + share.name) }} *(rw,{{ share.protocols.nfs.root_squash | ternary('','no_') }}root_squash)
+{% else %}
+# NFS not enabled for share {{ share.name }}
+{% endif %}
+{% endfor %}

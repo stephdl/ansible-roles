@@ -1,0 +1,49 @@
+---
+
+- set_fact: samba_tls_cert={{ '/var/lib/dehydrated/certificates/certs/' + samba_letsencrypt_cert + '/fullchain.pem' }}
+  when: samba_letsencrypt_cert is defined
+  tags: [cert,samba]
+
+- set_fact: samba_tls_key={{ '/var/lib/dehydrated/certificates/certs/' + samba_letsencrypt_cert + '/privkey.pem' }}
+  when: samba_letsencrypt_cert is defined
+  tags: [cert,samba]
+
+- set_fact: samba_i_am_primary_dc={{ (inventory_hostname == samba_primary_dc and samba_role == 'dc') | ternary(True,False) }}
+  tags: samba
+
+- name: Merge custom password complexity rules with default ones
+  set_fact: samba_pwd_policy={{ samba_base_pwd_policy | combine(samba_pwd_policy) }}
+  tags: samba
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: samba
+
+- name: Set a default samba domain
+  set_fact: samba_domain={{ ansible_domain | regex_replace('\.[a-z]+$','') }}
+  when: samba_domain is not defined
+  tags: samba
+
+- name: Check if domain is provisionned
+  stat: path=/var/lib/samba/sysvol/{{ samba_realm }}
+  register: samba_dc_sysvol
+  tags: samba
+
+- name: Add rsyncd port to the list of ports
+  set_fact: samba_dc_tcp_ports={{ samba_dc_tcp_ports + ['873'] }}
+  when: samba_i_am_primary_dc == True
+  tags: samba
+
+# sssd-ad can now be installed on EL8 with samba4 build from Tranquil IT
+# so don't turn ad_auth off anymore
+#- name: Disable ad_auth for samba DC
+#  set_fact: ad_auth=False
+#  when:
+#    - samba_role in [ 'dc', 'rodc' ]
+#    - ansible_os_family == 'RedHat'
+#    - ansible_distribution_major_version is version('8','>=')
+#  tags: samba

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+restorecon -R {{ framadate_root_dir }}
+chown root:root {{ framadate_root_dir }}
+chmod 700 {{ framadate_root_dir }}
+setfacl -k -b {{ framadate_root_dir }}
+setfacl -m u:{{ framadate_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ framadate_root_dir }}
+chown -R root:root {{ framadate_root_dir }}/web
+chown -R {{ framadate_php_user }} {{ framadate_root_dir }}/{tmp,sessions,logs}
+chmod 700 {{ framadate_root_dir }}/{tmp,sessions,logs}
+find {{ framadate_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ framadate_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown :{{ framadate_php_user }} {{ framadate_root_dir }}/web/app/inc/config.php
+chmod 640 {{ framadate_root_dir }}/web/app/inc/config.php
+[ -d {{ framadate_root_dir }}/web/tpl_c ] || mkdir -p {{ framadate_root_dir }}/web/tpl_c
+chown :{{ framadate_php_user }} {{ framadate_root_dir }}/web/tpl_c
+chmod 775 {{ framadate_root_dir }}/web/tpl_c

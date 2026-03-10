@@ -1,0 +1,4 @@
+---
+- include: ../common/handlers/main.yml
+- name: restart ethercalc
+  service: name=ethercalc_{{ ethercalc_id }} state=restarted enabled=yes

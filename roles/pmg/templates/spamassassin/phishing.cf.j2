@@ -1,0 +1,7 @@
+{% if pmg_use_openphish %}
+phishing_openphish_feed /etc/mail/spamassassin/openphish.txt
+{% endif %}
+phishing_phishtank_feed /var/lib/spamassassin/phishtank.txt
+body     URI_PHISHING      eval:check_phishing()
+describe URI_PHISHING      Url match phishing in feed
+score    URI_PHISHING      3

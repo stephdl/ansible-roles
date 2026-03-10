@@ -1,0 +1,12 @@
+---
+
+- name: Configure Elrepo
+  yum_repository:
+    file: elrepo
+    description: 'ELRepo.org Community Enterprise Linux Repository'
+    name: elrepo
+    baseurl: http://elrepo.org/linux/elrepo/el7/$basearch/ http://mirrors.coreix.net/elrepo/elrepo/el7/$basearch/
+    gpgcheck: True
+    gpgkey: https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+    enabled: True
+  tags: repo

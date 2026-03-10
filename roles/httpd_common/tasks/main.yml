@@ -1,0 +1,164 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+    - vars/defaults.yml
+  tags: web
+
+- name: Install packages
+  yum: name={{ httpd_common_packages }}
+  tags: web
+
+- name: List httpd ports
+  set_fact: httpd_ports={{ httpd_ports + (httpd_ansible_vhosts | selectattr('port','defined') | map(attribute='port') | list) | unique }}
+  tags: [firewall,web]
+  
+- name: Allow httpd to bind on ports
+  seport: ports={{ httpd_ports | join(',') }} proto=tcp setype=http_port_t state=present
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+
+- name: Creates default root directory
+  file: path={{ item }} state=directory mode=755
+  with_items:
+    - /var/www/html/default
+    - /var/www/html/default/cgi-bin
+    - /var/www/html/downtime
+    - /etc/httpd/ansible_conf.d
+    - /etc/httpd/custom_conf.d
+    - /etc/httpd/ansible_conf.modules.d
+  tags: web
+
+- name: Deploy an empty default index for the catch all vhost
+  copy: src=index_default.html dest=/var/www/html/default/index.html
+  tags: web
+
+- name: Deploy the maintenance page
+  copy: src=index_maintenance.html dest=/var/www/html/default/maintenance.html
+  tags: web
+
+- name: Remove obsolete configuration files
+  file: path={{ item }} state=absent
+  with_items:
+    - /etc/httpd/ansible_conf.d/10-welcome.conf
+  tags: web
+
+- name: Deploy mpm configuration
+  template: src=10-mpm.conf.j2 dest=/etc/httpd/ansible_conf.modules.d/10-mpm.conf
+  notify: restart httpd
+  tags: [conf,web]
+
+- name: Deploy main httpd configuration
+  template: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - src: httpd.conf.j2
+      dest: /etc/httpd/conf/httpd.conf
+    - src: common_env.inc.j2
+      dest: /etc/httpd/ansible_conf.d/common_env.inc
+    - src: autoindex.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-autoindex.conf
+    - src: status.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-status.conf
+    - src: errors.conf.j2
+      dest: /etc/httpd/ansible_conf.d/10-errors.conf
+    - src: vhost_default.conf.j2
+      dest: /etc/httpd/ansible_conf.d/20-vhost_default.conf
+    - src: 00-base_mod.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/00-base_mod.conf
+    - src: 20-cgi.conf.j2
+      dest: /etc/httpd/ansible_conf.modules.d/20-cgi.conf
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Check if common config templates are present
+  stat: path=/etc/httpd/ansible_conf.d/{{ item }}
+  with_items:
+    - common_perf.inc
+    - common_filter.inc
+    - common_force_ssl.inc
+    - common_letsencrypt.inc
+    - common_cache.inc
+    - common_mod_security2.inc
+  register: common_files
+  tags: [conf,web]
+
+- name: Deploy dummy config files if needed
+  copy: content="# Dummy config file. Use httpd_front / letsencrypt roles to get the real config" dest=/etc/httpd/ansible_conf.d/{{ item.item }}
+  when: not item.stat.exists
+  with_items: "{{ common_files.results }}"
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Deploy ansible vhosts configuration
+  template: src=vhost_ansible.conf.j2 dest=/etc/httpd/ansible_conf.d/30-vhost_ansible.conf
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Create ansible directories
+  file: path={{ item.path }} state=directory
+  with_items: "{{ httpd_ansible_directories }}"
+  tags: [conf,web]
+
+- name: Deploy ansible directories configuration
+  template: src=dir_ansible.conf.j2 dest=/etc/httpd/ansible_conf.d/10-dir_ansible.conf
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Deploy custom global configuration
+  copy: content={{ httpd_custom_conf }} dest=/etc/httpd/ansible_conf.d/10-custom_ansible.conf
+  notify: reload httpd
+  tags: [conf,web]
+
+- name: Configure log rotation
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/httpd
+  tags: [conf,web]
+
+- name: Remove old iptables rule
+  iptables_raw:
+    name: httpd_port
+    state: absent
+  when: iptables_manage | default(True)
+  tags: [firewall,web]
+
+- name: Handle HTTP ports
+  iptables_raw:
+    name: httpd_ports
+    state: "{{ (httpd_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state new -p tcp -m multiport --dports {{ httpd_ports | join(',') }} -s {{ httpd_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,web]
+
+- name: Start and enable the service
+  service: name=httpd state=started enabled=yes
+  tags: web
+
+- name: Allow network connections in SELinux
+  seboolean: name={{ item }} state=yes persistent=yes
+  with_items:
+    - httpd_can_connect_ldap
+    - httpd_unified
+    - httpd_can_network_connect
+    - httpd_mod_auth_pam
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+
+- name: Create or update htpasswd files
+  htpasswd:
+    path: "{{ item[0].path }}"
+    name: "{{ item[1].login }}"
+    password: "{{ item[1].pass | default(omit) }}"
+    owner: root
+    group: "{{ httpd_user }}"
+    mode: 0640
+    state: "{{ (item[1].state | default('present')) }}"
+  with_subelements:
+    - "{{ httpd_htpasswd }}"
+    - users
+  tags: web
+
+- include: filebeat.yml
+...

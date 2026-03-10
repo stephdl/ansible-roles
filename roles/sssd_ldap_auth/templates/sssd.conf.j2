@@ -1,0 +1,37 @@
+[sssd]
+config_file_version = 2
+services = {{ ldap_modules|join(', ') }}
+domains = LDAP
+
+[nss]
+
+[pam]
+
+[sudo]
+
+[autofs]
+
+[domain/LDAP]
+id_provider = ldap
+auth_provider = ldap
+ldap_schema = {{ ldap_schema }}
+ldap_uri = {{ ldap_uri }}
+ldap_default_bind_dn = {{ ldap_bind_dn }}
+ldap_default_authtok = {{ ldap_bind_pass }}
+ldap_default_authtok_type = password
+ldap_search_base = {{ ldap_base }}
+ldap_user_search_base = {{ ldap_user_base }},{{ ldap_base }}
+ldap_group_search_base = {{ ldap_group_base }},{{ ldap_base }}
+ldap_sudo_search_base = {{ ldap_sudo_base }},{{ ldap_base }}
+ldap_autofs_search_base = {{ ldap_autofs_base }},{{ ldap_base }}
+ldap_user_object_class = {{ ldap_user_object_class }}
+ldap_user_gecos = cn
+ldap_tls_reqcert = hard
+ldap_id_use_start_tls = true
+ldap_tls_cacert = {{ ldap_tls_ca_cert | default((ansible_os_family == 'Debian') | ternary('/etc/ssl/certs/ca-certificates.crt','/etc/pki/tls/cert.pem')) }}
+ldap_user_shell = {{ ldap_user_shell }}
+cache_credentials = true
+enumerate = true
+access_provider = ldap
+ldap_access_filter = {{ ldap_access_filter }}
+

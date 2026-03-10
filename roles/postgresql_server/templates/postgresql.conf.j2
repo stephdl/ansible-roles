@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+
+port = {{ pg_port }}
+
+{% for key in pg_conf.keys() | list | sort %}
+{% if key == 'listen_addresses' %}
+listen_addresses = '{{ pg_conf[key] | join("','") }}'
+{% elif key in pg_pct_mem_directives and pg_conf[key] is search('%$') %}
+{{ key }} = {{ ((pg_conf[key] | regex_replace('%$', '') | int) * ansible_memtotal_mb * 0.01) | int }}MB
+{% elif pg_conf[key] is search(',|/') %}
+{{ key }} = '{{ pg_conf[key] }}'
+{% else %}
+{{ key }} = {{ pg_conf[key] }}
+{% endif %}
+{% endfor %}
+

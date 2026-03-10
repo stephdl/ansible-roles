@@ -1,0 +1,9 @@
+---
+
+- include: ../common/handlers/main.yml
+
+- name: reload samba
+  service:
+    name: "{{ (samba_role == 'dc' or samba_role == 'rodc') | ternary('samba','smb') }}"
+    state: reloaded
+

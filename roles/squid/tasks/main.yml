@@ -1,0 +1,258 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - squid
+      - c-icap
+      - squidclamav
+      - ufdbGuard
+  notify: restart squid
+  tags: proxy
+
+- name: Identify intercept HTTP ports (if any)
+  set_fact: squid_intercept_http_ports={{ squid_http_ports | selectattr('port','defined') | selectattr('mode','defined') | selectattr('mode','equalto','intercept') | map(attribute='port') | list }}
+  tags: [firewall,proxy]
+
+- name: Identify intercept HTTPS ports (if any)
+  set_fact: squid_intercept_https_ports={{ squid_https_ports | selectattr('port','defined') | selectattr('mode','defined') | selectattr('mode','equalto','intercept') | map(attribute='port') | list }}
+  tags: [firewall,proxy]
+
+- name: List HTTP ports
+  set_fact: squid_http_ports_list={{ squid_http_ports | selectattr('port','defined') | map(attribute='port') | list }}
+  tags: [firewall,proxy]
+
+- name: List HTTPS ports
+  set_fact: squid_https_ports_list={{ squid_https_ports | selectattr('port','defined') | map(attribute='port') | list }}
+  tags: [firewall,proxy]
+
+- name: List TCP port to handle
+  set_fact: squid_ports={{ squid_http_ports_list + squid_https_ports_list }}
+  tags: [firewall,proxy]
+
+- name: Add a NAT rule for transparent proxying of clear HTTP
+  iptables_raw:
+    name: squid_intercept_http_ports
+    state: "{{ (squid_intercept_http_ports | length > 0) | ternary('present','absent') }}"
+    table: nat
+    rules: "-A PREROUTING -p tcp -m multiport --dports {{ squid_nat_http_ports | join(',') }} ! -d {{ ansible_default_ipv4.address }} -j DNAT --to {{ ansible_default_ipv4.address }}:{{ squid_intercept_http_ports | first }}"
+  when: iptables_manage | default(True)
+  tags: [firewall,proxy]
+
+- name: Add a NAT rule for transparent proxying of HTTPS
+  iptables_raw:
+    name: squid_intercept_https_ports
+    state: "{{ (squid_intercept_https_ports | length > 0) | ternary('present','absent') }}"
+    table: nat
+    rules: "-A PREROUTING -p tcp -m multiport --dports {{ squid_nat_https_ports | join(',') }} ! -d {{ ansible_default_ipv4.address }} -j DNAT --to {{ ansible_default_ipv4.address }}:{{ squid_intercept_https_ports | first }}"
+  when: iptables_manage | default(True)
+  tags: [firewall,proxy]
+
+- name: Handle squid ports
+  iptables_raw:
+    name: squid_ports
+    state: "{{ (squid_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ squid_ports | join(',') }} -s {{ squid_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,proxy]
+
+- name: Create TLS directory
+  file: path=/etc/squid/tls state=directory group=squid mode=750
+  tags: proxy
+
+- name: Check if the cert for squid exists
+  stat: path=/etc/squid/tls/cert.pem
+  register: squid_cert
+  tags: proxy
+
+  # Would be better to use openssl_certificate module, but requires pyOpenSSL >= 0.15 and we only have 0.13 on el7
+- name: Create self signed certificate
+  shell: >
+    openssl req -x509 -newkey rsa:4096 -nodes -sha256 -subj
+    "/C=FR/ST=Aquitaine/L=Bordeaux/O=Firewall Services/OU=Web Security/CN={{ inventory_hostname }}"
+    -keyout /etc/squid/tls/key.pem -out /etc/squid/tls/cert.pem -days 3650
+  when: not squid_cert.stat.exists
+  tags: proxy
+
+- name: Deploy squid main configuration
+  template: src=squid.conf.j2 dest=/etc/squid/squid.conf owner=squid group=squid mode=640
+  notify: reload squid
+  tags: proxy
+
+- name: Create acl directory
+  file: path=/etc/squid/acl state=directory
+  tags: proxy
+
+- name: Copy static ACL files
+  copy: src=acl/ dest=/etc/squid/acl/
+  notify: reload squid
+  tags: proxy
+
+- name: Deploy local white and blacklists
+  template: src={{ item }}.j2 dest=/etc/squid/acl/{{ item }}
+  with_items:
+    - local_whitelist.urls
+    - local_blacklist.urls
+    - local_whitelist.domains
+    - local_blacklist.domains
+  notify: reload squid
+  tags: proxy
+
+- name: Create local black and whitelist dirs
+  file: path=/var/ufdbguard/blacklists/{{ item }} state=directory
+  with_items:
+    - local_whitelist
+    - local_blacklist
+  tags: proxy
+
+- name: Deploy local white and blacklists for ufdbGuard
+  template: src={{ item.src }}.j2 dest=/var/ufdbguard/blacklists/{{ item.dest }}
+  with_items:
+    - src: local_whitelist.urls
+      dest: local_whitelist/urls
+    - src: local_blacklist.urls
+      dest: local_blacklist/urls
+    - src: local_whitelist.domains
+      dest: local_whitelist/domains
+    - src: local_blacklist.domains
+      dest: local_blacklist/domains
+  notify: update ufdb
+  tags: proxy
+
+- name: Check if safebrowsing available
+  stat: path=/var/lib/clamav/safebrowsing.cld
+  register: squid_safebrowsing
+  tags: proxy
+
+- name: Deploy clamd config
+  template: src=clamd.conf.j2 dest=/etc/clamd.d/squid.conf
+  notify: restart squid-clamd
+  tags: proxy
+
+- name: Deploy clamd systemd unit
+  template: src=squid-clamd.service.j2 dest=/etc/systemd/system/squid-clamd.service
+  register: squid_clam_unit
+  notify: restart squid-clamd
+  tags: proxy
+
+- name: Deploy c-icap configuration
+  template: src=c-icap.conf.j2 dest=/etc/c-icap/c-icap.conf
+  notify: restart c-icap
+  tags: proxy
+
+- name: Create systemd unit snippet dir
+  file: path=/etc/systemd/system/{{ item }}.service.d state=directory
+  loop:
+    - c-icap
+    - squid
+  tags: proxy
+
+- name: Deploy a systemd unit snippet for c-icap
+  copy:
+    content: |
+      [Service]
+      User=c-icap
+      Group=c-icap
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=1
+    dest: /etc/systemd/system/c-icap.service.d/user.conf
+  register: squid_c_icap_unit
+  notify: restart c-icap
+  tags: proxy
+
+- name: Deploy a systemd unit snipet for squid
+  copy:
+    content: |
+      [Service]
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=1
+    dest: /etc/systemd/system/squid.service.d/restart.conf
+  register: squid_unit
+  tags: proxy
+
+- name: Deploy squidclamav configuration
+  template: src=squidclamav.conf.j2 dest=/etc/c-icap/squidclamav.conf mode=644
+  notify: restart c-icap
+  tags: proxy
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: squid_clam_unit.changed or squid_c_icap_unit.changed or squid_unit.changed
+  tags: proxy
+
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+
+- name: Create ufdbGuard log directory
+  file: path=/var/log/ufdbguard state=directory owner=ufdb group=ufdb mode=750
+  tags: proxy
+
+- name: Remove old log dir
+  file: path=/var/log/ufdbGuard state=absent
+  tags: proxy
+
+- name: Deploy ufdb_update script
+  template: src=ufdb_update.sh.j2 dest=/usr/local/bin/ufdb_update.sh mode=755
+  tags: proxy
+
+- name: Add a cron task to update ufdbGuard databases
+  cron:
+    name: update_ufdbguard
+    special_time: daily
+    job: "/bin/sh /usr/local/bin/ufdb_update.sh > /dev/null 2>&1"
+    cron_file: update_ufdbguard
+    user: root
+    state: "{{ squid_filter_url | ternary('present','absent') }}"
+  tags: proxy
+
+- name: Update ufdb databases
+  command: /usr/local/bin/ufdb_update.sh
+  changed_when: False
+  tags: proxy
+
+- name: Check ufdbGuard categories
+  shell: find /var/ufdbguard/blacklists -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: squid_ufdb_categories
+  changed_when: False
+  tags: proxy
+
+- name: Check if the domains.ufdb file exist
+  stat: path=/var/ufdbguard/blacklists/{{ item }}/domains.ufdb
+  register: squid_ufdb_db
+  with_items: "{{ squid_ufdb_categories.stdout_lines }}"
+  tags: proxy
+
+- name: Deploy ufdbGuard configuration
+  template: src=ufdbGuard.conf.j2 dest=/etc/ufdbguard/ufdbGuard.conf group=ufdb mode=640
+  notify: restart ufdb
+  tags: proxy
+
+- name: Deploy URLBlocked script
+  copy: src=URLblocked.cgi dest=/var/www/html/default/cgi-bin/URLblocked.cgi mode=755
+  tags: proxy
+
+- name: Start and enable squid
+  service: name=squid state=started enabled=True
+  tags: proxy
+
+- name: Start and enable c-icap
+  service: name=c-icap state=started enabled=True
+  tags: proxy
+
+- name: Handle squid-clamd daemon
+  service: name=squid-clamd state={{ squid_scan_av | ternary('started','stopped') }} enabled={{ squid_scan_av | ternary(True,False) }}
+  tags: proxy
+
+  # Before 1.34.6-3 provided by EPEL, the service was handled by a init script and the service was named ufdb
+- name: Check if the systemd unit is installed
+  stat: path=/lib/systemd/system/ufdbGuard.service
+  register: squid_ufdb_unit
+  tags: proxy
+
+- name: Handle ufdb daemon
+  service: name={{ squid_ufdb_unit.stat.exists | ternary('ufdbGuard','ufdb') }} state={{ squid_filter_url | ternary('started','stopped') }} enabled={{ squid_filter_url | ternary(True,False) }}
+  tags: proxy
+
+- include: filebeat.yml

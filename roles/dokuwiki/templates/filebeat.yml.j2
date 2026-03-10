@@ -1,0 +1,7 @@
+- type: log
+  enabled: True
+  paths:
+    - {{ dokuwiki_root_dir }}/data/cache/loglog.log
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

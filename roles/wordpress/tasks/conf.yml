@@ -1,0 +1,21 @@
+---
+
+- import_tasks: ../includes/webapps_webconf.yml
+  vars:
+    - app_id: wordpress_{{ wp_id }}
+    - php_version: "{{ wp_php_version }}"
+    - php_fpm_pool: "{{ wp_php_fpm_pool | default('') }}"
+  tags: wp
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ wp_db_name }}"
+    - db_user: "{{ wp_db_user }}"
+    - db_server: "{{ wp_db_server }}"
+    - db_pass: "{{ wp_db_pass }}"
+  tags: wp
+
+- name: Deploy wp configuration
+  template: src=wp-config.php.j2 dest={{ wp_root_dir }}/web/wp-config.php owner={{ wp_php_user }} group={{ wp_php_user }} mode=660
+  tags: wp
+

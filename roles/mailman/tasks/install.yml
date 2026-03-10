@@ -1,0 +1,172 @@
+---
+
+- name: Enable python39 module
+  command: dnf -y module enable python39
+  args:
+    warn: False
+  changed_when: False
+  tags: mailman
+
+- name: Install packages
+  yum:
+    name:
+      - python39-pip
+      - python39-devel
+      - git
+      - gcc
+      - sassc
+  tags: mailman
+
+- name: Wipe the venv on upgrades
+  file: path={{ mailman_root_dir }}/venv state=absent
+  when: mailman_install_mode == 'upgrade'
+  tags: mailman
+
+- name: Create the venv dir
+  file: path={{ mailman_root_dir }}/venv state=directory
+  tags: mailman
+
+- name: Setup the virtualenv
+  pip:
+    name:
+      - pip
+      - wheel
+      - django<3.1
+      - mailman=={{ mailman_version.core }}
+      - postorius=={{ mailman_version.postorius }}
+      - HyperKitty=={{ mailman_version.hyperkitty }}
+      - mailman_hyperkitty
+      - mailman-web
+      - uwsgi
+      - whoosh
+    virtualenv: "{{ mailman_root_dir }}/venv"
+    virtualenv_command: /usr/bin/python3.9 -m venv
+  notify: restart mailman
+  tags: mailman
+
+- when: mailman_db_engine == 'postgres'
+  block:
+    - name: Install Postgres support
+      yum:
+        name:
+          - postgresql-devel
+
+    - name: Install postgres python support
+      pip:
+        name:
+          - psycopg2-binary==2.8.6 # There's a bug with TZ in 2.9
+        virtualenv: "{{ mailman_root_dir }}/venv"
+        virtualenv_command: /usr/bin/python3.9 -m venv
+
+    - name: Create the PostgreSQL role
+      postgresql_user:
+        db: postgres
+        name: "{{ mailman_db_user }}"
+        password: "{{ mailman_db_pass }}"
+        login_host: "{{ mailman_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+      tags: mailman
+    
+    - name: Create the PostgreSQL databases
+      postgresql_db:
+        name: "{{ mailman_db_name[item] }}"
+        encoding: UTF-8
+        template: template0
+        owner: "{{ mailman_db_user }}"
+        login_host: "{{ mailman_db_server }}"
+        login_user: sqladmin
+        login_password: "{{ pg_admin_pass }}"
+      loop: "{{ mailman_db_name.keys() | list }}"
+
+  tags: mailman
+
+- when: mailman_db_engine == 'mysql'
+  block:
+    - name: Install mysql support
+      yum:
+        name:
+          - mariadb-devel
+
+    - name: Install mysql python support
+      pip:
+        name:
+          - mysqlclient
+          - pymysql
+        virtualenv: "{{ mailman_root_dir }}/venv"
+        virtualenv_command: /usr/bin/python3.9 -m venv
+
+    - include_tasks: ../includes/webapps_create_mysql_db.yml
+      vars:
+        - db_name: "{{ mailman_db_name[mailman_db] }}"
+        - db_user: "{{ mailman_db_user }}"
+        - db_server: "{{ mailman_db_server }}"
+        - db_pass: "{{ mailman_db_pass }}"
+        - append_privs: True
+      loop: "{{ mailman_db_name.keys() | list }}"
+      loop_control:
+        loop_var: mailman_db
+
+  tags: mailman
+
+- name: Create a manage.py link
+  file: src={{ mailman_root_dir }}/venv/bin/mailman-web dest={{ mailman_root_dir }}/venv/bin/manage.py state=link
+  tags: mailman
+
+- name: Deploy systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - mailman-core.service
+    - mailman-web.service
+  notify: restart mailman
+  register: mailman_units
+  tags: mailman
+
+- name: Deploy systemd timers
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - mailman-digests.service
+    - mailman-digests.timer
+    - mailman-notify.service
+    - mailman-notify.timer
+  notify: restart mailman timers
+  register: mailman_timers
+  tags: mailman
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: >
+    mailman_units.results | selectattr('changed','equalto',True) | list | length > 0 or
+    mailman_timers.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: mailman
+
+- name: Install con jobs
+  cron:
+    cron_file: mailman
+    special_time: "{{ item.schedule | default(omit) }}"
+    minute: "{{ item.minute | default(omit) }}"
+    name: "{{ item.name }}"
+    user: "{{ mailman_user }}"
+    job: "{{ mailman_root_dir }}/venv/bin/mailman-web runjobs {{ item.name }}"
+  loop:
+    - name: yearly
+      schedule: yearly
+    - name: monthly
+      schedule: monthly
+    - name: weekly
+      schedule: weekly
+    - name: daily
+      schedule: daily
+    - name: hourly
+      schedule: hourly
+    - name: minutely
+    - name: quarter_hourly
+      minute: '2,17,32,47'
+  tags: mailman
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/mailman.sh mode=700
+  loop:
+    - pre
+    - post
+  tags: mailman

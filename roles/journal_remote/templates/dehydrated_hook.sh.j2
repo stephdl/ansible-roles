@@ -1,0 +1,14 @@
+#!/bin/sh
+
+{% if journal_remote_letsencrypt_cert is defined %}
+mkdir -p /etc/systemd/journal-remote-tls
+chown systemd-journal-remote:systemd-journal-remote /etc/systemd/journal-remote-tls
+chmod 700 /etc/systemd/journal-remote-tls
+if [ -e /var/lib/dehydrated/certificates/certs/{{ journal_remote_letsencrypt_cert }}/privkey.pem ]; then
+  cp -f /var/lib/dehydrated/certificates/certs/{{ journal_remote_letsencrypt_cert }}/privkey.pem /etc/systemd/journal-remote-tls/
+  cp -f /var/lib/dehydrated/certificates/certs/{{ journal_remote_letsencrypt_cert }}/fullchain.pem /etc/systemd/journal-remote-tls/
+  chown systemd-journal-remote:systemd-journal-remote /etc/systemd/journal-remote-tls/*
+  chmod 600 /etc/systemd/journal-remote-tls/privkey.pem
+  /sbin/service systemd-journal-remote restart
+fi
+{% endif %}

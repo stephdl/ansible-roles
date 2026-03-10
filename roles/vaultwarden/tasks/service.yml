@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the service
+  service: name=vaultwarden state=started enabled=True
+  register: vaultwarden_started
+  tags: vaultwarden

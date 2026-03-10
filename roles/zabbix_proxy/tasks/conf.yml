@@ -1,0 +1,9 @@
+---
+- name: Deploy Zabbix Proxy configuration
+  template: src=zabbix_proxy.conf.j2 dest=/etc/zabbix/zabbix_proxy.conf
+  notify: restart zabbix-proxy
+  tags: zabbix
+
+- name: Install server scripts
+  copy: src=../zabbix_server/files/scripts/ dest=/var/lib/zabbix/bin/
+  tags: zabbix

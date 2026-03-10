@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: letsencrypt
+    when: pve_letsencrypt is defined and pve_letsencrypt
+  - role: zfs_common

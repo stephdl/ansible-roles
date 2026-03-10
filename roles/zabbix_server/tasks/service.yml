@@ -1,0 +1,48 @@
+---
+
+- name: Remove custom unit
+  file: path=/etc/systemd/system/zabbix-server.service state=absent
+  register: zabbix_server_custom_unit
+  notify: restart zabbix-server
+  tags: zabbix
+
+- name: Create unit snippet dir
+  file: path=/etc/systemd/system/zabbix-server.service.d state=directory
+  tags: zabbix
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Service]
+      ExecReload=/usr/sbin/zabbix_server -R config_cache_reload
+      PrivateTmp=yes
+      PrivateDevices=yes
+      ProtectSystem=full
+      ProtectHome=yes
+      {% if not zabbix_server_uses_system_proxy %}
+      # Disable system proxy
+      {% for proto in ['http_proxy','https_proxy','HTTP_PROXY','HTTPS_PROXY'] %}
+      Environment={{ proto }}=
+      {% endfor %}
+      {% endif %}
+    dest: /etc/systemd/system/zabbix-server.service.d/99-ansible.conf
+  register: zabbix_server_snippet_unit
+  notify: restart zabbix-server
+  tags: zabbix
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zabbix_server_custom_unit.changed or zabbix_server_snippet_unit.changed
+  tags: zabbix
+
+- name: Start and enable the service
+  service: name=zabbix-server state=started enabled=True
+  register: zabbix_server_started
+  tags: zabbix
+
+- name: Handle Zabbix Java Gateway daemon
+  service:
+    name: zabbix-java-gateway
+    state: "{{ (zabbix_server_conf['StartJavaPollers'] is defined and zabbix_server_conf['StartJavaPollers'] > 0) | ternary('started','stopped') }}"
+    enabled: "{{ (zabbix_server_conf['StartJavaPollers'] is defined and zabbix_server_conf['StartJavaPollers'] > 0) | ternary(True,False) }}"
+  tags: zabbix

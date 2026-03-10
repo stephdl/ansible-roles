@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the service
+  service: name=graylog-server state=started enabled=True
+  register: graylog_started
+  tags: graylog

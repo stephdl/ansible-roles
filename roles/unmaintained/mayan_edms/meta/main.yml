@@ -1,0 +1,17 @@
+---
+
+dependencies:
+  - role: mkdir
+  - role: repo_remi # for gnupg1
+  - role: mysql_server
+    when:
+      - mayan_db_engine == 'mysql'
+      - mayan_db_server == '127.0.0.1' or mayan_db_server == 'localhost'
+  - role: postgresql_server
+    when:
+      - mayan_db_engine == 'postgresql'
+      - mayan_db_server == '127.0.0.1' or mayan_db_server == 'localhost'
+  - role: redis_server
+    when: mayan_redis_url | urlsplit('hostname') == '127.0.0.1' or mayan_redis_url | urlsplit('hostname') == 'localhost'
+  - role: rabbitmq_server
+    when: mayan_amqp_url | urlsplit('hostname') == '127.0.0.1' or mayan_amqp_url | urlsplit('hostname') == 'localhost'

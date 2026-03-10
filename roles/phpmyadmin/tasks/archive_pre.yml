@@ -1,0 +1,8 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ pma_root_dir }}"
+    - version: "{{ pma_current_version }}"
+    - db_name: "{{ pma_db_name }}"
+  tags: pma

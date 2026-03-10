@@ -1,0 +1,9 @@
+{% for key in zabbix_agent_conf.keys() | list %}
+{% if not zabbix_agent_conf[key] is string and zabbix_agent_conf[key] is iterable %}
+{% for x in zabbix_agent_conf[key] %}
+{{ key }}={{ x }}
+{% endfor %}
+{% else %}
+{{ key }}={{ zabbix_agent_conf[key] }}
+{% endif %}
+{% endfor %}

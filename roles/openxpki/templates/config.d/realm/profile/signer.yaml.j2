@@ -1,0 +1,52 @@
+label: Signer
+
+validity:
+  notafter: +0006
+
+style:
+  00_user_basic_style:
+    label: signer
+    description: Application authenticity and deployment security
+    ui: 
+      subject:
+        - username
+        - realname
+        - department
+        - email
+      info:
+        - comment
+
+    subject:
+      dn: CN=[% realname %]+UID=[% username %][% IF department %],DC=[% department %][% END %],{{ item.0.subj_suffix }}
+      san:
+        email: "[% email.lower %]"
+
+    metadata:
+      requestor: "[% realname %]"
+      email: "[% email %]"
+      department: "[% department %]"
+
+extensions:
+  key_usage:
+    critical: 1
+    digital_signature: 1
+    non_repudiation: 1
+    key_encipherment: 1
+    data_encipherment: 0
+    key_agreement: 0
+    key_cert_sign: 0
+    crl_sign: 0
+    encipher_only: 0
+    decipher_only: 0
+
+  extended_key_usage:
+    critical: 1
+    client_auth: 0
+    server_auth: 0
+    email_protection: 0
+    code_signing: 1
+    time_stamping: 1
+    ocsp_signing: 0
+    # MS Smartcard Logon
+    1.3.6.1.4.1.311.20.2.2: 0
+

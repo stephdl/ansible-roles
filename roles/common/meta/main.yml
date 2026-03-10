@@ -1,0 +1,28 @@
+---
+allow_duplicates: no
+dependencies:
+  - role: mkdir
+  - role: system_proxy
+  - role: repo_base
+    when: ansible_os_family == 'RedHat'
+  - role: network
+  - role: iptables
+    when: iptables_manage | default(True)
+  - role: zabbix_agent
+  - role: fusioninventory_agent
+  - role: sssd_ldap_auth
+    when: ldap_auth | default(False)
+  - role: sssd_ad_auth
+    when: ad_auth | default(False)
+  - role: ntp_client
+    when: ansible_virtualization_role == 'host' or (ansible_virtualization_type != 'lxc' and ansible_virtualization_type != 'systemd-nspawn')
+  - role: sudo
+  - role: ssh
+  - role: patrix
+    when:
+      - patrix_enabled | default(True)
+      - patrix_server is defined
+      - (patrix_user is defined and patrix_pass is defined) or patrix_token is defined
+  - role: postfix
+    when: system_postfix | default(True)
+  - role: timers

@@ -1,0 +1,8 @@
+main:
+  debug: 0
+  type: MySQL
+  name: '{{ pki_db_name }}'
+  host: '{{ pki_db_server }}'
+  port: '{{ pki_db_port }}'
+  user: '{{ pki_db_user }}'
+  passwd: '{{ pki_db_pass | regex_replace("'","''") }}'

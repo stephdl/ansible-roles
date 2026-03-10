@@ -1,0 +1,13 @@
+--- /usr/share/openmediavault/engined/rpc/sharemgmt.inc.orig	2018-11-27 16:51:05.412000000 +0100
++++ /usr/share/openmediavault/engined/rpc/sharemgmt.inc	2018-11-27 16:52:19.960000000 +0100
+@@ -914,8 +914,8 @@
+ 			if (array_key_exists("owner", $params) || array_key_exists(
+ 			  "group", $params)) {
+ 				$ownerGroupArg = "";
+-				if (array_key_exists("owner", $params))
+-					$ownerGroupArg = str_replace(' ', '\ ', $params['owner']);
++				//if (array_key_exists("owner", $params))
++				//	$ownerGroupArg = str_replace(' ', '\ ', $params['owner']);
+ 				if (array_key_exists("group", $params))
+ 					$ownerGroupArg = sprintf("%s:%s", $ownerGroupArg,
+ 					  str_replace(' ', '\ ', $params['group']));

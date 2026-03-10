@@ -1,0 +1,5 @@
+---
+
+- name: Create user account
+  user: name={{ documize_user }} system=True shell=/sbin/nologin home={{ documize_root_dir }}
+  tags: documize

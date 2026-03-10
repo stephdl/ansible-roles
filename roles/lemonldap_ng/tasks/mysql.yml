@@ -1,0 +1,81 @@
+---
+
+- name: Install needed packages
+  yum: name={{ llng_mysql_packages }}
+  tags: web
+
+- when:
+    - llng_db_pass is not defined
+    - llng_manager or llng_portal
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "/etc/lemonldap-ng/ansible_dbpass"
+    - set_fact: llng_db_pass={{ rand_pass }}
+  tags: web
+
+- when: llng_handler_db_pass is not defined
+  block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "/etc/lemonldap-ng/ansible_handler_dbpass"
+    - set_fact: llng_handler_db_pass={{ rand_pass }}
+  tags: web
+
+- name: Create the database
+  mysql_db:
+    name: "{{ llng_db_name }}"
+    login_host: "{{ llng_db_server | default(mysql_server) }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    encoding: utf8mb4
+    collation: utf8mb4_general_ci
+    state: present
+  tags: web
+
+- name: Copy mysql schema
+  copy: src=mysql_schema.sql dest=/etc/lemonldap-ng/mysql_schema.sql
+  register: llng_schema
+  tags: web
+
+- name: Inject SQL structure
+  mysql_db:
+    name: "{{ llng_db_name }}"
+    state: import
+    target: /etc/lemonldap-ng/mysql_schema.sql
+    login_host: "{{ llng_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  when: llng_schema.changed
+  tags: web
+
+- name: Create the main user
+  mysql_user:
+    name: "{{ llng_db_user }}"
+    password: "{{ llng_db_pass }}"
+    priv: "{{ llng_db_name }}.*:ALL"
+    host: "{{ ( llng_db_server == 'localhost' ) | ternary('localhost', item ) }}"
+    login_host: "{{ llng_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    state: present
+    append_privs: True
+  when: llng_portal == True or llng_manager == True
+  loop: "{{ ansible_all_ipv4_addresses }}"
+  tags: web
+
+- name: Create the handler user
+  mysql_user:
+    name: "{{ llng_handler_db_user }}"
+    password: "{{ llng_handler_db_pass }}"
+    priv: "{{ llng_db_name }}.{{ llng_session_tables[item.1].name }}:SELECT,INSERT,DELETE,UPDATE/{{ llng_db_name }}.lmConfig:SELECT"
+    host: "{{ ( llng_db_server == 'localhost' ) | ternary('localhost', item.0 ) }}"
+    login_host: "{{ llng_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    state: present
+    append_privs: True
+  when: llng_handler == True
+  loop: "{{ ansible_all_ipv4_addresses | product(llng_session_tables.keys() | list) | list }}"
+  tags: web
+

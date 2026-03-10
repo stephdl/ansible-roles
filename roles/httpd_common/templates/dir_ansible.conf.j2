@@ -1,0 +1,34 @@
+
+# {{ ansible_managed }}
+
+{% for dir in httpd_ansible_directories | default([]) %}
+  <Directory {{ dir.path }}>
+{% if dir.full_config is defined %}
+{{ dir.full_config | indent(4, true) }}
+{% else %}
+{% if dir.custom_pre is defined %}
+{{ dir.custom_pre | indent(4, true) }}
+{% endif %}
+    AllowOverride {{ dir.allow_override | default('All') }}
+{% if dir.options is defined %}
+    Options {{ dir.options | join(' ') }}
+{% endif %}
+{% if dir.allowed_ip is not defined or dir.allowed_ip == 'all' %}
+    Require all granted
+{% elif dir.allowed_ip == 'none' %}
+    Require all denied
+{% else %}
+    Require ip {{ dir.allowed_ip | join(' ') }}
+{% endif %}
+{% if dir.php is defined and dir.php.enabled | default(False) %}
+    <FilesMatch \.php$>
+      SetHandler "proxy:unix:/run/php-fpm/{{ dir.php.pool | default('php70') }}.sock|fcgi://localhost"
+    </FilesMatch>
+{% endif %}
+{% if dir.custom_post is defined %}
+{{ dir.custom_post | indent(4, true) }}
+{% endif %}
+{% endif %}
+  </Directory>
+
+{% endfor %}

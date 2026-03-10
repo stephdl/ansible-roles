@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: mkdir
+  - role: httpd_php

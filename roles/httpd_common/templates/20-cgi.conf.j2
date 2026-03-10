@@ -1,0 +1,5 @@
+{% if httpd_mpm == 'prefork' %}
+LoadModule cgi_module modules/mod_cgi.so
+{% else %}
+LoadModule cgid_module modules/mod_cgid.so
+{% endif %}

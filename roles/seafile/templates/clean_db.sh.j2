@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PATH=/opt/seafile/bin:/bin:/usr/bin
+PYTHONPATH=/opt/seafile/lib64/python3.6/site-packages/
+PYTHON=/opt/seafile/bin/python
+cd {{ seafile_root_dir }}/seafile-server
+./seahub.sh python-env python3 seahub/manage.py clearsessions
+

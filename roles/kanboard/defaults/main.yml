@@ -1,0 +1,65 @@
+---
+
+kanboard_id: "1"
+kanboard_manage_upgrade: True
+kanboard_version: '1.2.20'
+kanboard_zip_url: https://github.com/kanboard/kanboard/archive/v{{ kanboard_version }}.zip
+kanboard_zip_sha1: 114d6c5a368c6c1b58c8b98bdfcbf04df8fae67a
+# enabled prop for the ReverseProxyLdap plugin is managed automatically
+# True if kanboard_ldap_auth and kanboard_proxy_auth are both True, or
+# False otherwise
+kanboard_plugins:
+  reverse-proxy-ldap:
+    name: ReverseProxyLdap
+    version: '1.0.2'
+    zip_sha1: d264754e0de2c0e2500b839e8adb693cf59c3f66
+  calendar:
+    name: Calendar
+    version: '1.1.1'
+    zip_sha1: de4195ade4391bc6e46f7a993e9220144581f913
+    enabled: True
+  gantt:
+    name: Gantt
+    version: '1.0.6'
+    zip_sha1: 8ff400fe5c2385fee725219ba1f1f4dca5f3e878
+    enabled: True
+kanboard_root_dir: /opt/kanboard_{{ kanboard_id }}
+kanboard_php_user: php-kanboard_{{ kanboard_id }}
+kanboard_php_version: 73
+# kanboard_php_fpm_pool: php70
+kanboard_mysql_server: "{{ mysql_server | default('localhost') }}"
+kanboard_mysql_db: kanboard_{{ kanboard_id }}
+kanboard_mysql_user: kanboard_{{ kanboard_id }}
+# A random pass will be generated and stored in the meta dir if not set here
+#kanboard_mysql_pass: S3cr3t.P@ssw0rd
+
+kanboard_ldap_auth: "{{ (ad_auth | default(False) or ldap_auth | default(False)) | ternary(True,False) }}"
+kanboard_ldap_server: "{{ ad_auth | default(False) | ternary('ldap://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_uri) }}"
+#kanboard_ldap_bind_user:
+#kanboard_ldap_bind_pass:
+kanboard_ldap_start_tls: True
+kanboard_ldap_user_base: "{{ ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_user_base + ',' + ldap_base) }}"
+kanboard_ldap_user_filter: "{{ ad_auth | default(False) | ternary('(&(objectClass=user)(sAMAccountName=%s))','(&(objectClass=inetOrgPerson)(uid=%s))') }}"
+kanboard_ldap_user_attr_username: "{{ ad_auth | default(False) | ternary('sAMAccountName','uid') }}"
+kanboard_ldap_user_attr_fullname: cn
+kanboard_ldap_user_attr_mail: mail
+kanboard_ldap_user_attr_groups: memberOf
+kanboard_ldap_user_attr_photo: jpegPhoto
+kanboard_ldap_user_attr_lang: preferredLanguagepre
+kanboard_ldap_admin_group: "{{ ad_auth | default(False) | ternary('CN=Domain Admins,CN=Users,DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'cn=admins,' + ldap_group_base + ',' + ldap_base) }}"
+kanboard_ldap_manager_group: "{{ kanboard_ldap_admin_group }}"
+kanboard_ldap_group_base: "{{ ad_auth | default(False) | ternary((ad_ldap_group_search_base is defined) | ternary(ad_ldap_group_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_group_base + ',' + ldap_base) }}"
+kanboard_ldap_group_filter: "{{ ad_auth | default(False) | ternary('(&(objectClass=group)(cn=%s))','(&(objectClass=posixGroup)(cn=%s))') }}"
+kanboard_ldap_group_user_filter: "{{ ad_auth | default(False) | ternary('','(&(objectClass=posixGroup)(memberUid=%s))') }}"
+kanboard_ldap_group_attr_name: cn
+
+kanboard_proxy_auth: False
+kanboard_proxy_user_header: REMOTE_USER
+kanboard_proxy_admin: admin
+kanboard_proxy_domain: "{{ ansible_domain }}"
+
+# kanboard_alias: kanboard
+# kanboard_src_ip:
+#   - 192.168.7.0/24
+#   - 10.2.0.0/24
+...

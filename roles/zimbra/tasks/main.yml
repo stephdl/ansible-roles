@@ -1,0 +1,211 @@
+---
+
+#- name: Build config for domains
+#  set_fact: zcs_domains_conf={{ zcs_domains_conf | default([]) + [zcs_domain_defaults | combine(zcs_domains[item])] }}
+#  with_items: "{{ zcs_domains.keys() | list }}"
+#  tags: zcs
+#- set_fact: zcs_domains={{ zcs_domains_conf | default([]) }}
+#  tags: zcs
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: zcs
+
+- name: Install dependencies
+  package: name={{ zcs_packages }}
+  tags: zcs
+
+- name: Check if zimbra is installed
+  stat: path=/opt/zimbra/bin/zmprov
+  register: zcs_zmprov
+  tags: zcs
+
+  #- name: Stop postfix
+  #  service: name=postfix state=stopped enabled=False
+  #  tags: zcs
+
+- include_tasks: install.yml
+  when:
+    - zcs_install == True
+    - not zcs_zmprov.stat.exists
+  tags: zcs
+
+- name: Exit if not installed
+  meta: end_host
+  when: zcs_install != True and (zcs_zmprov is not defined or zcs_zmprov.stat is not defined or not zcs_zmprov.stat.exists)
+  tags: zcs
+
+- set_fact: zcs_i_am_primary_ldap={{ (inventory_hostname == zcs_primary_ldap) | ternary(True,False) }}
+  tags: zcs
+
+- name: Fetch the LDAP admin pass
+  shell: /opt/zimbra/bin/zmlocalconfig -s zimbra_ldap_password | awk '{ print $3}'
+  changed_when: False
+  register: zcs_ldap_admin_pass
+  when: zcs_ldap_admin_pass is not defined
+  tags: zcs
+- set_fact: zcs_ldap_admin_pass={{ zcs_ldap_admin_pass.stdout }}
+  when: zcs_ldap_admin_pass.stdout is defined
+  tags: zcs
+
+- name: Install wrapper scripts
+  template: src=zimbra_wrapper.j2 dest=/usr/local/bin/{{ item }} mode=0755
+  loop:
+    - zmprov
+    - zmcontrol
+    - zmhostname
+    - zmmailbox
+    - zmlocalconfig
+  tags: zcs
+
+  #- name: Check installed components
+  #  command: rpm -q zimbra-{{ item }}
+  #  args:
+  #    warn: False
+  #  register: zcs_components
+  #  failed_when: False
+  #  changed_when: False
+  #  loop:
+  #    - ldap
+  #    - logger
+  #    - mta
+  #    - dnscache
+  #    - snmp
+  #    - store
+  #    - apache
+  #    - spell
+  #    - memcached
+  #    - proxy
+  #    - drive
+  #  tags: zcs
+
+- name: List enabled components
+  shell: '/opt/zimbra/bin/zmprov getServer {{ inventory_hostname }} zimbraServiceEnabled | perl -ne ''m/^zimbraServiceEnabled: (\w+)/ && print "$1\n"'''
+  become_user: zimbra
+  register: zcs_enabled_components
+  changed_when: False
+  tags: zcs
+- set_fact: zcs_enabled_components={{ zcs_enabled_components.stdout_lines }}
+  tags: zcs
+
+- include_tasks: "{{ component }}.yml"
+  loop: "{{ zcs_enabled_components }}"
+  loop_control:
+    loop_var: component
+  tags: zcs
+
+- name: Handle general ports
+  iptables_raw:
+    name: zcs_general_ports
+    state: "{{ (zcs_cluster_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports 22 -s {{ zcs_cluster_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zcs
+
+- include_tasks: zmldapsync.yml
+  when: zcs_i_am_primary_ldap == True
+  tags: zcs
+
+- name: Install backup help script
+  get_url:
+    url: https://git.fws.fr/dani/zimbra/raw/branch/master/zmbh/zmbh.pl
+    dest: /opt/zimbra/bin/zmbh
+    mode: '0755'
+  tags: zcs
+
+- name: Remove old backup helper script
+  file: path=/usr/local/bin/zmbh.pl state=absent
+  tags: zcs
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /opt/zimbra/addon_cache
+    - dir: /opt/zimbra/meta
+      mode: '0700'
+  tags: zcs
+
+  #- include_tasks: backup.yml
+  #  when: zcs_i_am_primary_ldap == True
+  #  tags: zcs
+
+- name: Identify logger host
+  shell: /opt/zimbra/bin/zmprov gcf zimbraLogHostname | awk '{ print $2 }'
+  become_user: zimbra
+  register: zcs_log_hostname
+  changed_when: False
+  tags: zcs
+- set_fact: zcs_log_hostname={{ zcs_log_hostname.stdout }}
+  tags: zcs
+
+- name: Deploy syslog config
+  template: src=rsyslog.conf.j2 dest=/etc/rsyslog.conf
+  notify: restart rsyslog
+  tags: zcs
+
+- name: Fix logrotate config to reload rsyslog
+  replace:
+    path: /etc/logrotate.d/zimbra
+    regexp: '^(.*)/var/run/syslog\*\.pid(.*)'
+    replace: '\1/run/rsyslogd.pid\2'
+  tags: zcs
+
+- name: Set correct SELinux context
+  block:
+    - sefcontext:
+        target: "/opt/zimbra/log(/.*)?"
+        setype: var_log_t
+    - sefcontext:
+        target: "/etc/rc.d/init.d/zimbra"
+        setype: bin_t
+    - command: restorecon -R /opt/zimbra/log /etc/rc.d/init.d/zimbra
+      changed_when: False
+  when: ansible_selinux.status == 'enabled'
+  tags: zcs
+
+- name: Deploy Let's Encrypt hook
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/20zimbra.sh mode=755
+  when: zcs_letsencrypt == True
+  tags: zcs
+
+- name: Remove Let's Encrypt hook
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/20zimbra.sh state=absent
+  when: zcs_letsencrypt != True
+  tags: zcs
+
+- name: Create pre and post backup hook dir
+  file: path=/etc/backup/{{ item }}.d state=directory
+  loop:
+    - pre
+    - post
+  tags: zcs
+
+  # The cert bundle provided by Zimbra is not very up to date
+  # so link the system wide one here
+- name: Push system trusted CA store to Zimbra
+  file: src=/etc/pki/tls/cert.pem dest=/opt/zimbra/common/etc/ssl/cert.pem state=link
+  tags: zcs
+
+- name: Deploy pre and post backup scripts
+  template: src={{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/zimbra.sh mode=0750
+  loop:
+    - pre
+    - post
+  tags: zcs
+
+- name: Create backup mount point
+  file: path=/home/lbkp/zimbra state=directory
+  tags: zcs
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - /tmp/zimbra
+    - /tmp/tk_barrydegraaff_sharetoolkit_admin.zip
+  tags: zcs
+
+- include: filebeat.yml

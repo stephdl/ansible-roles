@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if documize_db_engine == 'mysql' %}
+/usr/bin/mysqldump \
+{% if documize_db_server not in ['127.0.0.1','localhost'] %}
+  --user={{ documize_db_user | quote }} \
+  --password={{ documize_db_pass | quote }} \
+  --host={{ documize_db_server | quote }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ documize_db_name | quote }} | zstd -c > "{{ documize_root_dir }}/backup/{{ documize_db_name }}.sql.zst"
+{% elif documize_db_engine == 'postgres' %}
+{% if documize_db_server not in ['127.0.0.1','localhost'] %}
+PGPASSWORD={{ documize_db_pass | quote }} /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ documize_db_user | quote }} \
+  --host={{ documize_db_server | quote }} \
+  {{ documize_db_name | quote }} | \
+{% else %}
+su - postgres -c "/usr/pgsql-14/bin/pg_dump --clean --create {{ documize_db_name | quote }}" | \
+{% endif %}
+  zstd -c > "{{ documize_root_dir }}/backup/{{ documize_db_name }}.sql.zst"
+{% endif %}

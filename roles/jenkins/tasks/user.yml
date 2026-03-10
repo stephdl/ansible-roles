@@ -1,0 +1,6 @@
+---
+
+
+- name: Create jenkins user account
+  user: name={{ jenkins_user }} home={{ jenkins_root_dir }} system=True
+  tags: jenkins

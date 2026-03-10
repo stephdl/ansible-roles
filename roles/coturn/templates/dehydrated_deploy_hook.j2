@@ -1,0 +1,13 @@
+#!/bin/sh
+
+{% if turn_letsencrypt_cert is defined %}
+if [ $1 == "{{ turn_letsencrypt_cert }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ turn_letsencrypt_cert }}/privkey.pem > /etc/coturn/ssl/key.pem
+  cat /var/lib/dehydrated/certificates/certs/{{ turn_letsencrypt_cert }}/fullchain.pem > /etc/coturn/ssl/cert.pem
+  chown root:coturn /etc/coturn/ssl/*
+  chmod 644 /etc/coturn/ssl/cert.pem
+  chmod 640 /etc/coturn/ssl/key.pem
+
+  /bin/systemctl restart coturn
+fi
+{% endif %}

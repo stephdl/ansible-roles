@@ -1,0 +1,15 @@
+---
+
+# Version of the firewall bouncer to install
+cs_fw_version: 0.0.10
+# URL of the firewall bouncer archive
+cs_fw_archive_url: https://github.com/crowdsecurity/cs-firewall-bouncer/releases/download/v{{ cs_fw_version }}/cs-firewall-bouncer.tgz
+# Expected sha1 of the archive
+cs_fw_archive_sha1: 46863e95bdc8f48434583f55e89b7720fce5736d
+
+# API on which the bouncer should listen for alerts
+cs_fw_lapi_url: "{{ cs_lapi_url | default('http://localhost:8080/') }}"
+# If not defined, ansible will try to register the bouncer on the Local API server
+# cs_lapi_server must be defined in this case
+# cs_fw_lapi_key: aaabbbccc
+

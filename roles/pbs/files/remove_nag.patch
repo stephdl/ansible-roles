@@ -1,0 +1,13 @@
+--- /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js.orig	2021-05-27 00:16:17.230337938 +0200
++++ /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js	2021-05-27 00:20:00.203317519 +0200
+@@ -468,8 +468,8 @@
+ 		},
+ 		success: function(response, opts) {
+ 		    let res = response.result;
+-		    if (res === null || res === undefined || !res || res
+-			.data.status.toLowerCase() !== 'active') {
++		    if (false) { // res === null || res === undefined || !res || res
++			//.data.status.toLowerCase() !== 'active') {
+ 			Ext.Msg.show({
+ 			    title: gettext('No valid subscription'),
+ 			    icon: Ext.Msg.WARNING,

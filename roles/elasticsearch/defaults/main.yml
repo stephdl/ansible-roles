@@ -1,0 +1,14 @@
+---
+
+# Name of the Elasticsearch cluster
+es_cluster_name: elasticsearch
+# Name of this ES node
+es_node_name: "{{ inventory_hostname }}"
+# Port on which ES will bind
+es_port: 9200
+# List of IP/CIDR which will have access to es_port (if iptables_manage == True)
+es_src_ip: []
+# Path where ES will store its data
+es_data_dir: /opt/elasticsearch/data
+# Path where ES will store snapshots for backups (created by pre-backup, removed by post-backup)
+es_backup_dir: /opt/elasticsearch/dumps

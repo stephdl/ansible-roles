@@ -1,0 +1,11 @@
+---
+
+- name: Install mod_perl
+  yum: name=mod_perl
+
+  # Can be installed before httpd, so create the dir
+- name: Ensure /etc/httpd/ansible_conf.modules.d exists
+  file: path=/etc/httpd/ansible_conf.modules.d state=directory
+
+- name: Load mod_perl module
+  copy: src=03-perl.conf dest=/etc/httpd/ansible_conf.modules.d/03-perl.conf

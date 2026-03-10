@@ -1,0 +1,28 @@
+---
+
+- name: Download Riot
+  get_url:
+    url: "https://github.com/vector-im/element-web/releases/download/v{{ element_version }}/element-v{{ element_version }}.tar.gz"
+    dest: "{{ element_root_dir }}/tmp/"
+    checksum: "sha1:{{ element_archive_sha1 }}"
+  when: element_install_mode != 'none'
+  tags: matrix
+
+- name: Extract element archive
+  unarchive:
+    src: "{{ element_root_dir }}/tmp/element-v{{ element_version }}.tar.gz"
+    dest: "{{ element_root_dir }}/tmp/"
+    remote_src: True
+  when: element_install_mode != 'none'
+  tags: matrix
+
+- name: Move the content of element to the correct top directory
+  synchronize:
+    src: "{{ element_root_dir }}/tmp/element-v{{ element_version }}/"
+    dest: "{{ element_root_dir }}/web/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: element_install_mode != 'none'
+  tags: matrix
+

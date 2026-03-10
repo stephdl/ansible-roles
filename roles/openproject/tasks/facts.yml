@@ -1,0 +1,28 @@
+---
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: /opt/openproject/meta/ansible_dbpass
+  when: openproject_db_pass is not defined
+  tags: openproject
+- set_fact: openproject_db_pass={{ rand_pass }}
+  when: openproject_db_pass is not defined
+  tags: openproject
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: /opt/openproject/meta/ansible_secret_key_base
+  when: openproject_secret_key_base is not defined
+  tags: openproject
+- set_fact: openproject_secret_key_base={{ rand_pass }}
+  when: openproject_secret_key_base is not defined
+  tags: openproject
+
+- import_tasks: ../includes/get_rand_pass.yml
+  vars:
+    - pass_file: /opt/openproject/meta/ansible_secret_token
+  when: openproject_secret_token is not defined
+  tags: openproject
+- set_fact: openproject_secret_token={{ rand_pass }}
+  when: openproject_secret_token is not defined
+  tags: openproject

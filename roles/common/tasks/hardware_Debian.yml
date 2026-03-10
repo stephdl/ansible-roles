@@ -1,0 +1,30 @@
+---
+
+- set_fact: megacli=megacli_{{ megacli_version }}_all.deb
+
+- name: Install libncurses
+  apt:
+    name:
+      - libncurses5
+
+- name: Check if MegaCLi is installed (Debian)
+  shell: dpkg -s megacli | grep Version | awk '{ print $2 }' 2>/dev/null
+  args:
+    warn: False
+  register: megacli_installed_version
+  failed_when: False
+  changed_when: False
+  when: lsi_controllers | length > 0
+
+- name: Copy MegaCli package
+  copy: src={{ megacli }} dest=/tmp
+  when:
+    - lsi_controllers | length > 0
+    - megacli_installed_version.stdout != megacli_version
+
+- name: Install MegaCli (Debian)
+  apt: deb=/tmp/{{ megacli }} allow_unauthenticated=yes
+  when:
+    - lsi_controllers | length > 0
+    - megacli_installed_version.stdout != megacli_version
+ 

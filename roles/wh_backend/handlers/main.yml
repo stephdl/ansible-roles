@@ -1,0 +1,8 @@
+---
+
+- name: reset permissions
+  command: sh /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}/bin/perms.sh
+  loop: "{{ wh_clients | subelements('apps') }}"
+
+- name: restart wh-acld
+  service: name=wh-acld state=restarted

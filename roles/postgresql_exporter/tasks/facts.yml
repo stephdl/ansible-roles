@@ -1,0 +1,11 @@
+---
+
+- name: Detect current version and set install mode
+  block:
+  - import_tasks: ../includes/webapps_set_install_mode.yml
+    vars:
+      root_dir: "{{ pg_exporter_root_dir }}"
+      version: "{{ pg_exporter_version }}"
+  - set_fact: pg_exporter_install_mode={{ install_mode }}
+  - set_fact: pg_exporter_current_version={{ current_version }}
+  tags: pg

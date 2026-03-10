@@ -1,0 +1,105 @@
+matrix:
+  domain: '{{ ma1sd_matrix_domain | default(synapse_server_name) }}'
+  v1: true
+  v2: true
+server:
+  port: {{ ma1sd_port }}
+{% if ma1sd_server_name is defined %}
+  name: '{{ ma1sd_server_name }}'
+{% endif %}
+  publicUrl: '{{ ma1sd_public_url | default('https://' + synapse_server_name) }}'
+key:
+  path: '{{ ma1sd_root_dir }}/etc/signing.key'
+lookup:
+  recursive:
+    enabled: {{ ma1sd_recursive_lookups | default(True) | ternary('true','false') }}
+{% if ma1sd_recursive_lookups_ip is defined and ma1sd_recursive_lookups_ip | length > 0 %}
+    allowedCidr:
+{% for net in ma1sd_recursive_lookups_ip %}
+{% if net | ipaddr %}
+      - {{ net }}
+{% endif %}
+{% endfor %}
+{% endif %}
+hashing:
+  enabled: true
+  rotationPolicy: per_requests
+  hashStorageType: sql
+  algorithms:
+    - sha256
+{% if ma1sd_ldap_lookup | default(synapse_ldap_auth) | default(False) %}
+ldap:
+  enabled: True
+{% if ma1sd_ldap_filter is defined %}
+  filter: {{ ma1sd_ldap_filter }}
+{% elif synapse_ldap_filter is defined %}
+  filter: {{ synapse_ldap_filter }}
+{% endif %}
+  connection:
+    tls: {{ ma1sd_ldap_tls | default(True) | ternary('true','false') }}
+    host: {{ ma1sd_ldap_server | default(synapse_ldap_uri) | regex_replace('^(ldaps?://)?(?P<host>[a-zA-Z0-9\-\.]+)(:\d+)?','\\g<host>') | default('localhost') }}
+    port: {{ ma1sd_ldap_port | default(ma1sd_ldap_tls | ternary('636','389')) }}
+{% if ma1sd_ldap_bind_dn is defined and ma1sd_ldap_bind_pass is defined %}
+    bindDn: {{ ma1sd_ldap_bind_dn }}
+    bindPassword: {{ ma1sd_ldap_bind_pass | quote }}
+{% elif synapse_ldap_bind_dn is defined and synapse_ldap_bind_pass is defined %}
+    bindDn: {{ synapse_ldap_bind_dn }}
+    bindPassword: {{ synapse_ldap_bind_pass | quote }}
+{% endif %}
+    baseDn: {{ ma1sd_ldap_base | default(synapse_ldap_user_base) }}
+  attribute:
+    uid:
+      type: {{ ma1sd_ldap_uid_type | default('uid') }}
+      value: {{ ma1sd_ldap_uid_value | default(ad_auth | default(False) | ternary('samaccountname','uid')) }}
+    name: {{ ma1sd_ldap_attr_name | default(synapse_ldap_attr_name) | default('cn') }}
+{% if ma1sd_ldap_attr_mail is defined and ma1sd_ldap_attr_mail | length > 0 %}
+    threepid:
+      email:
+{% for attr in ma1sd_ldap_attr_mail %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% if ma1sd_ldap_attr_tel is defined and ma1sd_ldap_attr_tel | length > 0 %}
+      msisdn:
+{% for attr in ma1sd_ldap_attr_tel %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% if ma1sd_ldap_attr_other is defined and ma1sd_ldap_attr_other | length > 0 %}
+      other:
+{% for attr in ma1sd_ldap_attr_other %}
+        - {{ attr }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if ma1sd_forwarders is defined and ma1sd_forwarders | length > 0 %}
+forward:
+  servers:
+{% for server in ma1sd_forwarders %}
+    - {{ server }}
+{% endfor %}
+{% endif %}
+threepid:
+  medium:
+    email:
+      connectors:
+        smtp:
+          host: localhost
+          port: 25
+          tls: 1
+      identity:
+        from: "{{ ma1sd_smtp_from | default('no-reply@' + ansible_domain) }}"
+storage:
+  provider:
+    sqlite:
+      database: '{{ ma1sd_root_dir }}/db/ma1sd.sqlite'
+{% if ma1sd_dns_overwrite is defined and ma1sd_dns_overwrite | length > 0 %}
+dns:
+  overwrite:
+    homeserver:
+      client:
+{% for overwrite in ma1sd_dns_overwrite %}
+        - name: {{ overwrite.name }}
+          value: '{{ overwrite.value }}'
+{% endfor %}
+{% endif %}

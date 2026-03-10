@@ -1,0 +1,18 @@
+---
+
+- name: Configure Lemonldap::NG repository
+  yum_repository:
+    file: lemonldap-ng
+    name: "{{ item.repo }}"
+    description: "{{ item.desc }}"
+    baseurl: "{{ item.url }}"
+    gpgcheck: 1
+    gpgkey: https://lemonldap-ng.org/_media/rpm-gpg-key-ow2
+  loop:
+    - repo: lemonldap-ng
+      url: https://lemonldap-ng.org/redhat/stable/$releasever/noarch
+      desc: Lemonldap::NG
+    - repo: lemonldap-ng-extras
+      url: https://lemonldap-ng.org/redhat/extras/$releasever
+      desc: Lemonldap::NG Extras packages
+  tags: repo

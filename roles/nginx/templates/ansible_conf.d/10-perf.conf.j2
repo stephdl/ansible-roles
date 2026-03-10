@@ -1,0 +1,8 @@
+map $is_cacheable $custom_expires {
+  default    epoch;
+  1          7d;
+}
+map $is_cacheable $custom_cache_control {
+  default    "no-cache, no-store, private";
+  1          "public, max-age=604800, must-revalidate, proxy-revalidate";
+}

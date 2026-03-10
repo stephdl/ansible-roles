@@ -1,0 +1,86 @@
+---
+
+- name: Install needed tools
+  package:
+    name:
+      - acl
+      - tar
+      - zstd
+      - mariadb
+  tags: bookstack
+
+- when: bookstack_install_mode != 'none'
+  block:
+    - name: Download bookstack
+      get_url:
+        url: "{{ bookstack_archive_url }}"
+        dest: "{{ bookstack_root_dir }}/tmp"
+        checksum: sha1:{{ bookstack_archive_sha1 }}
+
+    - name: Extract the archive
+      unarchive:
+        src: "{{ bookstack_root_dir }}/tmp/BookStack-{{ bookstack_version }}.tar.gz"
+        dest: "{{ bookstack_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move BookStack to its final dir
+      synchronize:
+        src: "{{ bookstack_root_dir }}/tmp/BookStack-{{ bookstack_version }}/"
+        dest: "{{ bookstack_root_dir }}/app/"
+        delete: True
+        compress: False
+        rsync_opts:
+          - '--exclude=/storage/'
+          - '--exclude=/public/uploads/'
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Populate data directories
+      synchronize:
+        src: "{{ bookstack_root_dir }}/tmp/BookStack-{{ bookstack_version }}/{{ item }}"
+        dest: "{{ bookstack_root_dir }}/data/"
+        compress: False
+      delegate_to: "{{ inventory_hostname }}"
+      loop:
+        - storage
+        - public/uploads
+
+    - name: Link data directories
+      file: src={{ item.src }} dest={{ item.dest }} state=link
+      loop:
+        - src: "{{ bookstack_root_dir }}/data/storage"
+          dest: "{{ bookstack_root_dir }}/app/storage"
+        - src: "{{ bookstack_root_dir }}/data/uploads"
+          dest: "{{ bookstack_root_dir }}/app/public/uploads"
+
+    - name: Install PHP libs with composer
+      composer:
+        command: install
+        working_dir: "{{ bookstack_root_dir }}/app"
+        executable: /bin/php{{ bookstack_php_version }}
+      environment:
+        php: /bin/php{{ bookstack_php_version }}
+
+  tags: bookstack
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ bookstack_db_name }}"
+    - db_user: "{{ bookstack_db_user }}"
+    - db_server: "{{ bookstack_db_server }}"
+    - db_pass: "{{ bookstack_db_pass }}"
+  tags: bookstack
+
+- name: Set correct SELinux context
+  sefcontext:
+    target: "{{ bookstack_root_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  when: ansible_selinux.status == 'enabled'
+  tags: bookstack
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/bookstack_{{ bookstack_id }} mode=700
+  loop:
+    - pre
+    - post
+  tags: bookstack

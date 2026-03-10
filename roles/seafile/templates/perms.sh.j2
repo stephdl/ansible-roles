@@ -1,0 +1,5 @@
+#!/bin/bash
+
+chown -R seafile:seafile {{ seafile_root_dir }}/seafile-server/pro/elasticsearch/
+chown -R seafile:seafile {{ seafile_root_dir }}/seahub-data
+restorecon -R {{ seafile_root_dir }}/

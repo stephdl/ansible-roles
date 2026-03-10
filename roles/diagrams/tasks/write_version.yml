@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ diagrams_version }} dest={{ diagrams_root_dir }}/meta/ansible_version
+  tags: diagrams

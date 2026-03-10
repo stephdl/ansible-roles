@@ -1,0 +1,10 @@
+---
+
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: "{{ synadm_root_dir }}"
+        - version: "{{ synadm_version }}"
+    - set_fact: synadm_install_mode={{ (install_mode == 'upgrade' and not synadm_manage_upgrade) | ternary('none',install_mode) }}
+    - set_fact: synadm_current_version={{ current_version | default('') }}
+  tags: matrix

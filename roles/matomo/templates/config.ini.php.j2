@@ -1,0 +1,24 @@
+[database]
+host = "{{ matomo_db_server }}"
+username = "{{ matomo_db_user }}"
+password = "{{ matomo_db_pass }}"
+dbname = "{{ matomo_db_name }}"
+port = {{ matomo_db_port }}
+
+[General]
+assume_secure_protocol = 1
+{% if httpd_src_ip is defined and httpd_src_ip | length > 0 and '0.0.0.0/0' not in httpd_src_ip %}
+proxy_client_headers[] = "HTTP_X_FORWARDED_FOR"
+proxy_host_headers[] = "HTTP_X_FORWARDED_HOST"
+{% endif %}
+salt = "{{ matomo_salt }}"
+force_ssl = 0
+assume_secure_protocol = 1
+
+[Tracker]
+enable_fingerprinting_across_websites = 1
+
+[mail]
+transport = "smtp"
+host = "localhost"
+

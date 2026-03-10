@@ -1,0 +1,9 @@
+[Unit]
+Description=ZFS pool trim
+Requires=zfs.target
+After=zfs.target
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+ExecStart=/sbin/zpool trim %I

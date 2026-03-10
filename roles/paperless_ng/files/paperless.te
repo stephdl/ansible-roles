@@ -1,0 +1,18 @@
+module paperless 1.3;
+
+require {
+        type gpg_exec_t;
+        type ldconfig_exec_t;
+        type init_t;
+        type ldconfig_t;
+        type postgresql_port_t;
+        class process2 nnp_transition;
+        class file { execute execute_no_trans map open read };
+        class tcp_socket name_connect;
+}
+
+#============= init_t ==============
+allow init_t gpg_exec_t:file { execute execute_no_trans map open read };
+allow init_t ldconfig_exec_t:file execute_no_trans;
+allow init_t ldconfig_t:process2 nnp_transition;
+allow init_t postgresql_port_t:tcp_socket name_connect;

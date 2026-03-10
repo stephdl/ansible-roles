@@ -1,0 +1,239 @@
+---
+
+- name: Install cas client lib
+  get_url:
+    url: "{{ item.url }}"
+    checksum: sha1:{{ item.sha1 }}
+    dest: /opt/zimbra/jetty/common/lib/
+  loop: "{{ zcs_cas_libs }}"
+  tags: zcs
+
+- name: Get or generate a pre authentication key
+  shell: |
+    KEY=$(/opt/zimbra/bin/zmprov getDomain {{ item }} zimbrapreauthkey | perl -ne '/^(?:zimbraP|p)reAuthKey: (.*)/ && print $1')
+    [ -z $KEY ] && KEY=$(/opt/zimbra/bin/zmprov generateDomainPreAuthKey {{ item }} | perl -ne '/^(?:zimbraP|p)reAuthKey: (.*)/ && print $1')
+    echo $KEY
+  become_user: zimbra
+  register: zcs_preauthkeys
+  changed_when: False
+  loop: "{{ zcs_domains.keys() | list }}"
+  tags: zcs
+
+- name: Install preauth pages
+  template: src=cas_preauth.jsp.j2 dest=/opt/zimbra/jetty/webapps/zimbra/public/preauth_{{ item.item }}.jsp owner=zimbra group=zimbra
+  loop: "{{ zcs_preauthkeys.results }}"
+  notify: restart zimbra
+  tags: zcs
+
+- name: Install admin preauth pages
+  template: src=cas_preauth_admin.jsp.j2 dest=/opt/zimbra/jetty/webapps/zimbraAdmin/public/preauth_{{ item.item }}.jsp owner=zimbra group=zimbra
+  loop: "{{ zcs_preauthkeys.results }}"
+  notify: restart zimbra
+  tags: zcs
+
+- name: Configure CAS filters
+  blockinfile:
+    path: /opt/zimbra/jetty/etc/zimbra.web.xml.in
+    block: |2
+
+      {% for domain in zcs_domains.keys() | list %}
+      {% if zcs_domains[domain].cas is defined and zcs_domains[domain].cas.enabled is defined and zcs_domains[domain].cas.enabled %}
+      <!-- CAS filters for domain {{ domain }} -->
+      <filter>
+        <filter-name>CasSingleSignOutFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.session.SingleSignOutFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasSingleSignOutFilter{{ domain }}</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+
+      <listener>
+        <listener-class>org.jasig.cas.client.session.SingleSignOutHttpSessionListener</listener-class>
+      </listener>
+
+      <filter>
+        <filter-name>CasAuthenticationFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
+        <init-param>
+          <param-name>casServerLoginUrl</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}/login</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ zcs_domains[domain].public_url }}</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasAuthenticationFilter{{ domain }}</filter-name>
+        <url-pattern>/public/preauth_{{ domain }}.jsp</url-pattern>
+      </filter-mapping>
+
+      <filter>
+        <filter-name>CasValidationFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.validation.Cas20ProxyReceivingTicketValidationFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ zcs_domains[domain].public_url }}</param-value>
+        </init-param>
+        <init-param>
+          <param-name>redirectAfterValidation</param-name>
+          <param-value>true</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasValidationFilter{{ domain }}</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+      <!-- End CAS filter config for domain {{ domain }} -->
+
+      {% else %}
+
+      <!-- CAS not enabled for domain {{ domain }} -->
+
+      {% endif %}
+      {% endfor %}
+
+      <filter>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <filter-class>org.jasig.cas.client.util.HttpServletRequestWrapperFilter</filter-class>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <url-pattern>/public/*</url-pattern>
+      </filter-mapping>
+
+      <!-- prevent Zimbra from adding ;jsessionid=XXXX in the URL, which the CAS server could reject
+           as it doesn't match the initial service anymore -->
+      <session-config>
+        <tracking-mode>COOKIE</tracking-mode>
+      </session-config>
+    marker: '<!-- "# {mark} ANSIBLE MANAGED BLOCK" -->'
+    insertafter: '</error-page>'
+    validate: xmllint %s
+  notify: restart zimbra
+  tags: zcs
+
+- name: Configure CAS admin filters
+  blockinfile:
+    path: /opt/zimbra/jetty/etc/zimbraAdmin.web.xml.in
+    block: |2
+
+      {% for domain in zcs_domains.keys() | list %}
+      {% if zcs_domains[domain].cas is defined and zcs_domains[domain].cas.enabled is defined and zcs_domains[domain].cas.enabled %}
+      <!-- CAS filters for domain {{ domain }} -->
+      <filter>
+        <filter-name>CasSingleSignOutFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.session.SingleSignOutFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasSingleSignOutFilter{{ domain }}</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+
+      <listener>
+        <listener-class>org.jasig.cas.client.session.SingleSignOutHttpSessionListener</listener-class>
+      </listener>
+
+      <filter>
+        <filter-name>CasAuthenticationFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
+        <init-param>
+          <param-name>casServerLoginUrl</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}/login</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ zcs_domains[domain].admin_url }}</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasAuthenticationFilter{{ domain }}</filter-name>
+        <url-pattern>/public/preauth_{{ domain }}.jsp</url-pattern>
+      </filter-mapping>
+
+      <filter>
+        <filter-name>CasValidationFilter{{ domain }}</filter-name>
+        <filter-class>org.jasig.cas.client.validation.Cas20ProxyReceivingTicketValidationFilter</filter-class>
+        <init-param>
+          <param-name>casServerUrlPrefix</param-name>
+          <param-value>{{ zcs_domains[domain].cas.server_url }}</param-value>
+        </init-param>
+        <init-param>
+          <param-name>serverName</param-name>
+          <param-value>{{ zcs_domains[domain].admin_url }}</param-value>
+        </init-param>
+        <init-param>
+          <param-name>redirectAfterValidation</param-name>
+          <param-value>true</param-value>
+        </init-param>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasValidationFilter{{ domain }}</filter-name>
+        <url-pattern>/*</url-pattern>
+      </filter-mapping>
+
+      <!-- End of CAS filters settings for domaine {{ domain }} -->
+
+      {% else %}
+
+      <!-- CAS not enabled for domain {{ domain }} -->
+
+      {% endif %}
+      {% endfor %}
+
+      <filter>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <filter-class>org.jasig.cas.client.util.HttpServletRequestWrapperFilter</filter-class>
+      </filter>
+
+      <filter-mapping>
+        <filter-name>CasHttpServletRequestWrapperFilter</filter-name>
+        <url-pattern>/public/*</url-pattern>
+      </filter-mapping>
+
+      <!-- prevent Zimbra from adding ;jsessionid=XXXX in the URL, which the CAS server could reject
+           as it doesn't match the initial service anymore -->
+      <session-config>
+        <tracking-mode>COOKIE</tracking-mode>
+      </session-config>
+    marker: '<!-- "# {mark} ANSIBLE MANAGED BLOCK" -->'
+    insertafter: '</error-page>'
+    validate: xmllint %s
+  notify: restart zimbra
+  tags: zcs
+
+- name: Configure login and logout URL
+  shell: |
+    /opt/zimbra/bin/zmprov modifyDomain {{ item }} zimbraWebClientLoginURL "{{ zcs_domains[item].public_url | regex_replace('/$','') }}/public/preauth_{{ item }}.jsp"
+    /opt/zimbra/bin/zmprov modifyDomain {{ item }} zimbraAdminConsoleLoginURL "{{ zcs_domains[item].admin_url | regex_replace('/$','') }}/zimbraAdmin/public/preauth_{{ item }}.jsp"
+    /opt/zimbra/bin/zmprov modifyDomain {{ item }} zimbraWebClientLogoutURL "{{ zcs_domains[item].cas.server_url | regex_replace('/$','') }}/logout"
+    /opt/zimbra/bin/zmprov modifyDomain {{ item }} zimbraAdminConsoleLogoutURL "{{ zcs_domains[item].cas.server_url | regex_replace('/$','') }}/logout"
+  become_user: zimbra
+  loop: "{{ zcs_domains.keys() | list }}"
+  when:
+    - zcs_domains[item].cas is defined
+    - zcs_domains[item].cas.enabled is defined
+    - zcs_domains[item].cas.enabled == True
+  changed_when: False
+  tags: zcs
+

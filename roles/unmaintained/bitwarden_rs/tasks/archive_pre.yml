@@ -1,0 +1,38 @@
+---
+
+- name: Create archive dir
+  file: path={{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }} state=directory
+  tags: bitwarden
+
+- name: Stop bitwarden during upgrade
+  service: name=bitwarden_rs state=stopped
+  tags: bitwarden
+
+- name: Archive current version
+  synchronize:
+    src: "{{ bitwarden_root_dir }}/{{ item }}"
+    dest: "{{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }}/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  loop:
+    - bitwarden_rs
+    - data
+    - etc
+    - web-vault
+  tags: bitwarden
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ bitwarden_db_name }}"
+    target: "{{ bitwarden_root_dir }}/archives/{{ bitwarden_current_version }}+{{ bitwarden_web_current_version }}/{{ bitwarden_db_name }}.sql.xz"
+    login_host: "{{ bitwarden_db_server }}"
+    login_user: "{{ bitwarden_db_user }}"
+    login_password: "{{ bitwarden_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  when: bitwarden_db_engine == 'mysql'
+  tags: bitwarden

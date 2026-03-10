@@ -1,0 +1,20 @@
+---
+ad_auth: False
+ad_domain: "{{ samba_domain }}"
+ad_realm: "{{ samba_realm }}"
+ad_admin: Administrator
+ad_admin_pass: "{{ samba_dc_admin_pass }}"
+ad_computer_ou: 
+ad_access_filter: "(memberOf=*)"
+# You can define a custom search base, with a scope and a filter for groups:
+# ad_ldap_group_search_base: CN=Groups,dc=ad,dc=domain,dc=com?sub?(|(cn=Domain Users)(cn=Domain Admins))
+
+# This is a list of groups to ignore. Because they would appear with a gid of 0, and would break all membership
+# This is ignored if ad_ldap_group_search_base is defined
+ad_ignore_groups:
+  - Pre-Windows 2000 Compatible Access
+  - Windows Authorization Access Group
+  - Administrators
+  - IIS_IUSRS
+  - Guests
+  - Users

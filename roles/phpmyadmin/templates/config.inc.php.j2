@@ -1,0 +1,36 @@
+<?php
+/*
+{{ ansible_managed }}
+*/
+
+$cfg['blowfish_secret'] = '{{ pma_key }}';
+$i = 0;
+
+{% for server in pma_servers | default([]) %}
+$i++;
+$cfg['Servers'][$i]['auth_type'] = '{{ server.auth_type | default('cookie') }}';
+$cfg['Servers'][$i]['host'] = '{{ server.host | default(mysql_server) }}';
+{% if server.auth_type == 'signon' %}
+$cfg['Servers'][$i]['SignonURL'] = '/sso.php';
+$cfg['Servers'][$i]['SignonSession'] = 'PmaSignonSession';
+{% endif %}
+{% if server.host | default('localhost') == 'localhost' %}
+$cfg['Servers'][$i]['socket'] = '{{ server.socket | default('/var/lib/mysql/mysql.sock') }}';
+{% endif %}
+{% if server.port is defined %}
+$cfg['Servers'][$i]['port'] = '{{ server.port }}';
+{% endif %}
+$cfg['Servers'][$i]['compress'] = false;
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+
+{% endfor %}
+
+$cfg['UploadDir'] = '{{ pma_root_dir }}/tmp';
+$cfg['TempDir'] = '{{ pma_root_dir }}/tmp';
+$cfg['SaveDir'] = '{{ pma_root_dir }}/data';
+
+$cfg['ShowAll'] = true;
+$cfg['SendErrorReports'] = 'never';
+$cfg['PmaNoRelation_DisableWarning'] = true;
+
+?>

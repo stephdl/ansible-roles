@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+curl -X DELETE http://localhost:{{ es_port }}/_snapshot/lbkp/lbkp
+umount /home/lbkp/es
+fstrim -a -v

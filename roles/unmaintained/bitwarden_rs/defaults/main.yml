@@ -1,0 +1,49 @@
+---
+
+bitwarden_version: 1.20.0
+bitwarden_archive_url: https://github.com/dani-garcia/bitwarden_rs/archive/{{ bitwarden_version }}.tar.gz
+bitwarden_archive_sha1: 39354ae4124a95a7fcb53e81d6234c5599f609fa
+
+bitwarden_web_version: 2.19.0
+bitwarden_web_archive_url: https://github.com/dani-garcia/bw_web_builds/releases/download/v{{ bitwarden_web_version }}/bw_web_v{{ bitwarden_web_version }}.tar.gz
+bitwarden_web_archive_sha1: dfb5acdad88bb6a915b7115739428278e7f3ea98
+
+bitwarden_root_dir: /opt/bitwarden_rs
+bitwarden_user: bitwarden_rs
+
+# Database : can be sqlite or mysql
+bitwarden_db_engine: sqlite
+bitwarden_db_server: "{{ mysql_server | default('localhost') }}"
+bitwarden_db_port: 3306
+bitwarden_db_name: bitwardenrs
+bitwarden_db_user: bitwardenrs
+# A random one will be created if not defined
+# bitwaren_db_pass: S3cr3t.
+
+# Port on which bitwarden will bind
+bitwarden_http_port: 8000
+bitwarden_ws_port: 8001
+# List of IP addresses (can be CIDR notation) which will be able to
+# access bitwarden ports
+bitwarden_src_ip: []
+bitwarden_web_src_ip: []
+
+# Public URL on which bitwarden will be accessible
+bitwarden_public_url: http://{{ inventory_hostname }}:{{ bitwarden_http_port }}
+
+# Should registration be enabled
+bitwarden_registration: False
+# List of domain names for which registration will be accepted
+# Those domains will be accepted for registration even if bitwarden_registration is set to False
+bitwarden_domains_whitelist:
+  - "{{ ansible_domain }}"
+
+# Admin Token to access /admin. A random one is created if not defined
+# bitwarden_admin_token: S3cr3t.
+
+# Or you can just disable the admin token. But you have to protect /admin yourself (eg, on a reverse proxy)
+bitwarden_disable_admin_token: False
+
+# YubiKey settings
+# bitwarden_yubico_client_id: XXXX
+# bitwarden_yubico_secret_key: XXXX

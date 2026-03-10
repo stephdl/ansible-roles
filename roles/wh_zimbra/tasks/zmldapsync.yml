@@ -1,0 +1,22 @@
+---
+- name: Deploy LDAP sync configuration
+  template: src=zmldapsync-wh.yml.j2 dest=/opt/zimbra/conf/zmldapsync-wh.yml mode=600
+  notify: start zmldapsync-wh
+  tags: mail
+
+- name: Deploy LDAP sync systemd units
+  template: src=zmldapsync-wh.{{ item }}.j2 dest=/etc/systemd/system/zmldapsync-wh.{{ item }}
+  loop:
+    - service
+    - timer
+  register: wh_zimbra_systemd_unit
+  tags: mail
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: wh_zimbra_systemd_unit.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: mail
+
+- name: Enable LDAP sync services
+  systemd: name=zmldapsync-wh.timer state=started enabled=True
+  tags: mail

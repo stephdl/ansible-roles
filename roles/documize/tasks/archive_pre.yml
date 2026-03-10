@@ -1,0 +1,41 @@
+---
+
+- name: Create the archive dir
+  file: path={{ documize_root_dir }}/archives/{{ documize_current_version }} state=directory
+  tags: documize
+
+- name: Backup previous version
+  copy: src={{ documize_root_dir }}/bin/documize dest={{ documize_root_dir }}/archives/{{ documize_current_version }}/ remote_src=True
+  tags: documize
+
+- name: Backup the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ documize_db_server }}
+    --port={{ documize_db_port }}
+    --username={{ documize_db_user }}
+    {{ documize_db_name }}
+    --file={{ documize_root_dir }}/archives/{{ documize_current_version }}/{{ documize_db_name }}.sql
+  environment:
+    - PGPASSWORD: "{{ documize_db_pass }}"
+  when: documize_db_engine == 'postgres'
+  tags: documize
+
+- name: Archive the database
+  mysql_db:
+    state: dump
+    name: "{{ documize_db_name }}"
+    target: "{{ documize_root_dir }}/archives/{{ documize_current_version }}/{{ documize_db_name }}.sql.xz"
+    login_host: "{{ documize_db_server | default(mysql_server) }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  when: documize_db_engine == 'mysql'
+  tags: documize
+
+

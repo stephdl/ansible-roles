@@ -1,0 +1,8 @@
+---
+
+wbo_id: 1
+wbo_port: 8095
+wbo_src_ip: []
+wbo_root_dir: /opt/wbo_{{ wbo_id }}
+wbo_git_url: https://github.com/lovasoa/whitebophir.git
+

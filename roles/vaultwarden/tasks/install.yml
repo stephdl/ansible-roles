@@ -1,0 +1,109 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - openssl-devel
+      - gcc
+      - sqlite
+  tags: vaultwarden
+
+- name: Check if MariaDB version is set
+  fail: msg="Need to define mysql_mariadb_version"
+  when:
+    - vaultwarden_db_engine == 'mysql'
+    - mysql_mariadb_version is not defined or mysql_mariadb_version == 'default'
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version is version('8','<')
+  tags: vaultwarden
+
+- name: Install MariaDB devel package
+  yum:
+    name:
+      - mariadb-devel
+  when: vaultwarden_db_engine == 'mysql'
+  tags: vaultwarden
+
+  # With upstream MariaDB repo, /usr/lib64/libmariadb.so is in MariaDB-shared not in MariaDB-devel
+- name: Install MariaDB shared libs
+  yum:
+    name:
+      - MariaDB-shared
+  when:
+    - vaultwarden_db_engine == 'mysql'
+    - mysql_mariadb_version is defined
+    - mysql_mariadb_version != 'default'
+  tags: vaultwarden
+
+- when: vaultwarden_install_mode != 'none'
+  tags: vaultwarden
+  block:
+    - name: Download vaultwarden
+      get_url:
+        url: "{{ vaultwarden_archive_url }}"
+        dest: "{{ vaultwarden_root_dir }}/tmp"
+        checksum: sha1:{{ vaultwarden_archive_sha1 }}
+
+    - name: Extract vaultwarden archive
+      unarchive:
+        src: "{{ vaultwarden_root_dir }}/tmp/vaultwarden-{{ vaultwarden_version }}.tar.gz"
+        dest: "{{ vaultwarden_root_dir }}/tmp"
+        remote_src: True
+  
+    - name: Build vaultwarden
+      command: bash -lc 'cargo build --features={{ (vaultwarden_db_engine == "mysql") | ternary("mysql","sqlite") }} --release'
+      args:
+        chdir: "{{ vaultwarden_root_dir }}/tmp/vaultwarden-{{ vaultwarden_version }}"
+
+    - name: Install binary
+      copy: src={{ vaultwarden_root_dir }}/tmp/vaultwarden-{{ vaultwarden_version }}/target/release/vaultwarden dest="{{ vaultwarden_root_dir }}/bin/" mode=755 remote_src=True
+      notify: restart vaultwarden
+
+- when: vaultwarden_web_install_mode != 'none'
+  tags: vaultwarden
+  block:
+    - name: Download vaultwarden web vault
+      get_url:
+       url: "{{ vaultwarden_web_archive_url }}"
+       dest: "{{ vaultwarden_root_dir }}/tmp"
+       checksum: sha1:{{ vaultwarden_web_archive_sha1 }}
+
+    - name: Extract the archive
+      unarchive:
+        src: "{{ vaultwarden_root_dir }}/tmp/bw_web_v{{ vaultwarden_web_version }}.tar.gz"
+        dest: "{{ vaultwarden_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Move files to their final location
+      synchronize:
+        src: "{{ vaultwarden_root_dir }}/tmp/web-vault/"
+        dest: "{{ vaultwarden_root_dir }}/web-vault/"
+        recursive: True
+        delete: True
+      delegate_to: "{{ inventory_hostname }}"
+
+- name: Install systemd unit
+  template: src=vaultwarden.service.j2 dest=/etc/systemd/system/vaultwarden.service
+  register: vaultwarden_unit
+  tags: vaultwarden
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: vaultwarden_unit.changed
+  tags: vaultwarden
+
+- name: Install pre/post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/vaultwarden.sh mode=755
+  loop:
+    - pre
+    - post
+  tags: vaultwarden
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ vaultwarden_db_name }}"
+    - db_user: "{{ vaultwarden_db_user }}"
+    - db_server: "{{ vaultwarden_db_server }}"
+    - db_pass: "{{ vaultwarden_db_pass }}"
+  when: vaultwarden_db_engine == 'mysql'
+  tags: vaultwarden

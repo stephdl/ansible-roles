@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+# Resume all suspended pool scrubs
+for ZPOOL in $(zpool list -H -o name); do
+  if [ $(zpool status $ZPOOL | grep -c 'scrub paused') -ge 1 ]; then
+    echo scrub paused for pool $ZPOOL, resuming it
+    zpool scrub $ZPOOL
+  fi
+done

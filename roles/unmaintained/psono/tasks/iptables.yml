@@ -1,0 +1,11 @@
+---
+
+- name:  Handle psono port in the firewall
+  iptables_raw:
+    name: psono_server_port
+    state: "{{ (psono_server_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ psono_server_port }} -s {{ psono_server_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: firewall,psono
+
+

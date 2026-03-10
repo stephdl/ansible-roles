@@ -1,0 +1,7 @@
+---
+
+wapt_packages:
+  - tis-waptserver
+# - tis-waptsetup
+  - postgresql14
+  - python3-psycopg2 # Needed to manage PG with ansible

@@ -1,0 +1,6 @@
+---
+dependencies:
+  - role: repo_scl
+    when:
+      - ansible_os_family == 'RedHat'
+      - ansible_distribution_major_version is version('8', '<')

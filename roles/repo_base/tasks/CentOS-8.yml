@@ -1,0 +1,125 @@
+---
+
+- when: not repo_centos_stream
+  block:
+    - name: Configure repositories
+      yum_repository:
+        file: "{{ item.file }}"
+        description: "CentOS {{ item.name }}"
+        name: "{{ item.name }}"
+        baseurl: http://mirror.centos.org/$contentdir/$releasever/{{ item.dir }}/$basearch/os/
+        gpgcheck: True
+        gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+        enabled: "{{ item.enabled | default(True) }}"
+      loop:
+        - name: baseos
+          file: CentOS-Linux-Base
+          dir: BaseOS
+        - name: appstream
+          file: CentOS-Linux-AppStream
+          dir: AppStream
+        - name: plus
+          file: CentOS-Linux-Plus
+          dir: centosplus
+          enabled: False
+        - name: extras
+          file: CentOS-Linux-Extras
+          dir: extras
+        - name: powertools
+          file: CentOS-Linux-PowerTools
+          dir: PowerTools
+
+    - name: Remove Base file
+      file: path=/etc/yum.repos.d/{{ item }}.repo state=absent
+      loop:
+        - CentOS-Stream-AppStream
+        - CentOS-Stream-Base
+        - CentOS-Stream-ContinuousRelease
+        - CentOS-Stream-Debuginfo
+        - CentOS-Stream-Devel
+        - CentOS-Stream-Extras
+        - CentOS-Stream-FastTrack
+        - CentOS-Stream-centosplus
+        - CentOS-Stream-PowerTools
+
+    # Waiting for the allowerasing args to dnf module, landing in ansible 2.10
+    - name: Switch to centos-linux-repos
+      shell: rpm -q centos-linux-repos || dnf install centos-linux-repos -y --allowerasing
+      args:
+        warn: False
+      changed_when: False
+
+  tags: repo
+
+- when: repo_centos_stream
+  block:
+    - name: Check if stream variable is set
+      copy: content={{ item.content }} dest={{ item.dest }}
+      loop:
+        - content: "{{ ansible_distribution_major_version }}-stream"
+          dest: /etc/dnf/vars/stream
+
+    - name: Configure repositories
+      yum_repository:
+        file: "{{ item.file }}"
+        description: "CentOS {{ item.name }}"
+        name: "{{ item.name }}"
+        baseurl: http://mirror.centos.org/$contentdir/$stream/{{ item.dir }}/$basearch/os/
+        gpgcheck: True
+        gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+      loop:
+        - name: baseos
+          file: CentOS-Stream-BaseOS
+          dir: BaseOS
+        - name: appstream
+          file: CentOS-Stream-AppStream
+          dir: AppStream
+        - name: extras
+          file: CentOS-Stream-Extras
+          dir: extras
+        - name: powertools
+          file: CentOS-Stream-PowerTools
+          dir: PowerTools
+
+    - name: Remove Base file
+      file: path=/etc/yum.repos.d/{{ item }}.repo state=absent
+      loop:
+        - CentOS-Linux-AppStream
+        - CentOS-Linux-BaseOS
+        - CentOS-Linux-Base
+        - CentOS-Linux-ContinuousRelease
+        - CentOS-Linux-Debuginfo
+        - CentOS-Linux-Devel
+        - CentOS-Linux-Extras
+        - CentOS-Linux-FastTrack
+        - CentOS-Linux-centosplus
+        - CentOS-Linux-Plus
+        - CentOS-Linux-PowerTools
+
+    # Waiting for the allowerasing args to dnf module, landing in ansible 2.10
+    - name: Switch to centos-stream-repos
+      shell: rpm -q centos-stream-repos || dnf install centos-stream-repos -y --allowerasing
+      args:
+        warn: False
+      changed_when: False
+
+  tags: repo
+
+- name: Remove old repo files
+  file: path=/etc/yum.repos.d/{{ item }}.repo state=absent
+  loop:
+    - CentOS-Base
+    - CentOS-CR
+    - CentOS-Extras
+    - CentOS-BaseOS
+    - CentOS-AppStream
+    - CentOS-PowerTools
+    - CentOS-centosplus
+    - CentOS-cr
+    - CentOS-extras
+    - CentOS-fasttrack
+  tags: repo
+
+- include: epel_{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+- include: fws_{{ ansible_os_family }}.yml
+- include: postgres_client_{{ ansible_os_family }}.yml

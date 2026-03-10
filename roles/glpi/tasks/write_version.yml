@@ -1,0 +1,17 @@
+---
+
+- name: Write plugin versions
+  shell: echo {{ glpi_plugins[item].version }} > {{ glpi_root_dir }}/meta/glpi_plugin_{{ item }}_ansible_version
+  when:
+    - item not in glpi_installed_plugins
+    - glpi_plugins[item] is defined
+  with_items: "{{ glpi_plugins_to_install }}"
+  changed_when: False
+  tags: glpi
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ glpi_root_dir }}"
+    - version: "{{ glpi_version }}"
+  tags: glpi
+

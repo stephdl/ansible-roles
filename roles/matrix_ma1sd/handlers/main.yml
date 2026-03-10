@@ -1,0 +1,7 @@
+---
+
+- name: restart ma1sd
+  service: name=matrix-ma1sd state=restarted
+  when: not ma1sd_started.changed
+
+...

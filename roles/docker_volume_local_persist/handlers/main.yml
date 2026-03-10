@@ -1,0 +1,5 @@
+---
+
+- name: restart docker-volume-local-persist
+  service: name=docker-volume-local-persist state=restarted
+  when: not docker_local_persist_started.changed

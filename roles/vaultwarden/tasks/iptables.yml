@@ -1,0 +1,8 @@
+---
+
+- name: Handle vaultwarden ports in the firewall
+  iptables_raw:
+    name: vaultwarden
+    state: "{{ (vaultwarden_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -m multiport -p tcp --dports {{ vaultwarden_http_port }},{{ vaultwarden_ws_port }} -s {{ vaultwarden_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,vaultwarden

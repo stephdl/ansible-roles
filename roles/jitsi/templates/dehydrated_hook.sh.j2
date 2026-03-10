@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+{% if jitsi_letsencrypt_cert is defined %}
+
+{% if jitsi_letsencrypt_cert == True %}
+{% set cert = jitsi_domain %}
+{% elif jitsi_letsencrypt_cert is string %}
+{% set cert = jitsi_letsencrypt_cert %}
+{% endif %}
+
+if [ $1 == "{{ cert }}" ]; then
+  cp /var/lib/dehydrated/certificates/certs/{{ cert }}/fullchain.pem /etc/prosody/certs/jitsi.crt
+  cp /var/lib/dehydrated/certificates/certs/{{ cert }}/privkey.pem /etc/prosody/certs/jitsi.key
+  chown :prosody /etc/prosody/certs/jitsi.key
+  chmod 644 /etc/prosody/certs/jitsi.crt
+  chmod 640 /etc/prosody/certs/jitsi.key
+  systemctl reload prosody
+fi
+{% endif %}
+

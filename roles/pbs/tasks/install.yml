@@ -1,0 +1,17 @@
+---
+
+- name: Install PBS
+  apt:
+    name:
+      - proxmox-backup-server
+    policy_rc_d: 101 # Prevent the daemon from starting automatically after install
+  tags: pbs
+
+- name: Install dehydrated hook
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/pbs.sh mode=755
+  tags: pbs
+
+- name: Remove registration nag
+  patch: src=remove_nag.patch dest=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+  ignore_errors: True
+  tags: pbs

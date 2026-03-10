@@ -1,0 +1,111 @@
+###########################################################
+## {{ ansible_managed }}
+###########################################################
+
+
+port {{ item.port }}
+dev {{ item.dev + item.name }}
+persist-tun
+persist-key
+{% if item.ifconfig is defined %}
+ifconfig {{ item.ifconfig }}
+{% else %}
+topology {{ item.topology }}
+{% endif %}
+{% if item.type == 'server' %}
+proto {{ (item.proto == 'tcp') | ternary('tcp-server',item.proto) }}
+{% for route in item.push_routes %}
+route {{ route.net }} {{ route.mask }}
+{% endfor %}
+{% else %}
+resolv-retry infinite
+nobind
+proto {{ (item.proto == 'tcp') | ternary('tcp-client',item.proto) }}
+{%   if item.remote is string %}
+remote {{ item.remote | string }}
+{%   elif item.remote is iterable %}
+{%     for remote in item.remote %}
+remote {{ remote }}
+{%     endfor %}
+{%   endif %}
+{% endif %}
+
+{% if item.auth == 'cert' %}
+{%   if item.remote_cn is defined %}
+verify-x509-name {{ item.remote_cn }} name
+{%   endif %}
+tls-{{ item.type }}
+{%   if item.type == 'server' %}
+remote-cert-tls client
+{%     if item.duplicate_dn %}
+duplicate-cn
+{%     endif %}
+dh /etc/openvpn/{{ item }}.sh
+{%   elif item.type == 'client' %}
+remote-cert-tls server
+{%     if item.pull %}
+pull
+{%     endif %}
+{%   endif %}
+
+{%   if item.pkcs12 is defined %}
+<pkcs12>
+{{ item.pkcs12 }}
+</pkcs12>
+{%   elif item.ca is defined and item.cert is defined and item.key is defined %}
+<ca>
+{{ item.ca }}
+</ca>
+<cert>
+{{ item.cert }}
+</cert>
+<key>
+{{ item.key }}
+</key>
+{%   endif %}
+{% if item.tls_crypt %}
+<tls-crypt>
+{{ item.tls_crypt }}
+</tls-crypt>
+{% elif item.tls_auth %}
+<tls-auth>
+{{ item.tls_auth }}
+</tls-auth>
+key-direction {{ (item.type == 'server') | ternary('0','1') }}
+{% endif %}
+{% elif item.auth == 'psk' %}
+<secret>
+{{ item.secret }}
+</secret>
+{% endif %}
+
+{% if item.cipher != 'default' %}
+cipher {{ item.cipher }}
+{% endif %}
+{% if item.auth_hash is defined %}
+auth {{ item.auth_hash }}
+{% endif %}
+passtos
+{% if item.compress != 'default' %}
+compress {{ item.compress }}
+{% endif %}
+
+{% for route in item.routes %}
+route {{ route.net }} {{ route.mask }}
+{% endfor %}
+
+keepalive 10 60
+{% if item.proto == 'udp' %}
+mtu-test
+{% endif %}
+
+{% if item.rcvbuf is defined %}
+rcvbuf {{ item.rcvbuf }}
+{% endif %}
+{% if item.sndbuf is defined %}
+sndbuf {{ item.sndbuf }}
+{% endif %}
+
+{% if item.proto == 'udp' %}
+fast-io
+{% endif %}

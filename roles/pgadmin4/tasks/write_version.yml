@@ -1,0 +1,6 @@
+---
+
+- name: Write version
+  copy: content={{ pga_version }} dest={{ pga_root_dir }}/meta/ansible_version
+  tags: pgadmin4
+

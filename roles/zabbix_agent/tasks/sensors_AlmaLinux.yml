@@ -1,0 +1,50 @@
+---
+
+- name: Install hardware sensors support
+  yum:
+    name:
+      - smartmontools
+      - lm_sensors
+  when: ansible_virtualization_role != "guest"
+  tags: zabbix
+
+- name: Check if lm_sensors is configured
+  stat: path=/etc/sysconfig/lm_sensors
+  register: lm_sensors
+  when: ansible_virtualization_role != "guest"
+  tags: zabbix
+
+- name: Configure lm_sensors
+  shell: "/sbin/sensors-detect < /dev/null"
+  # Configure only if /etc/sysconfig/lm_sensors doesn't exists or has been customized
+  when:
+    - ansible_virtualization_role != "guest"
+    - not lm_sensors.stat.exists or lm_sensors.stat.checksum == "c27ae43795d152a7fc7503c7109288e3fdc2207c"
+  tags: zabbix
+
+- name: Check if there's an ipmi controler
+  stat: path=/dev/ipmi0
+  register: zabbix_ipmi
+  tags: zabbix
+
+- name: Install ipmi support
+  yum:
+    name:
+      - OpenIPMI
+      - ipmitool
+  when:
+    - ansible_virtualization_role != "guest"
+    - zabbix_ipmi.stat.exists
+  tags: zabbix
+
+- name: Start and enable lm_sensors service
+  service: name=lm_sensors state=started enabled=yes
+  when: ansible_virtualization_role != "guest"
+  tags: zabbix
+
+- name: Start and enable ipmi service
+  service: name=ipmi state=started enabled=yes
+  when:
+    - ansible_virtualization_role != "guest"
+    - zabbix_ipmi.stat.exists
+  tags: zabbix

@@ -1,0 +1,5 @@
+---
+
+# Version of postgres to install. 'default' means takes the one from the standard repo
+# If a version is specified (like 10, 11, 12, 13 etc.), upstream repository will be configured
+pg_version: default

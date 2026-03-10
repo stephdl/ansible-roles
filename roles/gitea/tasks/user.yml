@@ -1,0 +1,8 @@
+---
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: gitea
+    - comment: GIT Repository account
+    - home: "{{ gitea_root_dir }}"
+    - shell: /bin/bash
+  tags: gitea

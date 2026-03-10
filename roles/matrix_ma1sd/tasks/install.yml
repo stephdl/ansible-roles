@@ -1,0 +1,39 @@
+---
+
+- name: Install needed packages
+  yum:
+    name:
+      - java-1.8.0-openjdk-devel
+    state: latest
+  tags: matrix
+
+- name: Download ma1sd archive
+  get_url:
+    url: "{{ ma1sd_archive_url }}"
+    dest: "{{ ma1sd_root_dir }}/tmp/"
+    checksum: sha1:{{ ma1sd_archive_sha1 }}
+  when: ma1sd_install_mode != 'none'
+  tags: matrix
+
+- name: Extract ma1sd
+  unarchive:
+    src: "{{ ma1sd_root_dir }}/tmp/ma1sd.zip"
+    dest: "{{ ma1sd_root_dir }}/tmp/"
+    remote_src: True
+  when: ma1sd_install_mode != 'none'
+  tags: matrix
+
+- name: Move ma1sd to its final dir
+  synchronize:
+    src: "{{ ma1sd_root_dir }}/tmp/ma1sd/"
+    dest: "{{ ma1sd_root_dir }}/app/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: ma1sd_install_mode != 'none'
+  tags: matrix
+
+- name: Deploy systemd unit
+  template: src=matrix-ma1sd.service.j2 dest=/etc/systemd/system/matrix-ma1sd.service
+  notify: reload systemd
+  tags: matrix

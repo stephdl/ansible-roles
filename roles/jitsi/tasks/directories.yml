@@ -1,0 +1,54 @@
+---
+
+- name: Create directories
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: "{{ jitsi_root_dir }}"
+      mode: 755
+    - dir: "{{ jitsi_root_dir }}/.m2"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+    - dir: "{{ jitsi_root_dir }}/tmp"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/src/videobridge"
+      owner: "{{ jitsi_user }}"
+    - dir: "{{ jitsi_root_dir }}/src/jicofo"
+      owner: "{{ jitsi_user }}"
+    - dir: "{{ jitsi_root_dir }}/src/jigasi"
+      owner: "{{ jitsi_user }}"
+    - dir: "{{ jitsi_root_dir }}/src/meet"
+      owner: "{{ jitsi_user }}"
+    - dir: "{{ jitsi_root_dir }}/videobridge"
+    - dir: "{{ jitsi_root_dir }}/jibri"
+    - dir: "{{ jitsi_root_dir }}/jicofo"
+    - dir: "{{ jitsi_root_dir }}/jigasi"
+    - dir: "{{ jitsi_root_dir }}/meet"
+    - dir: "{{ jitsi_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/archives"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/etc/"
+      mode: 755
+    - dir: "{{ jitsi_root_dir }}/etc/videobridge"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/etc/jicofo"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/etc/jigasi"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/etc/confmapper"
+    - dir: "{{ jitsi_root_dir }}/data"
+      mode: 755
+    - dir: "{{ jitsi_root_dir }}/data/confmapper"
+      owner: "{{ jitsi_user }}"
+      group: "{{ jitsi_user }}"
+      mode: 700
+    - dir: "{{ jitsi_root_dir }}/confmapper"
+  tags: jitsi

@@ -1,0 +1,32 @@
+---
+
+- name: Install geoipupdate
+  yum:
+    name:
+      - geoipupdate
+  tags: geoip
+
+- name: Deploy configuration
+  template: src=GeoIP.conf.j2 dest=/etc/GeoIP.conf mode=600
+  notify: start geoipupdate
+  tags: geoip
+
+- name: Deploy geoipupdate units
+  template: src=geoipupdate.{{ item }}.j2 dest=/etc/systemd/system/geoipupdate.{{ item }}
+  loop:
+    - timer
+    - service
+  register: geoip_units
+  tags: geoip
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: geoip_units.results | selectattr('changed', 'equalto', True) | list | length > 0
+  tags: geoip
+
+- name: Handle geoip timer
+  systemd:
+    name: geoipupdate.timer
+    state: "{{ (geoip_account_id is defined and geoip_license_key is defined) | ternary('started', 'stopped') }}"
+    enabled: "{{ (geoip_account_id is defined and geoip_license_key is defined) | ternary(True, False) }}"
+  tags: geoip

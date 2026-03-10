@@ -1,0 +1,19 @@
+#!/bin/bash
+
+restorecon -R {{ bookstack_root_dir }}
+chown root:root {{ bookstack_root_dir }}
+chmod 700 {{ bookstack_root_dir }}
+setfacl -R -k -b {{ bookstack_root_dir }}
+setfacl -m u:{{ bookstack_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:x {{ bookstack_root_dir }}
+find {{ bookstack_root_dir }}/app -type f -exec chmod 644 "{}" \;
+find {{ bookstack_root_dir }}/app -type d -exec chmod 755 "{}" \;
+chown root:{{ bookstack_php_user }} {{ bookstack_root_dir }}/app/.env
+chmod 640 {{ bookstack_root_dir }}/app/.env
+chown -R {{ bookstack_php_user }} {{ bookstack_root_dir }}/app/bootstrap/cache
+chmod 700 {{ bookstack_root_dir }}/app/bootstrap/cache
+chown -R {{ bookstack_php_user }} {{ bookstack_root_dir }}/data
+chmod 700 {{ bookstack_root_dir }}/data
+setfacl -R -m u:{{ httpd_user | default('apache') }}:rx {{ bookstack_root_dir }}/app/public
+setfacl -m u:{{ httpd_user | default('apache') }}:x {{ bookstack_root_dir }}/data/
+setfacl -R -m u:{{ httpd_user | default('apache') }}:rx {{ bookstack_root_dir }}/data/uploads
+find {{ bookstack_root_dir }} -name .htaccess -exec chmod 644 "{}" \;

@@ -1,0 +1,27 @@
+{% if ampache_alias is defined %}
+Alias /{{ ampache_alias }} {{ ampache_root_dir }}/web/public
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+RewriteEngine On
+<Directory {{ ampache_root_dir }}/web/public>
+  AllowOverride All
+  Options FollowSymLinks
+{% if ampache_allowed_ip is defined %}
+  Require ip {{ ampache_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ ampache_php_fpm_pool  | default('ampache_' + ampache_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+  <FilesMatch "(.maintenance.*|.ansible.*|.php_cs|.travis.*)">
+    Require all denied
+  </FilesMatch>
+</Directory>
+
+<Directory {{ ampache_root_dir }}/web/config>
+  Require all denied
+</Directory>
+

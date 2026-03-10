@@ -1,0 +1,17 @@
+---
+
+fusinv_uri: []
+fusinv_user: user
+fusinv_pass: secret
+fusinv_disabled_tasks:
+  - ESX
+  - WakeOnLan
+  - NetDiscovery
+  - Deploy
+  - NetInventory
+
+# Not included in debian repo
+# so we need to manually down and install it
+fusinv_deb_version: 2.4.2-1
+
+...

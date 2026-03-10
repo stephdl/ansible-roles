@@ -1,0 +1,165 @@
+---
+
+- include: facts.yml
+
+- name: Install tools
+  apt:
+    name:
+      - pigz
+      - ksm-control-daemon
+      - openvswitch-switch
+      - ethtool
+      - patch
+
+- name: Deploy vzdump config
+  template: src=vzdump.conf.j2 dest=/etc/vzdump.conf
+
+- name: Deploy ksm configuration
+  template: src=ksmtuned.conf.j2 dest=/etc/ksmtuned.conf
+  notify: restart ksmtuned
+
+- name: Handle ksm services
+  service: name=ksmtuned state={{ pve_ksm | ternary('started','stopped') }} enabled={{ pve_ksm | ternary(True,False) }}
+
+- name: Configure modules to load
+  copy: content={{ pve_mod_to_load | join("\n") }} dest=/etc/modules-load.d/firewall.conf
+  register: pve_modules
+
+- name: Load modules
+  service: name=systemd-modules-load state=restarted
+  when: pve_modules.changed
+
+- name: Enable ocfs2 support
+  set_fact: pve_ocfs2=True
+  when: fstab | default([]) | selectattr('fstype','equalto','ocfs2') | list | length > 0
+
+- name: Install ocfs2 support
+  apt: name=ocfs2-tools state=present
+  when: pve_ocfs2 == True
+
+- name: Check proxmox cluster status
+  command: pvesh get /cluster/status --output-format=json
+  register: pve_cluster_status_1
+  ignore_errors: True
+  changed_when: False
+
+- name: Parse proxmox cluster status
+  set_fact: pve_cluster={{ pve_cluster_status_1.stdout | from_json }}
+  when: pve_cluster_status_1.rc == 0
+
+- name: Check proxmox cluster status (old pvesh)
+  command: pvesh get /cluster/status
+  when: pve_cluster_status_1.rc != 0
+  register: pve_cluster_status_2
+  changed_when: False
+
+- name: Parse proxmox cluster status (old pvesh)
+  set_fact: pve_cluster={{ pve_cluster_status_2.stdout | from_json }}
+  when: pve_cluster_status_1.rc != 0
+
+- name: Deploy ocfs2 config
+  template: src=ocfs2.conf.j2 dest=/etc/ocfs2/cluster.conf
+  when: pve_ocfs2 == True
+  notify: restart o2cb
+
+- name: Deploy o2cb conf
+  template: src=o2cb.j2 dest=/etc/default/o2cb
+  when: pve_ocfs2 == True
+
+- name: Handle o2cb service
+  service: name=o2cb state=started enabled=True
+  when: pve_ocfs2 == True
+
+- name: Deploy the unlock_dev script
+  copy: src=unlock_dev dest=/usr/local/bin/unlock_dev mode=755
+
+- name: Check if the old hookd daemon is installed
+  stat: path=/usr/local/bin/pve-hookd
+  register: pve_old_hookd
+
+- name: Stop the old hookd daemon
+  service: name=pve-hookd state=stopped
+  when: pve_old_hookd.stat.exists
+
+- name: Remove the old hook daemon
+  file: path={{ item }} state=absent
+  loop:
+    - /usr/local/bin/pve-hookd
+    - /etc/hooks
+    - /etc/systemd/system/pve-hookd.service
+    - /etc/tmpfiles.d/pve-container-hooks.conf
+    - /etc/systemd/system/pve-container@.service.d/pve-container-hooks.conf
+    - /var/run/lxc/active
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: pve_old_hookd.stat.exists
+
+- include_tasks: pve_online.yml
+  when: pve_online == True
+
+- include_tasks: ovh.yml
+  when: pve_ovh == True
+
+- name: Create backup dir
+  file: path=/home/lbkp/pve state=directory
+
+- name: Install pre and post backup scripts
+  copy: src={{ item.src }} dest=/etc/backup/{{ item.type }}.d/{{ item.src }} mode=755
+  with_items:
+    - src: pve_dump
+      type: pre
+    - src: pve_rm_dump
+      type: post
+
+- name: Remove registration nag
+  patch: src=remove_nag.patch dest=/usr/share/perl5/PVE/API2/Subscription.pm
+  ignore_errors: True # Don't fail on old PVE where the patch doesn't apply
+  notify: restart pveproxy
+
+- name: Rise limits for containers
+  pam_limits:
+    domain: '*'
+    limit_type: "{{ item.type }}"
+    limit_item: nofile
+    value: "{{ item.value }}"
+  with_items:
+    - type: soft
+      value: 65000
+    - type: hard
+      value: 65535
+
+- name: Rise inotify instances
+  sysctl:
+    name: fs.inotify.max_user_instances
+    value: 1024
+    sysctl_file: /etc/sysctl.d/ansible.conf
+
+- name: Ensure dehydrated hook dir exists
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/ state=directory
+
+- name: Deploy dehydrated hook
+  template: src=dehydrated_hook.sh.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/20pve.sh mode=755
+
+  # See https://bugzilla.proxmox.com/show_bug.cgi?id=2326 why
+- name: Create corosync override directory
+  file: path=/etc/systemd/system/corosync.service.d/ state=directory
+  tags: pve
+
+- name: Setup corosync to be restarted in case of failure
+  copy:
+    content: |
+      [Service]
+      Restart=on-failure
+      RestartSec=1
+    dest: /etc/systemd/system/corosync.service.d/ansible.conf
+  register: pve_corosync_unit
+  tags: pve
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: pve_corosync_unit.changed
+  tags: pve
+
+- include: zabbix.yml
+- include: filebeat.yml

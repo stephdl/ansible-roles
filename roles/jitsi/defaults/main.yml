@@ -1,0 +1,281 @@
+---
+
+jitsi_root_dir: /opt/jitsi
+jitsi_user: jitsi
+
+# List of IP or CIDR for which web resources will be served
+# It can be different from jitsi_videobridge_src_ip is web access is done through
+# a reverse proxy
+jitsi_web_src_ip:
+  - 0.0.0.0/0
+
+jitsi_jicofo_git_url: https://github.com/jitsi/jicofo.git
+jitsi_jigasi_git_url: https://github.com/jitsi/jigasi.git
+jitsi_meet_git_url: https://github.com/jitsi/jitsi-meet.git
+
+# Should ansible handle upgrades, or only initial install ?
+jitsi_manage_upgrade: True
+
+# XMPP server to connect to. Default is the same machine
+jitsi_xmpp_server: "{{ inventory_hostname }}"
+# Port on which to connect to the XMPP server to register as a component
+jitsi_xmpp_component_port: 5347
+
+# Account for videobridge
+jitsi_jvb_xmpp_user: "{{ jitsi_videobridge_xmpp_user | default('jvb') }}"
+jitsi_jvb_xmpp_domain: "{{ jitsi_videobridge_xmpp_domain | default(jitsi_auth_domain) }}"
+# jitsi_jvb_xmpp_pass: 
+
+jitsi_stun_servers: []
+# jitsi_stun_servers:
+#   - stun:meet-jit-si-turnrelay.jitsi.net:443
+
+jitsi_turn_secret: "{{ turnserver_auth_secret | default('p@ssw0rd') }}"
+
+# Authentication. Can be set to
+#  * False : no authentication at all (can also be None)
+#  * sso : In this case, you have to protect /login with your SSO system (through a reverse proxy)
+#    And once authenticated, send the HTTP headers mail and displayName with the appropriate values
+#    Note that jitsi Android client does not support sso authentication, so mobile users will be able
+#    to join an existing conf, but not create one easily
+#  * ldap : Will use an LDAP server for authentication. Works on mobile, but is a bit less convinient
+#    than sso for desktop users. See all the jitsi_ldap_xxxx settings
+jitsi_auth: False
+
+jitsi_jicofo_xmpp_user: focus
+jitsi_jicofo_xmpp_domain: "{{ jitsi_auth_domain }}"
+# Password for the focus user on the auth domain
+# jitsi_jicofo_xmpp_pass: p@ssw0rd
+
+jitsi_domain: "{{ inventory_hostname }}"
+jitsi_auth_domain: auth.{{ jitsi_domain }}
+
+# Can be either true, in which case a cert will be automatically obtained using letsencrypt
+# or can be a name, in which case you have to configure letsencrypt to obtain the cert yourself
+# jitsi_letsencrypt_cert: True
+# or
+# jitsi_letsencrypt_cert: jitsi.example.com
+#
+# or, you can also set custom cert path
+#
+# jitsi_cert_path: /etc/jitsi/ssl/cert.pem
+# jitsi_key_path: /etc/jitsi/ssl/key.pem
+
+# Meet configuration. Will be converted to JSON
+# See https://github.com/jitsi/jitsi-meet/blob/master/config.js for available settings and their meaning
+jitsi_meet_conf_base:
+  hosts:
+    domain: "{{ jitsi_domain }}"
+    muc: conference.{{ jitsi_domain }}
+  bosh: '//{{ jitsi_domain }}/http-bind'
+  websocket: wss://{{ jitsi_domain }}/xmpp-websocket
+  clientNode: http://jitsi.org/jitsimeet
+  focusUserJid: "{{ jitsi_jicofo_xmpp_user }}@{{ jitsi_auth_domain }}"
+  disableAudioLevels: True
+  testing:
+    p2pTestMode: False
+  enableNoAudioDetection: True
+  enableNoisyMicDetection: False
+  startAudioMuted: 10
+  maxFullResolutionParticipants: 4
+  desktopSharingChromeExtId: null
+  desktopSharingChromeSources:
+    - screen
+    - window
+    - tab
+  desktopSharingChromeMinExtVersion: 0.1
+  channelLastN: -1
+  requireDisplayName: False
+  enableLayerSuspension: True
+  prejoinPageEnabled: True
+  disableThirdPartyRequests: True
+  enableWelcomePage: True
+  useStunTurn: True
+  localRecording:
+    enabled: True
+  p2p:
+    enabled: False
+    useStunTurn: True
+    stunServers: "{{ jitsi_stun_servers }}"
+    preferH264: True
+  dialInNumbersUrl: https://{{ jitsi_domain }}/phoneNumberList
+  dialInConfCodeUrl: https://{{ jitsi_domain }}/conferenceMapper
+jitsi_meet_conf_extra: {}
+jitsi_meet_conf: "{{ jitsi_meet_conf_base | combine(jitsi_meet_conf_extra, recursive=True) }}"
+
+# Meet interface configuration. Will be converted to JSON
+# See https://github.com/jitsi/jitsi-meet/blob/master/interface_config.js for available settings and their meaning
+jitsi_meet_interface_conf_base:
+  DEFAULT_BACKGROUND: '#474747'
+  DISABLE_VIDEO_BACKGROUND: False
+  INITIAL_TOOLBAR_TIMEOUT: 20000
+  TOOLBAR_TIMEOUT: 4000
+  TOOLBAR_ALWAYS_VISIBLE: False
+  DEFAULT_REMOTE_DISPLAY_NAME: Happy User
+  DEFAULT_LOCAL_DISPLAY_NAME: Me
+  SHOW_JITSI_WATERMARK: False
+  JITSI_WATERMARK_LINK: 'https://jitsi.org'
+  SHOW_BRAND_WATERMARK: False
+  BRAND_WATERMARK_LINK: 'https://www.firewall-services.com'
+  DEFAULT_WELCOME_PAGE_LOGO_URL: 'images/watermark.svg'
+  DEFAULT_LOGO_URL: 'images/watermark.svg'
+  PROVIDER_NAME: 'Firewall Services'
+  SHOW_POWERED_BY: False
+  SHOW_DEEP_LINKING_IMAGE: False
+  DISPLAY_WELCOME_FOOTER: True,
+  DISPLAY_WELCOME_PAGE_ADDITIONAL_CARD: False
+  DISPLAY_WELCOME_PAGE_CONTENT: False
+  DISPLAY_WELCOME_PAGE_TOOLBAR_ADDITIONAL_CONTENT: False
+  GENERATE_ROOMNAMES_ON_WELCOME_PAGE: True
+  APP_NAME: Jitsi Meet
+  NATIVE_APP_NAME: Jitsi Meet
+  INVITATION_POWERED_BY: True
+  LANG_DETECTION: True
+  AUTHENTICATION_ENABLE: True
+#  TOOLBAR_BUTTONS:
+#    - microphone
+#    - camera
+#    - closedcaptions
+#    - desktop
+#    - embedmeeting
+#    - fullscreen
+#    - fodeviceselection
+#    - hangup
+#    - profile
+#    - chat
+#    - recording
+#    #- livestreaming
+#    - etherpad
+#    - sharedvideo
+#    - settings
+#    - raisehand
+#    - videoquality
+#    - filmstrip
+#    - invite
+#    - feedback
+#    - stats
+#    - shortcuts
+#    - tileview
+#    - videobackgroundblur
+#    - download
+#    - help
+#    - mute-everyone
+#    - security
+  SETTINGS_SECTIONS:
+    - devices
+    - language
+    - moderator
+    - profile
+    - calendar
+  VIDEO_LAYOUT_FIT: both
+  VERTICAL_FILMSTRIP: True
+  CLOSE_PAGE_GUEST_HINT: False
+  SHOW_PROMOTIONAL_CLOSE_PAGE: False
+  RANDOM_AVATAR_URL_PREFIX: False
+  RANDOM_AVATAR_URL_SUFFIX: False
+  FILM_STRIP_MAX_HEIGHT: 120
+  ENABLE_FEEDBACK_ANIMATION: False
+  DISABLE_FOCUS_INDICATOR: False
+  DISABLE_DOMINANT_SPEAKER_INDICATOR: False
+  DISABLE_TRANSCRIPTION_SUBTITLES: True
+  DISABLE_RINGING: False
+  AUDIO_LEVEL_PRIMARY_COLOR: 'rgba(255,255,255,0.4)'
+  AUDIO_LEVEL_SECONDARY_COLOR: 'rgba(255,255,255,0.2)'
+  POLICY_LOGO: Null
+  LOCAL_THUMBNAIL_RATIO: '16 / 9' # 16:9
+  REMOTE_THUMBNAIL_RATIO: 1 # 1:1
+  LIVE_STREAMING_HELP_LINK: 'https://jitsi.org/live'
+  MOBILE_APP_PROMO: True
+  MOBILE_DOWNLOAD_LINK_ANDROID: 'https://play.google.com/store/apps/details?id=org.jitsi.meet'
+  MOBILE_DOWNLOAD_LINK_F_DROID: 'https://f-droid.org/en/packages/org.jitsi.meet/'
+  MOBILE_DOWNLOAD_LINK_IOS: 'https://itunes.apple.com/us/app/jitsi-meet/id1165103905'
+  MAXIMUM_ZOOMING_COEFFICIENT: 1.3
+  SUPPORT_URL: https://community.jitsi.org/
+  CONNECTION_INDICATOR_AUTO_HIDE_ENABLED: True
+  CONNECTION_INDICATOR_AUTO_HIDE_TIMEOUT: 5000
+  CONNECTION_INDICATOR_DISABLED: False
+  VIDEO_QUALITY_LABEL_DISABLED: False
+  RECENT_LIST_ENABLED: True
+  OPTIMAL_BROWSERS: 
+    - chrome
+    - chromium
+    - firefox
+    - nwjs
+    - electron
+    - safari
+  UNSUPPORTED_BROWSERS: []
+  AUTO_PIN_LATEST_SCREEN_SHARE: remote-only
+  DISABLE_PRESENCE_STATUS: False
+  DISABLE_JOIN_LEAVE_NOTIFICATIONS: False
+  SHOW_CHROME_EXTENSION_BANNER: False
+  ENABLE_DIAL_OUT: "{{ (jitsi_jigasi_sip_server is defined) | ternary(True, False) }}"
+
+jitsi_meet_interface_conf_extra: {}
+jitsi_meet_interface_conf: "{{ jitsi_meet_interface_conf_base | combine(jitsi_meet_interface_conf_extra, recursive=True) }}"
+
+# You can customize strings here (lang/main-XX.json)
+jitsi_meet_custom_lang:
+  fr:
+    welcomepage:
+      headerSubtitle: >-
+        La vidéoconférence simple, sécurisée, libre
+      startMeeting: >-
+        C'est parti !
+      appDescription: >-
+        Choisissez un nom ou bien laisser le système en créer un pour vous,
+        partagez le lien avec qui vous voulez.
+        Jamais la vidéoconférence n'a été aussi simple
+
+
+# If jitsi_auth is ldap
+# We inherit values from prosody if available, or we try to get values from ad_auth or ldap_auth
+jitsi_ldap_base: "{{ prosody_ldap_base | default(ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_user_base | default('ou=Users') + ',' + ldap_base | default(ansible_domain | regex_replace('\\.','dc=')))) }}"
+jitsi_ldap_servers: "{{ prosody_ldap_server | default(ad_ldap_servers | default([ad_auth | default(False) | ternary(ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_uri | default('ldap://' + ansible_domain) | urlsplit('hostname'))]))}}"
+jitsi_ldap_bind_dn: "{{ prosody_ldap_bind_dn | default(None) }}"
+jitsi_ldap_bind_pass: "{{ prosody_ldap_bind_pass | default(None) }}"
+jitsi_ldap_filter: "{{ prosody_ldap_filter | default(ad_auth | default(False) | ternary('(&(objectClass=user)(sAMAccountName=%s))','(&(objectClass=inetOrgPerson)(uid=%s))')) }}"
+jitsi_ldap_starttls: "{{ prosody_ldap_starttls | default(True) }}"
+
+# Jigasi settings
+
+# Default room on which to connect inbound SIP calls
+# if no Jitsi-Conference-Room SIP header is found
+jitsi_jigasi_default_room: sip
+
+# SIP settings
+#jitsi_jigasi_sip_user:
+#jitsi_jigasi_sip_secret:
+#jitsi_jigasi_sip_server:
+jitsi_jigasi_sip_port: 5060
+jitsi_jigasi_sip_transport: UDP
+
+jitsi_jigasi_xmpp_user: jigasi
+jitsi_jigasi_xmpp_domain: "{{ jitsi_auth_domain }}"
+# Password to auth as an XMPP user. A random one will be created if missing
+#jitsi_jigasi_xmpp_pass:
+
+# conferenceMapper is used for inbound SIP call
+jitsi_confmapper_port: 8823
+jitsi_confmapper_src_ip: []
+jitsi_confmapper_conf_base:
+  numbers: {}
+  # numbers:
+  #   FR:
+  #     - +335 99 99 99 99
+  #     - +339 88 88 88 88
+  #   EN:
+  #     - 555 555 555
+  port: "{{ jitsi_confmapper_port }}"
+  host: 0.0.0.0
+  expire_seconds: 86400
+  id_max_length: 4
+  db_file: "{{ jitsi_root_dir }}/data/confmapper/confmapper.sqlite"
+jitsi_confmapper_conf_extra: {}
+jitsi_confmapper_conf: "{{ jitsi_confmapper_conf_base | combine(jitsi_confmapper_conf_extra, recursive=True) }}"
+
+# This is for Jibri integration
+jitsi_jibri_xmpp_user: jibri
+# jitsi_jibri_xmpp_pass: s3cr3t.
+jitsi_jibri_recorder_xmpp_user: recorder
+# jitsi_jibri_recorder_xmpp_pass: p@ssw0rd
+

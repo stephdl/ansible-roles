@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable the service
+  service: name=rabbitmq-server state=started enabled=True
+  tags: rabbitmq

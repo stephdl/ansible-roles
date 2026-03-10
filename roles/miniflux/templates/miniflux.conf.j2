@@ -1,0 +1,19 @@
+DATABASE_URL="host={{ miniflux_db_server }} port={{ miniflux_db_port }} user={{ miniflux_db_user }} password='{{ miniflux_db_pass }}' dbname={{ miniflux_db_name }} sslmode=disable"
+LISTEN_ADDR=0.0.0.0
+PORT={{ miniflux_port }}
+BASE_URL={{ miniflux_public_url }}
+RUN_MIGRATIONS=1
+CREATE_ADMIN=1
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD={{ miniflux_admin_pass | quote }}
+PROXY_IMAGES=all
+POLLING_FREQUENCY=15
+BATCH_SIZE=50
+{% if miniflux_oidc %}
+OAUTH2_PROVIDER=oidc
+OAUTH2_CLIENT_ID={{ miniflux_oidc_id | quote }}
+OAUTH2_CLIENT_SECRET={{ miniflux_oidc_secret | quote }}
+OAUTH2_REDIRECT_URL={{ miniflux_oidc_callback_url }}
+OAUTH2_OIDC_DISCOVERY_ENDPOINT={{ miniflux_oidc_disco_url }}
+OAUTH2_USER_CREATION=1
+{% endif %}

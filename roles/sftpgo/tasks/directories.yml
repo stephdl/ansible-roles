@@ -1,0 +1,29 @@
+---
+
+- name: Create directories
+  file: path={{ sftpgo_root_dir }}/{{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  loop:
+    - dir: /
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+    - dir: meta
+      mode: 700
+    - dir: archives
+      omde: 700
+    - dir: tmp
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+    - dir: etc
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+    - dir: bin
+    - dir: data
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+    - dir: data/home
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+    - dir: backup
+      owner: "{{ sftpgo_user }}"
+      mode: 700
+  tags: sftpgo

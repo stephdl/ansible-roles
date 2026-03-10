@@ -1,0 +1,10 @@
+---
+
+- name: Disable SELinux
+  lineinfile: regexp='^SELINUX=.*' line='SELINUX=disabled' path=/etc/selinux/config
+  register: selinux_disabled
+  when: ansible_selinux.status == 'enabled' and ansible_selinux.mode != 'permissive'
+
+- name: Set permissive mode
+  command: setenforce 0
+  when: ansible_selinux.status == 'enabled' and ansible_selinux.mode != 'permissive'

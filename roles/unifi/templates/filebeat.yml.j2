@@ -1,0 +1,5 @@
+- type: log
+  enabled: True
+  paths:
+    - {{ unifi_root_dir }}/app/logs/*.log
+  exclude_files: ['\.\d+$']

@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable the service
+  service: name=postgres-exporter state=started enabled=True
+  tags: pg

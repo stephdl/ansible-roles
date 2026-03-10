@@ -1,0 +1,30 @@
+[php{{ item }}]
+listen.owner = root
+listen.group = {{ httpd_group }}
+listen.mode = 0660
+pm = dynamic
+pm.max_children = {{ httpd_php_pool_max_children | default('15') }}
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 5m
+listen = /run/php-fpm/php{{ item }}.sock
+user = {{ httpd_user }}
+group = {{ httpd_group }}
+
+
+php_admin_value[sendmail_path] = /usr/sbin/sendmail -t -i -f php@{{ ansible_domain }}
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = {{ php_pool_memory_limit | default('128M') }}
+php_value[session.save_handler] = files
+{% if '7' in item|string %}
+{% set var_lib_path = "/var/opt/remi/php" ~ item ~ "/lib/php" %}
+{% else %}
+{% set var_lib_path = "/opt/remi/php" ~ item ~ "/root/var/lib" %}
+{% endif %}
+php_admin_value[session.save_path] = {{ var_lib_path }}/session
+php_value[soap.wsdl_cache_dir]  = {{ var_lib_path }}/wsdlcache
+php_value[opcache.file_cache]  = {{ var_lib_path }}/opcache

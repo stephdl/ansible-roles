@@ -1,0 +1,5 @@
+---
+
+- name: restart vaultwarden
+  service: name=vaultwarden state=restarted
+  when: not vaultwarden_started.changed

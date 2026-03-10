@@ -1,0 +1,6 @@
+#!/bin/sh
+
+export JAVA_HOME=/usr/lib/jvm/jre-openjdk
+export M2_HOME={{ mvn_root_dir }}/apache-maven
+export MAVEN_HOME={{ mvn_root_dir }}/apache-maven
+export PATH=${M2_HOME}/bin:${PATH}

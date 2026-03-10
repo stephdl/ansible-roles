@@ -1,0 +1,9 @@
+---
+
+  # Wipe the local cache
+- name: restart sssd
+  file: path=/var/lib/sss/db/cache_{{ ad_realm | upper }}.ldb state=absent
+  notify: really restart sssd
+
+- name: really restart sssd
+  service: name=sssd state=restarted

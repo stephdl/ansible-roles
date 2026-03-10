@@ -1,0 +1,30 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+    - vars/defaults.yml
+  tags: repo
+
+- name: Remove remi-release
+  yum: name=remi-release state=absent
+  tags: repo
+
+- name: Configure Remi repository
+  yum_repository:
+    name: remi
+    description: Remi's RPM repository for Enterprise Linux
+    baseurl: http://rpms.remirepo.net/enterprise/$releasever/remi/$basearch/
+    gpgcheck: True
+    gpgkey: "{{ repo_remi_gpg_url }}"
+    exclude: "{{ (ansible_distribution_major_version is version('8','<')) | ternary('composer,php-symfony*','') }}"
+  tags: repo
+
+# Note : we use a template here because yum_repository doesn't support module_hotfix attribute
+- name: Configure Remi modular repository
+  template: src=remi-modular.repo.j2 dest=/etc/yum.repos.d/remi-modular.repo
+  when: ansible_distribution_major_version is version('8','>=')
+  tags: repo

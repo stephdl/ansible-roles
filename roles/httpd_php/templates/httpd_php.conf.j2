@@ -1,0 +1,5 @@
+<FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/php{{ httpd_php_default_version | default('71') }}.sock|fcgi://localhost"
+    RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
+</FilesMatch>

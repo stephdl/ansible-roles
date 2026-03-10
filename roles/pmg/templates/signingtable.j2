@@ -1,0 +1,3 @@
+{% for domain in pmg_dkim_sign | sort(attribute='priority') %}
+{{ domain.domain }} {{ (domain.domain == '*') | ternary('default',domain.domain) }}
+{% endfor %}

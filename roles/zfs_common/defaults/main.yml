@@ -1,0 +1,8 @@
+---
+
+# zfs_arc_min: 10%
+# zfs_arc_max: 50%
+
+# You can define arbitrary param here
+zfs_mod_params: {}
+

@@ -1,0 +1,12 @@
+---
+
+- name: Merge timer settings with defaults
+  set_fact: system_timers_conf={{ system_timers_conf | default([]) + [ system_timer_defaults | combine(item, recursive=True) ] }}
+  loop: "{{ system_timers }}"
+  tags: system,cron
+- set_fact: system_timers={{ system_timers_conf | default([]) }}
+  tags: system,cron
+
+- name: Build a list of managed timers
+  set_fact: system_timers_managed={{ system_timers | map(attribute='id') | list }}
+  tags: system,cron

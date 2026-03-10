@@ -1,0 +1,27 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - zabbix-server-mysql
+      - zabbix-web
+      - zabbix-java-gateway
+      - zabbix-get
+      - mariadb
+      - fping
+      - patrix
+      - perl-JSON
+      - perl-IO-Socket-SSL
+      - perl-libwww-perl
+      - perl-URI
+      - perl-DateTime-Format-ISO8601
+      - perl-Getopt-Long
+      - perl-Pod-Usage
+  tags: zabbix
+
+- name: Install backup scripts
+  template: src={{ item }}_backup.sh.j2 dest=/etc/backup/{{ item }}.d/zabbix.sh mode=700
+  loop:
+    - pre
+    - post
+  tags: zabbix

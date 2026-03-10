@@ -1,0 +1,10 @@
+---
+- name: restart filebeat
+  service: name=filebeat state=restarted
+  when: filebeat_output_hosts | length > 0
+
+- name: restart journalbeat
+  service: name=journalbeat state=restarted
+  when:
+    - filebeat_output_hosts | length > 0
+    - ansible_service_mgr == 'systemd'

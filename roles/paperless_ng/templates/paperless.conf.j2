@@ -1,0 +1,35 @@
+PAPERLESS_REDIS={{ paperless_redis_url }}
+PAPERLESS_DBHOST={{ paperless_db_server }}
+PAPERLESS_DBPORT={{ paperless_db_port }}
+PAPERLESS_DBNAME={{ paperless_db_name }}
+PAPERLESS_DBUSER={{ paperless_db_user }}
+PAPERLESS_DBPASS={{ paperless_db_pass }}
+PAPERLESS_CONSUMPTION_DIR={{ paperless_consume_dir }}
+PAPERLESS_CONSUMER_POLLING=60
+PAPERLESS_DATA_DIR={{ paperless_root_dir }}/data
+PAPERLESS_MEDIA_ROOT={{ paperless_root_dir }}/media
+PAPERLESS_STATICDIR={{ paperless_root_dir }}/static
+PAPERLESS_CONVERT_TMPDIR={{ paperless_root_dir }}/tmp
+PAPERLESS_SCRATCH_DIR={{ paperless_root_dir }}/tmp
+PAPERLESS_FILENAME_FORMAT={created_year}/{created_month}/{title}
+PAPERLESS_LOGGING_DIR={{ paperless_root_dir }}/log
+PAPERLESS_SECRET_KEY={{ paperless_secret_key }}
+PAPERLESS_ALLOWED_HOSTS={{ paperless_public_url | urlsplit('hostname') }}
+PAPERLESS_CORS_ALLOWED_HOSTS={{ paperless_public_url }}
+PAPERLESS_FORCE_SCRIPT_NAME={{ paperless_public_url | urlsplit('path') | regex_replace('/$','') }}
+PAPERLESS_STATIC_URL={{ paperless_public_url | urlsplit('path') | regex_replace('/$','') }}/static/
+PAPERLESS_OCR_LANGUAGE={{ paperless_ocr_lang }}
+PAPERLESS_TASK_WORKERS=2
+{% if system_tz is defined %}
+PAPERLESS_TIME_ZONE={{ system_tz }}
+{% endif %}
+PAPERLESS_CONSUMER_DELETE_DUPLICATES=True
+PAPERLESS_CONSUMER_RECURSIVE=True
+PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS=True
+{% if paperless_auth_header is defined %}
+PAPERLESS_ENABLE_HTTP_REMOTE_USER=True
+PAPERLESS_HTTP_REMOTE_USER_HEADER_NAME={{ paperless_auth_header }}
+{% endif %}
+{% if paperless_ignore_dates | length > 0 %}
+PAPERLESS_IGNORE_DATES={{ paperless_ignore_dates | join(',') }}
+{% endif %}

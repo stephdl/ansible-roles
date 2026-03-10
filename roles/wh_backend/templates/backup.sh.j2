@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+cd /opt/wh/{{ item.0.name }}/apps/{{ item.1.name }}
+# Remove old archives
+find archives/ -type f -mtime +2 -exec rm -f "{}" \;
+# Create the new daily archive, with a dump of the DB and the web, data and logs dir
+TS=$(date +%Y-%m-%d_%Hh%M)
+mysqldump --add-drop-table --single-transaction \
+    --host={{ (wh_default_app | combine(item.1)).database.server | default(mysql_server) }} \
+    --user={{ item.0.name[0:7] }}_{{ item.1.name[0:7] }} \
+    --password="{{ (wh_default_app | combine(item.1)).database.pass | default((wh_pass_seed | password_hash('sha256', 65534 | random(seed=item.0.name + item.1.name) | string))[9:27] ) }}" \
+    {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }} | \
+    lz4 -c > {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }}.sql.lz4
+tar cf archives/$TS.tar {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }}.sql.lz4 data web logs
+rm -f {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }}.sql.lz4
+pushd archives
+nice -n 9 xz --force --threads=0 $TS.tar
+popd

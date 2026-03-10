@@ -1,0 +1,15 @@
+{% if pmg_bayes_imap_server is defined %}
+IMAP_SA_LEARN_SERVER={{ pmg_bayes_imap_server }}
+{% endif %}
+{% if pmg_bayes_imap_user is defined %}
+IMAP_SA_LEARN_USER={{ pmg_bayes_imap_user }}
+{% endif %}
+{% if pmg_bayes_imap_pass is defined %}
+IMAP_SA_LEARN_PASSWORD={{ pmg_bayes_imap_pass | quote }}
+{% endif %}
+IMAP_SA_LEARN_SPAMDIR={{ pmg_bayes_imap_spam }}
+IMAP_SA_LEARN_HAMDIR={{ pmg_bayes_imap_ham }}
+IMAP_SA_LEARN_SECURITY={{ pmg_bayes_imap_security }}
+{% if pmg_bays_imap_attachment %}
+IMAP_SA_LEARN_ATTACHMENT=1
+{% endif %}

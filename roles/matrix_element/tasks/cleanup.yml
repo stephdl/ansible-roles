@@ -1,0 +1,16 @@
+---
+
+- name: Remove temp files
+  file: path={{ element_root_dir }}/tmp/{{ item }} state=absent
+  loop:
+    - element-v{{ element_version }}.tar.gz
+    - element-v{{ element_version }}
+  tags: matrix
+
+- name: Remove old Riot install
+  file: path={{ item }} state=absent
+  loop:
+    - /opt/matrix/riot
+    - /etc/httpd/ansible_conf.d/10-riot_riot.conf
+  notify: reload httpd
+  tags: matrix

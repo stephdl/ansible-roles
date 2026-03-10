@@ -1,0 +1,5 @@
+---
+
+- name: restart synapse
+  service: name=matrix-synapse state=restarted
+  when: not synapse_started.changed

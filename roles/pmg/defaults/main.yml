@@ -1,0 +1,43 @@
+---
+
+pmg_api_ports: [8006]
+pmg_api_src_ip: "{{ trusted_ip | default(['127.0.0.1']) }}"
+
+pmg_smtp_ext_ports:
+  - 25
+pmg_smtp_ext_src_ip:
+  - 0.0.0.0/0
+
+pmg_smtp_int_ports:
+  - 26
+pmg_smtp_int_src_ip: "{{ trusted_ip | default(['127.0.0.1']) }}"
+
+pmg_dkim_sign: []
+# pmg_dkim_sign:
+#   - domain: '*'
+#     selector: default
+#     priority: 999
+
+# opendkim will resolv names itself,
+# bypassing /etc/resolv.conf by default. Set here a list of DNS server
+# to use if you want to use specific name servers
+pmg_dkim_nameservers: []
+
+# You can give an imap account, and PMG will fetch email and learn as spam/ham
+# pmg_bayes_imap_server: imap.domain.net
+# Security used. Can be none, starttls or tls
+pmg_bayes_imap_security: starttls
+# pmg_bayes_imap_user: pmg-sa-learn@domain.tld
+# pmg_bayes_imap_pass: XXXX
+pmg_bayes_imap_spam: Spam
+pmg_bayes_imap_ham: Ham
+# If spam/ham are just plain email, set it to false. But if they are attached
+# as message/rfc822 (it's the case for example with Zimbra spam / non spam buttons)
+# then set it to true. If true, the script will extract the first rfc822 attachment
+# and feed it to sa-learn instead of feeding the outer email
+pmg_bays_imap_attachment: False
+
+# Should we use the openfish feeds. They should only be used for personal usage
+# unless allowed by openphish. See https://openphish.com/feed.txt
+pmg_use_openphish: False
+

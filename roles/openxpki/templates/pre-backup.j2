@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump \
+{% if pki_db_server not in [ '127.0.0.1', 'localhost' ] %}
+       	--user={{ pki_db_user }} \
+        --password={{ pki_db_pass | quote }} \
+        --host={{ pki_db_server }} \
+{% endif %}
+        --quick --single-transaction \
+        --add-drop-table {{ pki_db_name }} | zstd -c > {{ pki_root_dir }}/backup/{{ pki_db_name }}.sql.zst

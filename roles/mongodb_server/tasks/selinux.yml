@@ -1,0 +1,14 @@
+---
+
+- name: Set correct SELinux label
+  sefcontext:
+    target: "{{ mongo_db_path }}"
+    setype: mongod_var_lib_t
+    state: present
+  tags: mongo
+
+- name: Restore SELinux contexts
+  command: restorecon -R {{ mongo_db_path }}
+  changed_when: False
+  tags: mongo
+

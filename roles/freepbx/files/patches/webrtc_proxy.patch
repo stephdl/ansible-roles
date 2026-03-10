@@ -1,0 +1,21 @@
+--- /opt/freepbx/web/admin/modules/webrtc/Webrtc.class.php.orig	2019-11-12 14:47:05.904759608 +0100
++++ /opt/freepbx/web/admin/modules/webrtc/Webrtc.class.php	2019-11-12 14:55:46.392864447 +0100
+@@ -374,13 +374,14 @@
+ 		$prefix = $this->FreePBX->Config->get('HTTPPREFIX');
+ 		$suffix = !empty($prefix) ? "/".$prefix."/ws" : "/ws";
+ 
+-		if($secure && !$this->FreePBX->Config->get('HTTPTLSENABLE')) {
+-			return array("status" => false, "message" => _("HTTPS is not enabled for Asterisk"));
+-		}
++		//if($secure && !$this->FreePBX->Config->get('HTTPTLSENABLE')) {
++		//	return array("status" => false, "message" => _("HTTPS is not enabled for Asterisk"));
++		//}
+ 
+ 		$type = ($this->FreePBX->Config->get('HTTPTLSENABLE') && $secure) ? 'wss' : 'ws';
+ 		$port = ($this->FreePBX->Config->get('HTTPTLSENABLE') && $secure) ? $this->FreePBX->Config->get('HTTPTLSBINDPORT') : $this->FreePBX->Config->get('HTTPBINDPORT');
+-		$results['websocket'] = !empty($results['websocket']) ? $results['websocket'] : $type.'://'.$sip_server.':'.$port.$suffix;
++		//$results['websocket'] = !empty($results['websocket']) ? $results['websocket'] : $type.'://'.$sip_server.':'.$port.$suffix;
++		$results['websocket'] = !empty($results['websocket']) ? $results['websocket'] : 'wss://'.$_SERVER['HTTP_HOST'].'/'.$this->FreePBX->Config->get('HTTPPREFIX').'/ws';
+ 		try {
+ 			$stunaddr = $this->FreePBX->Sipsettings->getConfig("webrtcstunaddr");
+ 			$stunaddr = !empty($stunaddr) ? $stunaddr : $this->FreePBX->Sipsettings->getConfig("stunaddr");

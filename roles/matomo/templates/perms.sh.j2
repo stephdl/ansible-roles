@@ -1,0 +1,21 @@
+#!/bin/sh
+
+restorecon -R {{ matomo_root_dir }}
+chown root:root {{ matomo_root_dir }}
+chmod 700 {{ matomo_root_dir }}
+setfacl -k -b {{ matomo_root_dir }}
+setfacl -m u:{{ matomo_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ matomo_root_dir }}
+chown -R root:root {{ matomo_root_dir }}/web
+chown -R {{ matomo_php_user | default('apache') }} {{ matomo_root_dir }}/web/plugins
+chown {{ matomo_php_user | default('apache') }} {{ matomo_root_dir }}/web/matomo.js
+find {{ matomo_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ matomo_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown -R :{{ matomo_php_user }} {{ matomo_root_dir }}/web/{config,tmp,misc}/
+find {{ matomo_root_dir }}/web/{config,tmp,misc} -type f -exec chmod 660 "{}" \;
+find {{ matomo_root_dir }}/web/{config,tmp,misc} -type d -exec chmod 770 "{}" \;
+chown -R {{ matomo_php_user }} {{ matomo_root_dir }}/tmp/*
+find {{ matomo_root_dir }}/tmp/ -type f -exec chmod 660 "{}" \;
+find {{ matomo_root_dir }}/tmp/ -type d -exec chmod 770 "{}" \;
+chown :{{ matomo_php_user }} {{ matomo_root_dir }}/web/piwik.js
+chmod 664 {{ matomo_root_dir }}/web/piwik.js
+

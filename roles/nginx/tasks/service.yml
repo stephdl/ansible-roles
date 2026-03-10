@@ -1,0 +1,42 @@
+---
+
+- name: Customize systemd unit
+  copy:
+    content: |
+      [Unit]
+      Description=The nginx HTTP and reverse proxy server
+      After=syslog.target network-online.target remote-fs.target nss-lookup.target
+      Wants=network-online.target
+      
+      [Service]
+      Type=forking
+      PIDFile=/run/nginx.pid
+      ExecStartPre={{ nginx_openresty | ternary('/usr/local/openresty/nginx/sbin/nginx','/sbin/nginx') }} -t
+      ExecStartPre=/bin/rm -f /run/nginx.pid
+      ExecStart={{ nginx_openresty | ternary('/usr/local/openresty/nginx/sbin/nginx','/sbin/nginx') }}
+      ExecReload=/bin/kill -s HUP $MAINPID
+      ExecStop=/bin/kill -s QUIT $MAINPID
+      PrivateTmp=true
+      Restart=on-failure
+      StartLimitInterval=0
+      RestartSec=5
+      
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/nginx.service
+  register: nginx_unit
+  notify: restart nginx
+  tags: web
+
+- name: Remove obsolete unit conf
+  file: path=/etc/systemd/system/nginx.service.d/ansible.conf state=absent
+  tags: web
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: nginx_unit.changed
+  tags: web
+
+- name: Start and enable the service
+  service: name=nginx state=started enabled=True
+  tags: web

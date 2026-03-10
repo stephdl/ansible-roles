@@ -1,0 +1,10 @@
+#!/bin/sh
+
+{% if letsencrypt_auto_renew | default(True) %}
+sleep $[ $RANDOM % 900 ];
+systemd-cat dehydrated --cron --keep-going
+{% endif %}
+
+{% if letsencrypt_revoke_old_certs | default(False) and ansible_os_family == 'RedHat' %}
+systemd-cat dehydrated_revoke
+{% endif %}

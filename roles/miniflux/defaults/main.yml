@@ -1,0 +1,43 @@
+---
+
+# Version to install
+miniflux_version: 2.0.33
+# URL of the binary to install
+miniflux_bin_url: https://github.com/miniflux/v2/releases/download/{{ miniflux_version }}/miniflux-linux-amd64
+# Expected sha1 of the binary
+miniflux_bin_sha1: 4a0b48505cb21c12ea1e2e78dffa08ba76d8375c
+# Should ansible handle upgrades ? If false, only initial install will be done
+miniflux_manage_upgrade: True
+
+# Top dir where miniflux will be installed
+miniflux_root_dir: /opt/miniflux
+# User account under which miniflux will run
+miniflux_user: miniflux
+
+miniflux_db_server: "{{ pg_server | default('localhost') }}"
+miniflux_db_port: 5432
+miniflux_db_name: miniflux
+miniflux_db_user: miniflux
+# A random one will be created and stored in the meta sub dir
+# if not defined
+# miniflux_db_pass: S3cR3t.
+
+# Port on which miniflux will bind
+miniflux_port: 8085
+# List of IP / CIDR for which miniflux_port will be accessible (if ansible manage iptables)
+miniflux_src_ip: []
+
+# Public URL. Must be adapted if you use a reverse proxy
+miniflux_public_url: http://{{ inventory_hostname }}:{{ miniflux_port }}/
+
+# Ansible will create a default admin account, you can set the password
+# If not defined, a random one will be created and store in meta/ansible_admin_pass
+# miniflux_admin_pass: p@ssw0rd
+
+# OpenID Connect auth
+miniflux_oidc: False
+miniflux_oidc_id: miniflux
+# miniflux_oidc_secret: S3cr3T.
+miniflux_oidc_callback_url: "{{ miniflux_public_url | regex_replace('/$','') }}/oauth2/oidc/callback"
+miniflux_oidc_disco_url: https://sso.{{ ansible_domain }}
+

@@ -1,0 +1,52 @@
+---
+
+fpbx_version: 15.0
+fpbx_archive_sha1: 42aae0f245a5d6297f8f2154281f28436663ee33
+fpbx_archive_url: https://mirror.freepbx.org/modules/packages/freepbx/freepbx-{{ fpbx_version }}-latest.tgz
+fpbx_root_dir: /opt/freepbx
+fpbx_manage_upgrade: True
+
+fpbx_db_server: localhost
+fpbx_db_user: freepbx
+fpbx_db_name: freepbx
+fpbx_cdr_db_name: asteriskcdrdb
+# fpbx_db_pass: secret
+
+fpbx_php_version: 56
+
+# fbx_alias: /freepbx
+# fpbx_src_ip:
+#   - 192.168.281.0/24
+
+# fpbx_manager_pass: secret
+# Can be set to database to use internal auth. None is used when protecting accessing with the web server
+fpbx_auth_type: none
+
+fpbx_mgm_tcp_ports: [ 5038 ]
+fpbx_mgm_udp_ports: []
+fpbx_voip_tcp_ports:
+  - 5060          # SIP, chan_pjsip
+  - 5061          # SIP, chan_sip
+fpbx_voip_udp_ports:
+  - 5060          # SIP, chan_pjsip
+  - 5160          # SIP, chan_sip
+  - '10000:20000' # RTP
+  - 4520          # dundi
+  - 4569          # IAX2
+fpbx_prov_tcp_ports: [ 21 ]
+fpbx_prov_udp_ports: [ 69 ]
+fpbx_http_ports:
+  - 80     # Normal HTTP
+  - 8088   # UCP node
+  - 8001   # ast WS
+fpbx_mgm_src_ip: []
+fpbx_voip_src_ip: []
+fpbx_http_src_ip: "{{ httpd_src_ip }}"
+fpbx_prov_src_ip: "{{ fpbx_voip_src_ip }}"
+
+# Password used for provisioning. The user is phone
+# A random one is created if not set here
+# fpbx_phone_pass: s3crEt.
+
+# Set to your vhost if you use one
+# fpbx_vhost: https://tel.domain.net

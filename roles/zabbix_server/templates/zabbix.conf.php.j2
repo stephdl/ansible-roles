@@ -1,0 +1,15 @@
+<?php
+global $DB;
+$DB['TYPE']             = 'MYSQL';
+$DB['SERVER']           = '{{ zabbix_server_db_server }}';
+$DB['PORT']             = '{{ zabbix_server_db_port }}';
+$DB['DATABASE']         = '{{ zabbix_server_db_name }}';
+$DB['USER']             = '{{ zabbix_server_db_user }}';
+$DB['PASSWORD']         = '{{ zabbix_server_db_pass }}';
+$ZBX_SERVER             = 'localhost';
+$ZBX_SERVER_PORT        = '{{ zabbix_server_port }}';
+$IMAGE_FORMAT_DEFAULT   = IMAGE_FORMAT_PNG;
+{% if zabbix_server_version.stdout is version('5.0', '>=') %}
+$DB['DOUBLE_IEEE754'] = 'true';
+{% endif %}
+?>

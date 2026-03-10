@@ -1,0 +1,9 @@
+---
+
+- name: Create system user
+  user:
+    name: "{{ paperless_user }}"
+    shell: /bin/false
+    home: "{{ paperless_root_dir }}"
+    system: True
+  tags: ged

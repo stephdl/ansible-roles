@@ -1,0 +1,131 @@
+---
+
+# Synapse version to deploy
+synapse_version: 1.48.0
+
+# Should ansible handle Synapse upgrades ? If false, only initial install will be done
+synapse_manage_upgrade: True
+
+# Synapse install dir
+synapse_root_dir: /opt/matrix/synapse
+
+# User account which run the daemon
+synapse_user: synapse
+
+# Max amount of memory the daemon is allowed (in MB)
+synapse_max_mem: 4096
+
+# PostgreSQL
+synapse_pg_create_db: True
+synapse_pg_db_server: "{{ pg_server | default('localhost') }}"
+synapse_pg_db_port: 5432
+synapse_pg_db_name: synapse
+synapse_pg_db_user: synapse
+# synapse_pg_db_pass: secret
+
+# Server name. Mandatory
+# synapse_server_name: 
+# synapse_public_baseurl: https://matrix.example.com
+
+# Should synapse handle TLS
+synapse_tls: False
+
+# Limit of events for get and sync. -1 for no limit
+synapse_timeline_limit: -1
+
+# Ports and bind addresses
+synapse_tls_port: 8448
+synapse_tls_listen_ip:
+  - 0.0.0.0
+synapse_port: 8008
+synapse_listen_ip: 
+  - 0.0.0.0
+# List of IP able to access the ports
+synapse_tls_src_ip:
+  - 0.0.0.0/0
+synapse_src_ip:
+  - 0.0.0.0/0
+
+# You can restrict federation with a list of servers. * means everything
+# Empty list means no federation is allowed
+synapse_federation_domain_whitelist:
+  - '*'
+
+synapse_federation_ip_blacklist:
+  - 127.0.0.0/8
+  - 100.64.0.0/10
+  - 169.254.0.0/16
+
+# Limits
+synapse_upload_max_size: 20M
+
+# Limit number of messages and login
+synapse_rc_message_per_sec: 3
+synapse_rc_message_burst: 50
+synapse_rc_login_per_sec: 3
+synapse_rc_login_burst: 10
+
+# Registration settings
+synapse_enable_registration: False
+synapse_allow_guest_access: False
+# If set, allow registration if you know this key. Even if registration is otherwise disabled
+# synapse_registration_shared_secret:
+
+# URL Preview
+synapse_url_preview: True
+synapse_url_preview_ip_range_blacklist:
+  - '127.0.0.0/8'
+  - '10.0.0.0/8'
+  - '172.16.0.0/12'
+  - '192.168.0.0/16'
+  - '100.64.0.0/10'
+  - '169.254.0.0/16'
+synapse_url_preview_ip_range_whitelist: []
+synapse_url_preview_url_blacklist: []
+# synapse_url_preview_url_blacklist:
+#   - username: '*'
+#   - netloc: '*.example.org'
+#     path: /admin
+#   - scheme: http
+#   - netloc: '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+synapse_max_spider_size: 10M
+
+# Turn configuration, for VoIP/Video using WebRTC
+# synapse_turn_uris: 
+#   - turns:turn.example.com
+#   - turns:turn.example.com?transport=tcp
+# synapse_turn_shared_secret:
+# Set this to true if you want guests to do VoIP/Video calls too
+synapse_turn_allow_guests: True
+
+synapse_email_notifs: True
+synapse_smtp_from: "Your Friendly %(app)s Home Server <noreply@{{ ansible_domain }}>"
+synapse_app_name: Matrix
+#synapse_element_base_url: https://messenger.example.com
+
+# Log level
+synapse_log_level: ERROR
+
+# Can be internal, ldap, rest or oidc (several choices can be made)
+synapse_auth:
+  - internal
+
+# If auth is ldap
+synapse_ldap_uri: "{{ ldap_uri | default('ldap://ldap.example.com:389') }}"
+synapse_ldap_start_tls: True
+synapse_ldap_user_base: "{{ ad_ldap_user_search_base | default(ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'dc=example,dc=org')) }}"
+synapse_ldap_attr_uid: "{{ ad_auth | default(False) | ternary('sAMAccountName', 'uid') }}"
+synapse_ldap_attr_email: mail
+synapse_ldap_attr_name: cn
+synapse_ldap_filter: "{{ ad_auth | default(False) | ternary('(&(objectCategory=person)(objectClass=user)(primaryGroupId=513))', '(objectClass=inetOrgPerson)') }}"
+
+# if auth is rest
+synapse_auth_rest_uri: http://localhost:8083
+
+# if auth is oidc
+synapse_oidc_server: https://sso.domain.com
+synapse_oidc_client: matrix
+synapse_oidc_secret: XXXXX
+# Jinja2 template to for the local part of the MXID.
+synapse_oidc_localpart: "{{ '{{ user.sub }}' }}"
+synapse_oidc_display_name: "{{ '{{ user.name }}' }}"

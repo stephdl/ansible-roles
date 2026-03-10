@@ -1,0 +1,5 @@
+---
+
+- name: Create g2cs user account
+  user: name=g2cs system=True shell=/sbin/nologin
+  tags: cs

@@ -1,0 +1,7 @@
+[Unit]
+Description=Sync LDAP accounts into Zimbra for hosted clients
+
+[Service]
+Type=oneshot
+ExecStart=/opt/zimbra/bin/zmldapsync --config /opt/zimbra/conf/zmldapsync-wh.yml
+TimeoutSec=300

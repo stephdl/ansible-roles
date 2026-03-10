@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ pim_root_dir }}/archives/{{ pim_current_version }}"
+  tags: pim
+

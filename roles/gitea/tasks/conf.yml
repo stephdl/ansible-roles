@@ -1,0 +1,34 @@
+---
+
+- name: Create random tokens
+  shell: "{{ gitea_root_dir }}/bin/gitea generate secret {{ item }} > {{ gitea_root_dir }}/meta/ansible_{{ item }}"
+  args:
+    creates: "{{ gitea_root_dir }}/meta/ansible_{{ item }}"
+  with_items:
+    - INTERNAL_TOKEN
+    - LFS_JWT_SECRET
+    - SECRET_KEY
+    - JWT_SECRET
+  tags: gitea
+
+- name: Read random tokens
+  command: cat {{ gitea_root_dir }}/meta/ansible_{{ item }}
+  with_items:
+    - INTERNAL_TOKEN
+    - LFS_JWT_SECRET
+    - SECRET_KEY
+    - JWT_SECRET
+  changed_when: False
+  register: gitea_tokens
+  tags: gitea
+
+- name: Deploy gitea configuration
+  template: src=app.ini.j2 dest={{ gitea_root_dir }}/etc/app.ini owner=root group=gitea mode=0660
+  notify: restart gitea
+  tags: gitea
+
+- name: Set optimal permissions
+  command: "{{ gitea_root_dir }}/perms.sh"
+  changed_when: False
+  tags: gitea
+

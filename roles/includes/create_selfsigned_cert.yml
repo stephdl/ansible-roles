@@ -1,0 +1,20 @@
+---
+
+- name: Ensure openssl is installed
+  package: name=openssl
+
+- name: Create cert dir
+  file: path={{ cert_path | dirname }} state=directory
+
+- name: Create private key directory
+  file: path={{ cert_key_path | dirname }} state=directory owner={{ cert_user | default(omit) }}
+
+- name: Create the self signed certificate
+  command: openssl req -x509 -newkey rsa:{{ cert_key_size | default(4096) }} \
+           -subj "{{ cert_subj | default('/C=FR/ST=Aquitaine/L=Firewall Services/O=IT Security/CN=' + inventory_hostname) }}" \
+           -nodes -keyout {{ cert_key_path }} -out {{ cert_path }} -days {{ cert_validity | default(3650) }}
+  args:
+    creates: "{{ cert_path }}"
+
+- name: Restrict permissions of the private key
+  file: path={{ cert_key_path }} owner={{ cert_user | default(omit) }} group={{ cert_user | default(omit) }} mode=600

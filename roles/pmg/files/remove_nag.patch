@@ -1,0 +1,11 @@
+--- /usr/share/perl5/PMG/API2/Subscription.pm.orig	2018-10-19 09:00:37.950836918 +0200
++++ /usr/share/perl5/PMG/API2/Subscription.pm	2018-10-19 09:00:45.782516677 +0200
+@@ -79,7 +79,7 @@
+ 	my $info = PVE::INotify::read_file('subscription');
+ 	if (!$info) {
+ 	    return {
+-		status => "NotFound",
++		status => "Active",
+ 		message => "There is no subscription key",
+ 		serverid => $server_id,
+ 		url => $url,

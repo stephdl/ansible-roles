@@ -1,0 +1,9 @@
+[Unit]
+Description=Regular ZFS pool scrub
+
+[Timer]
+OnCalendar={{ zfs_scrub_freq }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

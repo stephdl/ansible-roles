@@ -1,0 +1,14 @@
+[Unit]
+Description=Web Hosting ACL monitor daemon
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/wh-acld
+PrivateTmp=yes
+PrivateDevices=yes
+MemoryLimit=100M
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

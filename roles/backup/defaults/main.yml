@@ -1,0 +1,36 @@
+---
+
+# The shell of the lbkp account
+backup_shell: '/bin/bash'
+
+# List of commands lbkp will be allowed to run as root, with sudo
+backup_sudo_base_commands:
+  - /usr/bin/rsync
+  - /usr/local/bin/pre-backup
+  - /usr/local/bin/post-backup
+  - /bin/tar
+  - /bin/gtar
+backup_sudo_extra_commands: []
+backup_sudo_commands: "{{ backup_sudo_base_commands + backup_sudo_extra_commands }}"
+
+# List of ssh public keys to deploy
+backup_ssh_keys: []
+
+# Options to set for the ssh keys, to restrict what they can do
+backup_ssh_keys_options:
+  - no-X11-forwarding
+  - no-agent-forwarding
+  - no-pty
+
+# List of IP address allowed to use the ssh keys
+# Empty list means no restriction
+backup_src_ip: []
+
+# Custom pre / post script
+backup_pre_script: |
+  #!/bin/bash -e
+  # Nothing to do
+backup_post_script: |
+  #!/bin/bash -e
+  # Nothing to do
+...

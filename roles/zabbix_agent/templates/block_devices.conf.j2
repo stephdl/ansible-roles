@@ -1,0 +1,6 @@
+{% if zabbix_dev_disco.rc == 0 %}
+# Discover block devices
+UserParameter=vfs.dev.discovery,/var/lib/zabbix/bin/disco_block_devices
+{% else %}
+# vfs.dev.discovery is natively supported, not UserParameter needed
+{% endif %}

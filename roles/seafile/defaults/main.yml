@@ -1,0 +1,117 @@
+---
+
+# seafile_license: |
+#   #Seafile server licence
+
+#   Name = "Firewall Services #20193111573"
+#   Licencetype = "User"
+#   LicenceKEY = "XXX"
+#   ProductID = "Seafile server"
+#   Expiration = "2020-01-09"
+#   MaxUsers = "9"
+#   Mode = "subscription"
+#   etc...
+seafile_version: "{{ seafile_license is defined | ternary('8.0.14','9.0.1') }}"
+
+# Archive URL and sha1 are only used for the community version
+seafile_archive_url: https://s3.eu-central-1.amazonaws.com/download.seadrive.org/seafile-server_{{ seafile_version }}_x86-64.tar.gz
+seafile_archive_sha1: 6f55aa1d465e94a7ada1dff7e1923e020ddb5a6c
+
+seafile_root_dir: /opt/seafile
+seafile_data_dir: "{{ seafile_root_dir }}/data"
+seafile_db_server: "{{ mysql_server | default('127.0.0.1') }}"
+seafile_db_port: 3306
+seafile_db_user: seafile
+# If not set, a random password will be generated and stored in the meta directory
+# seafile_db_pass: 
+seafile_db_ccnet: ccnet
+seafile_db_seafile: seafile
+seafile_db_seahub: seahub
+
+# Set to none to disable memcached
+seafile_memcached_server: 127.0.0.1:11211
+
+# Account under which services will run
+seafile_user: seafile
+seafile_group: "{{ seafile_user }}"
+
+# A random one will be generated if not defined here
+# seafile_seahub_secret: 
+# seafile_seahub_id: 
+
+# Main seafile daemon port
+seafile_seafile_port: 8082
+# Seahub port
+seafile_seahub_port: 8000
+
+# If you want webdav to be enabled
+seafile_webdav: True
+seafile_webdav_port: 8080
+
+# Restrict access to seafile ports
+# empty means only loopback
+seafile_src_ip: []
+
+# Public URL of the service
+seafile_public_url: http://{{ inventory_hostname }}:{{ seafile_seahub_port }}
+
+# Default admin user, created at install time
+seafile_admin_email: admin@{{ ansible_domain }}
+seafile_admin_pass: seafile
+
+# LDAP integration
+seafile_ldap_auth: "{{ (ad_auth | default(False) or ldap_auth | default(False)) | ternary(True,False) }}"
+seafile_ldap_uri: "{{ ad_auth | default(False) | ternary('ldaps://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower,ldap_uri | default('ldap://ldap' ~ ansible_domain) | regex_replace('^ldap://(.*)','ldaps://\\1')) }}"
+seafile_ldap_base: "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'ou=Users,' + ldap_base) }}"
+# seafile_ldap_bind_dn:
+# Note that seafile_ldap_bind_pass should not contain special caracter, as it might break the parser and
+# prevent seafevents from starting !
+# seafile_ldap_bind_pass: 
+seafile_ldap_login_attr: "{{ ad_auth | default(False) | ternary('userPrincipalName','mail') }}"
+seafile_ldap_filter: "{{ ad_auth | default(False) | ternary('&(objectClass=user)(objectCategory=person)(primaryGroupId=513)','objectClass=inetOrgPerson') }}"
+# seafile_ldap_group_filter: (mail=*)
+
+# oAuth2 authentication
+seafile_oauth2_auth: False
+seafile_oauth2_id: seafile
+# seafile_oauth2_secret:
+seafile_oauth2_sso: https://sso.{{ ansible_domain }}
+seafile_oauth2_callback_url: "{{ seafile_public_url }}/oauth/callback/"
+seafile_oauth2_provider_domain: "{{ ansible_domain }}"
+seafile_oauth2_authorization_url: "{{ seafile_oauth2_sso }}/oauth2/authorize"
+seafile_oauth2_token_url: "{{ seafile_oauth2_sso }}/oauth2/token"
+seafile_oauth2_user_info_url: "{{ seafile_oauth2_sso }}/oauth2/userinfo"
+
+# Proxy authentication
+seafile_header_auth: False
+seafile_header_auth_name: HTTP_USER_PRINCIPAL
+seafile_header_auth_domain: ''
+seafile_header_auth_protected_paths:
+  - 'sso'
+seafile_header_auth_force_logout: False
+
+# Default quota (in GB) to apply to all users
+# seafile_default_quota: 20
+
+# Default history to keep (in days) for libraries
+seafile_default_history: 365
+
+# You can set max sizes (in MB)
+# seafile_max_upload_size
+# seafile_max_download_dir_size
+
+# Max cookie lifetime
+seafile_cookie_age: '60 * 60 * 12'
+
+# Name and title of your Seafile instance
+seafile_site_name: 'Seafile'
+seafile_site_title: 'Mon cloud privé'
+
+# Set to your OnlyOffice url to enable integration
+# seafile_oo_uri: https://oods.example.org/
+# Optional secret token shared with OnlyOffice
+# seafile_oo_secret: XXXXX
+
+# Enable ClamAV scanning of files
+# Only available if you run the PRO edition
+seafile_scan_av: True

@@ -1,0 +1,26 @@
+---
+- include: sensors_{{ ansible_os_family }}.yml
+
+- name: Check if hardware sensors should be detected
+  stat: path=/etc/zabbix/sensors.ini
+  register: zbx_hw_sensors
+  tags: zabbix
+
+- set_fact: zbx_conf_sensors={{ (ansible_virtualization_role != "guest" and (not zbx_hw_sensors.stat.exists or zbx_hw_sensors.stat.checksum == "4112359dc054a50d8ee2fcf03fb97ad6c7401533")) | ternary(True, False) }}
+  tags: zabbix
+
+- name: Detect hardware sensors (please review /etc/zabbix/sensors.ini to set thresholds)
+  command: "/var/lib/zabbix/bin/util_generate_sensors_ini -o /etc/zabbix/sensors.ini"
+  when: zbx_conf_sensors
+  tags: zabbix
+
+- name: Retrieve hardware sensors configuration
+  fetch: src=/etc/zabbix/sensors.ini dest=config fail_on_missing=yes
+  when: zbx_conf_sensors
+  tags: zabbix
+
+- name: Update hardware sensors configuration
+  copy: src=config/{{ inventory_hostname }}/etc/zabbix/sensors.ini dest=/etc/zabbix/sensors.ini
+  when: ansible_virtualization_role != "guest" and zbx_hw_sensors.stat.exists
+  tags: zabbix
+

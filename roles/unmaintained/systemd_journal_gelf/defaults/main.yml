@@ -1,0 +1,7 @@
+---
+
+# j2gelf_url: https://gelf.domain.net/gelf
+# j2gelf_user: logs
+# j2gelf_pass: s3cr3T.
+j2gelf_compress: True
+j2gelf_keep_alive: True

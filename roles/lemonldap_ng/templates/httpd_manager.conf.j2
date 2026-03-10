@@ -1,0 +1,75 @@
+<VirtualHost 0.0.0.0:80>
+  ServerName {{ llng_manager_vhost }}
+  Include ansible_conf.d/common_env.inc
+  Include ansible_conf.d/common_letsencrypt.inc
+  Include ansible_conf.d/common_force_ssl.inc
+</VirtualHost>
+<IfModule mod_ssl.c>
+  <VirtualHost 0.0.0.0:443>
+    ServerName {{ llng_manager_vhost }}
+    SSLEngine On
+    Alias /_deferror/ "/usr/share/httpd/error/"
+    Include ansible_conf.d/common_env.inc
+    Include ansible_conf.d/common_filter.inc
+    Include ansible_conf.d/common_letsencrypt.inc
+
+{% if llng_manager_ssl is defined %}
+{% if llng_manager_ssl.cert is defined and llng_manager_ssl.key is defined %}
+    SSLCertificateFile {{ llng_manager_ssl.cert }}
+    SSLCertificateKeyFile {{ llng_manager_ssl.key }}
+{% if llng_manager_ssl.cert_chain is defined %}
+    SSLCertificateChainFile {{ llng_manager_ssl.cert_chain }}
+{% endif %}
+{% elif llng_manager_ssl.letsencrypt_cert is defined %}
+    SSLCertificateFile      /var/lib/dehydrated/certificates/certs/{{ llng_manager_ssl.letsencrypt_cert }}/cert.pem
+    SSLCertificateKeyFile   /var/lib/dehydrated/certificates/certs/{{ llng_manager_ssl.letsencrypt_cert }}/privkey.pem
+    SSLCertificateChainFile /var/lib/dehydrated/certificates/certs/{{ llng_manager_ssl.letsencrypt_cert }}/chain.pem
+{% endif %}
+{% endif %}
+    RewriteEngine On
+
+    RewriteCond "%{REQUEST_URI}" "!^/(?:static|doc|lib|javascript|favicon).*"
+    RewriteRule "^/(.+)$" "/manager.fcgi/$1" [PT]
+
+    FcgidMaxRequestLen 2000000
+    <Files *.fcgi>
+        SetHandler fcgid-script
+        Options +ExecCGI
+        header unset Lm-Remote-User
+    </Files>
+
+    DocumentRoot /usr/share/lemonldap-ng/manager/htdocs/
+    <Location />
+      Require ip {{ llng_manager_src_ip | join(' ') }}
+
+      <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/xml text/javascript text/css
+        SetOutputFilter DEFLATE
+        BrowserMatch ^Mozilla/4 gzip-only-text/html
+        BrowserMatch ^Mozilla/4\.0[678] no-gzip
+        BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+        SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+      </IfModule>
+      <IfModule mod_headers.c>
+        Header append Vary User-Agent env=!dont-vary
+      </IfModule>
+    </Location>
+
+    Alias /static/ /usr/share/lemonldap-ng/manager/htdocs/static/
+    <Directory /usr/share/lemonldap-ng/manager/htdocs/static/>
+      Require all granted
+      Options +FollowSymLinks
+    </Directory>
+
+    Alias /doc/ /usr/share/lemonldap-ng/doc/
+    Alias /lib/ /usr/share/lemonldap-ng/doc/pages/documentation/current/lib/
+    <Directory /usr/share/lemonldap-ng/doc/>
+        Require all granted
+        ErrorDocument 404 /notfound.html
+        Options +FollowSymLinks
+        DirectoryIndex index.html start.html
+    </Directory>
+
+    Header set Strict-Transport-Security 15768000
+  </VirtualHost>
+</IfModule>

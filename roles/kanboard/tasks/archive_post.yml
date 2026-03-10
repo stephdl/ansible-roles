@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ kanboard_root_dir }}"
+    - version: "{{ kanboard_current_version }}"
+  tags: kanboard

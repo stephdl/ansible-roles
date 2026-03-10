@@ -1,0 +1,15 @@
+---
+
+- import_tasks: ../includes/webapps_archive.yml
+  vars:
+    - root_dir: "{{ dolibarr_root_dir }}"
+    - version: "{{ dolibarr_current_version }}"
+    - db_name: "{{ dolibarr_db_name }}"
+    - db_server: "{{ dolibarr_db_server }}"
+  tags: dolibarr
+
+- name: Unlock installation process
+  file: path={{ dolibarr_root_dir }}/data/install.lock state=absent
+  when: dolibarr_install_mode == 'upgrade'
+  tags: dolibarr
+

@@ -1,0 +1,13 @@
+---
+
+- name: Start and enable services
+  service: name=jitsi-jicofo state=started enabled=True
+  tags: jitsi
+
+- name: Start and enable jigasi
+  service: name=jitsi-jigasi state={{ jitsi_jigasi | ternary('started', 'stopped') }} enabled={{ jitsi_jigasi }}
+  tags: jitsi
+
+- name: Start and enable confmapper
+  service: name=jitsi-confmapper state={{ jitsi_jigasi | ternary('started', 'stopped') }} enabled={{ jitsi_jigasi }}
+  tags: jitsi

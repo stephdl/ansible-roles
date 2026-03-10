@@ -1,0 +1,24 @@
+---
+- name: Allow network connections in SELinux
+  seboolean: name={{ item }} state=True persistent=True
+  with_items:
+    - httpd_can_network_connect
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+
+- name: Allow nginx to bind on ports
+  seport: ports={{ (nginx_ports + nginx_ssl_ports ) | join(',') }} proto=tcp setype=http_port_t state=present
+  when: ansible_selinux.status == 'enabled'
+  tags: web
+
+- name: Ensure correct context on cache
+  sefcontext:
+    target: '/var/cache/nginx(/.*)?'
+    setype: httpd_cache_t
+  register: nginx_cache_context
+  tags: web
+
+- name: Restore context of cache files
+  command: restorecon -R /var/cache/nginx
+  changed_when: nginx_cache_context.changed
+  tags: web

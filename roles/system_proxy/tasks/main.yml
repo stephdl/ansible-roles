@@ -1,0 +1,84 @@
+---
+
+- name: Add a profile script
+  template: src=proxy.sh.j2 dest=/etc/profile.d/proxy.sh mode=755
+  tags: proxy
+
+- name: Add lines in environment file
+  lineinfile:
+    dest: /etc/environment
+    regexp: "^{{ item }}=.*"
+    line: "{{ item }}={{ (system_proxy is defined and system_proxy != '') | ternary(system_proxy,'') }}"
+    state: "{{ (system_proxy is defined and system_proxy != '') | ternary('present','absent') }}"
+  with_items:
+    - http_proxy
+    - HTTP_PROXY
+    - https_proxy
+    - HTTPS_PROXY
+    - ftp_proxy
+    - FTP_PROXY
+  tags: proxy
+
+- name: Set proxy exceptions
+  lineinfile:
+    dest: /etc/environment
+    regexp: "^{{ item }}=.*"
+    line: "{{ item }}={{ (system_proxy is defined and system_proxy != '' and system_proxy_no_proxy is defined and system_proxy_no_proxy | length > 0) | ternary(system_proxy_no_proxy | join(','),'') }}"
+    state: "{{ (system_proxy is defined and system_proxy != '' and system_proxy_no_proxy is defined and system_proxy_no_proxy | length > 0) | ternary('present','absent') }}"
+  with_items:
+    - no_proxy
+    - NO_PROXY
+  tags: proxy
+
+- name: Creates systemd.conf.d dir
+  file: path=/etc/systemd/system.conf.d state=directory
+  when: ansible_service_mgr == 'systemd'
+  tags: proxy
+
+- name: Deploy a systemd snippet for default proxy
+  template: src=systemd.conf.j2 dest=/etc/systemd/system.conf.d/proxy.conf
+  notify: reload systemd
+  when: ansible_service_mgr == 'systemd'
+  tags: proxy
+
+- name: Configure proxy for yum
+  ini_file:
+    path: /etc/yum.conf
+    section: main
+    option: proxy
+    value: "{{ (system_proxy is defined and system_proxy != '') | ternary(system_proxy,'') }}"
+    state: "{{ (system_proxy is defined and system_proxy != '') | ternary('present','absent') }}"
+  when: ansible_os_family == 'RedHat'
+  tags: proxy
+
+- name: Configure proxy for dnf
+  ini_file:
+    path: /etc/dnf/yum.conf
+    section: main
+    option: proxy
+    value: "{{ (system_proxy is defined and system_proxy != '') | ternary(system_proxy,'') }}"
+    state: "{{ (system_proxy is defined and system_proxy != '') | ternary('present','absent') }}"
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version is version('8', '>=')
+  tags: proxy
+
+- name: Config proxy for apt
+  copy:
+    content: |
+      Acquire::http::Proxy "{{ system_proxy }}";
+      Acquire::https::Proxy "{{ system_proxy }}";
+    dest: /etc/apt/apt.conf.d/10proxy
+  when:
+    - ansible_os_family == 'Debian'
+    - system_proxy is defined
+    - system_proxy != ''
+  tags: proxy
+
+- name: Remove proxy from apt config
+  file: path=/etc/apt/apt.conf.d/10proxy state=absent
+  when:
+    - ansible_os_family == 'Debian'
+    - system_proxy is not defined or system_proxy == ''
+  tags: proxy
+

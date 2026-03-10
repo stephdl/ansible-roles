@@ -1,0 +1,165 @@
+# -*- coding: utf-8 -*-
+
+{% if seafile_version is version('9.0.0', '>=') %}
+SERVICE_URL = '{{ seafile_public_url }}'
+{% endif %}
+
+SECRET_KEY = "{{ seafile_seahub_secret }}"
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': '{{ seafile_db_seahub }}',
+        'USER': '{{ seafile_db_user }}',
+        'PASSWORD': '{{ seafile_db_pass }}',
+        'HOST': '{{ seafile_db_server }}',
+        'PORT': '{{ seafile_db_port }}'
+    }
+}
+
+FILE_SERVER_ROOT = "{{ (seafile_public_url == 'http://' + inventory_hostname + ':' + seafile_seahub_port | string) | ternary('http://' + inventory_hostname + ':' + seafile_seafile_port | string,seafile_public_url+'/seafhttp') }}"
+
+THUMBNAIL_ROOT = "{{ seafile_data_dir }}/thumbnails"
+
+SEAHUB_DATA_ROOT = "{{ seafile_data_dir }}/seahub"
+
+{% if seafile_memcached_server is defined and seafile_memcached_server != 'none' %}
+CACHES = {
+    'default': {
+        'BACKEND': 'django_pylibmc.memcached.PyLibMCCache',
+        'LOCATION': '{{ seafile_memcached_server }}',
+    }
+}
+{% endif %}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '%(process)-5d %(thread)d %(name)-50s %(levelname)-8s %(message)s'
+        },
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(funcName)s %(message)s'
+        },
+        'simple': {
+            'format': '[%(asctime)s] %(name)s %(levelname)s %(message)s',
+            'datefmt': '%d/%b/%Y %H:%M:%S'
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'syslog': {
+            'class': 'logging.handlers.SysLogHandler',
+            'address': '/dev/log',
+            'formatter': 'standard'
+        },
+    },
+    'loggers': {
+        # root logger
+        # All logs printed by Seahub and any third party libraries will be handled by this logger.
+        '': {
+            'handlers': ['console', 'syslog'],
+            'level': 'DEBUG', # Logs when log level is higher than info. Level can be any one of DEBUG, INFO, WARNING, ERROR, CRITICAL.
+            'disabled': False
+        },
+        # This logger recorded logs printed by Django Framework. For example, when you see 5xx page error, you should check the logs recorded by this logger.
+        'django.request': {
+            'handlers': ['console', 'syslog'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+EMAIL_USE_TLS = False
+EMAIL_HOST = 'localhost'
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_PORT = 25
+DEFAULT_FROM_EMAIL = "seafile@{{ ansible_domain }}"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+SHARE_LINK_PASSWORD_MIN_LENGTH = 4
+SHARE_LINK_EXPIRE_DAYS_DEFAULT = 7
+
+REPO_PASSWORD_MIN_LENGTH = 4
+
+ENABLE_REPO_SNAPSHOT_LABEL = True
+
+{% if seafile_oauth2_auth == True %}
+ENABLE_OAUTH = True
+OAUTH_ENABLE_INSECURE_TRANSPORT = True
+OAUTH_CLIENT_ID = "{{ seafile_oauth2_id }}"
+OAUTH_CLIENT_SECRET = "{{ seafile_oauth2_secret }}"
+OAUTH_REDIRECT_URL = "{{ seafile_oauth2_callback_url }}"
+OAUTH_PROVIDER_DOMAIN = "{{ seafile_oauth2_provider_domain }}"
+OAUTH_AUTHORIZATION_URL = "{{ seafile_oauth2_authorization_url }}"
+OAUTH_TOKEN_URL = "{{ seafile_oauth2_token_url }}"
+OAUTH_USER_INFO_URL = "{{ seafile_oauth2_user_info_url }}"
+OAUTH_SCOPE = ["openid", "profile", "email", ]
+OAUTH_ATTRIBUTE_MAP = {
+    "id": (False, "id"),
+    "email": (True, "email"),
+    "name": (False, "name"),
+}
+{% endif %}
+{% if seafile_header_auth == True %}
+ENABLE_REMOTE_USER_AUTHENTICATION = True
+REMOTE_USER_HEADER = '{{ seafile_header_auth_name }}'
+REMOTE_USER_DOMAIN = '{{ seafile_header_auth_domain }}'
+REMOTE_USER_PROTECTED_PATH = [
+{% for path in seafile_header_auth_protected_paths %}
+  '{{ path }}',
+{% endfor %}
+]
+REMOTE_USER_FORCE_LOGOUT_IF_NO_HEADER = {{ seafile_header_auth_force_logout | ternary('True','False') }}
+{% endif %}
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = {{ seafile_cookie_age }}
+
+SITE_NAME = '{{ seafile_site_name }}'
+SITE_TITLE = '{{ seafile_site_title }}'
+
+ENABLE_SYS_ADMIN_VIEW_REPO = True
+
+ENABLE_WIKI = True
+
+{% if seafile_oo_uri is defined %}
+ENABLE_ONLYOFFICE = True
+VERIFY_ONLYOFFICE_CERTIFICATE = True
+ONLYOFFICE_APIJS_URL = "{{ (seafile_oo_uri is search('api\.js$')) | ternary(seafile_oo_uri,seafile_oo_uri | regex_replace('/$','') + '/web-apps/apps/api/documents/api.js') }}"
+ONLYOFFICE_FILE_EXTENSION = ('doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'odt', 'fodt', 'odp', 'fodp', 'ods', 'fods')
+ONLYOFFICE_EDIT_FILE_EXTENSION = ('docx', 'pptx', 'xlsx', 'odt', 'ods', 'odp')
+ONLYOFFICE_FORCE_SAVE = True
+{% if seafile_oo_secret is defined %}
+ONLYOFFICE_JWT_SECRET = '{{ seafile_oo_secret }}'
+{% endif %}
+{% endif %}
+
+{% if seafile_public_url is search '^https://' %}
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+{% endif %}
+
+{% if seafile_license is defined %}
+{% if seafile_scan_av %}
+ENABLE_UPLOAD_LINK_VIRUS_CHECK = True
+{% endif %}
+{% if system_admin_email is defined %}
+VIRUS_SCAN_NOTIFY_LIST = ['{{ system_admin_email }}']
+{% endif %}
+{% endif %}

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eo pipefail
+
+/usr/bin/mysqldump --user={{ glpi_mysql_user | quote }} \
+                   --password={{ glpi_mysql_pass | quote }} \
+                   --host={{ glpi_mysql_server | quote }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ glpi_mysql_db | quote }} | zstd -T0 -c > {{ glpi_root_dir }}/backup/{{ glpi_mysql_db }}.sql.zst
+
+[ -e {{ glpi_root_dir }}/web/config/glpicrypt.key ] && cp {{ glpi_root_dir }}/web/config/glpicrypt.key {{ glpi_root_dir }}/backup/

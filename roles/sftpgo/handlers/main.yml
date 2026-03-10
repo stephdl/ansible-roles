@@ -1,0 +1,4 @@
+---
+
+- name: restart sftpgo
+  service: name=sftpgo state=restarted

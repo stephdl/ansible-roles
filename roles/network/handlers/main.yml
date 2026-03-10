@@ -1,0 +1,9 @@
+---
+
+- name: reload network
+  command: nmcli conn reload
+  notify: reload interfaces
+
+- name: reload interfaces
+  command: nmcli conn up {{ item.name }}
+  loop: "{{ net_if }}"

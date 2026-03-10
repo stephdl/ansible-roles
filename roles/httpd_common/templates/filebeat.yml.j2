@@ -1,0 +1,15 @@
+---
+- module: apache
+  access:
+    enabled: True
+    input:
+      exclude_files:
+        - '\.[gx]z$'
+        - '\d+$'
+  error:
+    enabled: True
+    input:
+      exclude_files: 
+        - '\.[gx]z$'
+        - '\d+$'
+

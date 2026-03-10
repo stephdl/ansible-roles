@@ -1,0 +1,5 @@
+---
+
+webapps_mysql_packages:
+  - python-mysqldb
+  - mariadb-client

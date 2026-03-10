@@ -1,0 +1,106 @@
+APP_NAME = Gitea: Git with a cup of tea
+RUN_USER = gitea
+RUN_MODE = prod
+
+[security]
+INTERNAL_TOKEN = {{ gitea_tokens.results | selectattr('item','equalto','INTERNAL_TOKEN') | map(attribute='stdout') | first | string }}
+INSTALL_LOCK   = true
+SECRET_KEY     = {{ gitea_tokens.results | selectattr('item','equalto','SECRET_KEY') | map(attribute='stdout') | first | string }}
+{% if gitea_username_header is defined %}
+REVERSE_PROXY_AUTHENTICATION_USER = {{ gitea_username_header }}
+{% endif %}
+{% if gitea_web_src_ip is defined and gitea_web_src_ip | length > 0 %}
+REVERSE_PROXY_LIMIT = 1
+REVERSE_PROXY_TRUSTED_PROXIES = {{ gitea_web_src_ip | select('search','\\.\\d+$') | list | join(',') }}
+REVERSE_PROXY_TRUSTED_NETWORKS = {{ gitea_web_src_ip | select('search','/\\d+$') | list | join(',') }}
+{% endif %}
+
+[server]
+LOCAL_ROOT_URL   = http://localhost:{{ gitea_web_port }}/
+SSH_DOMAIN       = {{ gitea_ssh_domain }}
+DOMAIN           = {{ gitea_domain }}
+HTTP_PORT        = {{ gitea_web_port }}
+ROOT_URL         = {{ gitea_public_url }}
+DISABLE_SSH      = false
+SSH_PORT         = {{ gitea_ssh_port }}
+LFS_START_SERVER = true
+LFS_CONTENT_PATH = {{ gitea_root_dir }}/data/lfs
+LFS_JWT_SECRET   = {{ gitea_tokens.results | selectattr('item','equalto','LFS_JWT_SECRET') | map(attribute='stdout') | first | string }}
+OFFLINE_MODE     = true
+STATIC_ROOT_PATH = {{ gitea_root_dir }}
+LANDING_PAGE     = explore
+
+[oauth2]
+JWT_SECRET = {{ gitea_tokens.results | selectattr('item','equalto','JWT_SECRET') | map(attribute='stdout') | first | string }}
+
+[ssh.minimum_key_sizes]
+DSA = -1
+
+[ui]
+ISSUE_PAGING_NUM = 20
+
+[repository.upload]
+TEMP_PATH = tmp/uploads
+
+[database]
+DB_TYPE  = mysql
+HOST     = {{ gitea_db_server }}
+NAME     = {{ gitea_db_name }}
+USER     = {{ gitea_db_user }}
+PASSWD   = `{{ gitea_db_pass }}`
+LOG_SQL  = false
+
+[repository]
+ROOT = {{ gitea_root_dir }}/data/repositories
+
+[mailer]
+ENABLED = true
+HOST    = localhost:25
+FROM    = gitea-no-reply@{{ ansible_domain }}
+USER    =
+PASSWD  =
+
+[service]
+REGISTER_EMAIL_CONFIRM                 = true
+ENABLE_NOTIFY_MAIL                     = true
+DISABLE_REGISTRATION                   = {{ gitea_registration | ternary('false','true') }}
+ALLOW_ONLY_EXTERNAL_REGISTRATION       = false
+ENABLE_CAPTCHA                         = false
+REQUIRE_SIGNIN_VIEW                    = false
+DEFAULT_KEEP_EMAIL_PRIVATE             = true
+DEFAULT_ALLOW_CREATE_ORGANIZATION      = true
+DEFAULT_ENABLE_TIMETRACKING            = true
+NO_REPLY_ADDRESS                       = noreply.{{ ansible_domain }}
+{% if gitea_username_header is defined %}
+ENABLE_REVERSE_PROXY_AUTHENTICATION    = true
+ENABLE_REVERSE_PROXY_AUTO_REGISTRATION = true
+{% endif %}
+
+[picture]
+DISABLE_GRAVATAR        = false
+ENABLE_FEDERATED_AVATAR = true
+
+[openid]
+ENABLE_OPENID_SIGNIN = false
+ENABLE_OPENID_SIGNUP = false
+
+[session]
+PROVIDER = file
+
+[log]
+MODE      = console
+LEVEL     = Trace
+ROOT_PATH = {{ gitea_root_dir }}/log
+
+[log.console]
+LEVEL = Trace
+
+[indexer]
+REPO_INDEXER_ENABLED = true
+STARTUP_TIMEOUT = 300s
+
+[other]
+SHOW_FOOTER_VERSION = false
+
+[migrations]
+ALLOW_LOCALNETWORKS = true

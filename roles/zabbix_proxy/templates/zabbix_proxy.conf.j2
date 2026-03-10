@@ -1,0 +1,29 @@
+Server={{ zabbix_proxy_server }}
+Hostname={{ inventory_hostname }}
+LogType=system
+PidFile=/var/run/zabbix/zabbix_proxy.pid
+DBName=/var/lib/zabbix/db/proxy.sqlite
+ProxyOfflineBuffer=72
+SocketDir=/var/run/zabbix
+ConfigFrequency=600
+DataSenderFrequency=30
+CacheSize={{ zabbix_proxy_cache_size | default('32M') }}
+StartPollers={{ zabbix_proxy_pollers | default(5) }}
+StartIPMIPollers={{ zabbix_proxy_ipmi_pollers | default(1) }}
+StartPollersUnreachable={{ zabbix_proxy_unreachable_pollers | default(2) }}
+StartTrappers={{ zabbix_proxy_trappers | default(5) }}
+StartPingers={{ zabbix_proxy_pingers | default(4) }}
+StartDiscoverers={{ zabbix_proxy_discoverers | default(1) }}
+StartHTTPPollers={{ zabbix_proxy_http_pollers | default(1) }}
+Timeout={{ zabbix_proxy_timeout | default(30) }}
+ExternalScripts=/var/lib/zabbix/bin/
+TmpDir=/var/lib/zabbix/tmp
+{% if zabbix_proxy_encryption | default('none') == 'psk' %}
+TLSPSKFile=/etc/zabbix/zabbix_proxy.psk
+TLSPSKIdentity={{ inventory_hostname }}-proxy
+TLSConnect=psk
+TLSAccept=psk
+{% endif %}
+{% if ansible_all_ipv6_addresses | length < 1 %}
+Fping6Location=
+{% endif %}

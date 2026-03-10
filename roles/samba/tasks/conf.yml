@@ -1,0 +1,157 @@
+---
+
+- name: Setup env var for ldb tools
+  copy: src=ldb_modules_samba.sh dest=/etc/profile.d/ldb_modules_samba.sh mode=755
+  tags: samba
+
+- name: Link our DC keytab to the system keytab
+  file: src=/var/lib/samba/private/secrets.keytab dest=/etc/krb5.keytab state=link remote_src=True force=True
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+  # This is for DC where their principal is added as uppercase HOST/FQDN
+  # it mostly work, except for ssh kerberos auth which requires lower case host/fqdn principal
+- name: Check if the keytab contains lowercase host principal
+  shell: klist -k /etc/krb5.keytab | grep 'host/{{ ansible_hostname }}.{{ samba_realm }}'
+  ignore_errors: True
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  changed_when: False
+  register: samba_lc_principal
+  tags: samba
+
+- name: Add lower case host principal to the keytab file
+  command: samba-tool domain exportkeytab /etc/krb5.keytab --principal=host/{{ ansible_hostname }}.{{ samba_realm }}
+  when:
+    - samba_role == 'dc' or samba_role == 'rodc'
+    - samba_lc_principal.stdout_lines | length < 1
+  tags: samba
+
+- name: Add a tmpfiles.d snippet for permissions on ntp_signd socket dir
+  copy: content="d /var/lib/samba/ntp_signd 750 root chrony" dest=/etc/tmpfiles.d/samba_ntp.conf
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  register: samba_tmpfiles
+  tags: samba
+
+- name: Create tmpfiles
+  command: systemd-tmpfiles --create
+  when: samba_tmpfiles.changed
+  tags: samba
+
+- name: Deploy rsyncd snippet
+  template: src=rsyncd.conf.j2 dest=/etc/rsyncd.conf.d/samba_dc.conf
+  when: samba_i_am_primary_dc == True
+  tags: samba
+
+- name: Remove rsyncd snippet
+  file: path=/etc/rsyncd.conf.d/samba_dc.conf state=absent
+  when: not samba_i_am_primary_dc == True
+  tags: samba
+
+- name: Deploy sysvol rsync password file
+  copy: content={{ (samba_sysvol_rsync_pass is defined) | ternary(samba_i_am_primary_dc | ternary('sysvol-replication:','') + samba_sysvol_rsync_pass,'# No password defined') }} dest=/etc/samba/rsync-sysvol.secret mode=600
+  tags: samba
+
+- name: Setup cron to sync sysvol from primary DC
+  cron:
+    name: samba_sync_sysvol
+    cron_file: samba_sync_sysvol
+    minute: '*/16'
+    user: root
+    job: rsync -XAavz --delete-after {{ (samba_sysvol_rsync_pass is defined) | ternary('--password-file=/etc/samba/rsync-sysvol.secret','') }} rsync://{{ (samba_sysvol_rsync_pass is defined) | ternary('sysvol-replication@','') }}{{ samba_primary_dc }}/sysvol/ /var/lib/samba/sysvol/
+    state: "{{ samba_i_am_primary_dc | ternary('absent','present') }}"
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+- name: Deploy dehydrated hook
+  copy: src=dehydrated_deploy_hook dest=/etc/dehydrated/hooks_deploy_cert.d/samba.sh mode=755
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+- name: Remove dehydrated hook
+  file: path=/etc/dehydrated/hooks_deploy_cert.d/samba.sh state=absent
+  when: samba_role != 'dc' and samba_role != 'rodc'
+  tags: samba
+
+- name: Create DH param
+  command: openssl dhparam -out /var/lib/samba/private/tls/dhparam.pem 2048
+  args:
+    creates: /var/lib/samba/private/tls/dhparam.pem
+  tags: samba
+
+- name: Deploy smb.conf
+  template: src=smb.conf.j2 dest=/etc/samba/smb.conf
+  notify: reload samba
+  tags: samba
+
+- name: Check if there's a shares.conf snippet
+  stat: path=/etc/samba/smb.conf.d/shares.conf
+  register: samba_shares_snippet
+  tags: samba
+
+- name: Deploy an empty shares conf snippet
+  copy: content="# No shares defined yet" dest=/etc/samba/smb.conf.d/shares.conf
+  when: not samba_shares_snippet.stat.exists
+  tags: samba
+
+- name: Check if /etc/krb5.conf exists
+  stat: path=/etc/krb5.conf
+  register: samba_krb5_conf
+  tags: samba
+
+- name: Start and enable the samba daemon
+  service: name=samba state=started enabled=True
+  when: samba_role == 'dc' or samba_role == 'rodc'
+  tags: samba
+
+- name: Reconfigure sssd
+  include_role: name=sssd_ad_auth
+  when:
+    - not samba_krb5_conf.stat.exists
+    - ad_auth is defined
+    - ad_auth
+  tags: samba
+
+- name: Check if winbind_cache exists
+  stat: path=/var/lib/samba/winbindd_cache.tdb
+  register: samba_winbind_cache
+  tags: samba
+
+- include_tasks: member_join.yml
+  when:
+    - samba_role == 'member'
+    - not samba_winbind_cache.stat.exists
+
+- name: Start and enable the smb daemon
+  service: name=smb state=started enabled=True
+  when: samba_role != 'dc' and samba_role != 'rodc'
+  tags: samba
+
+  # Here we just read the actual policy. This way, on the next task, we can update only the items we need
+- name: Check current password policy
+  shell: "samba-tool domain passwordsettings show | perl -ne 'm/^{{ samba_pwd_policy_descriptions[item] }}: (.*)/ && print $1'"
+  register: samba_dc_current_pwd_policy
+  changed_when: False
+  with_items: "{{ samba_pwd_policy.keys() | list }}"
+  when: samba_i_am_primary_dc == True
+  tags: samba
+
+- name: Set password policy
+  command: samba-tool domain passwordsettings set --{{ item.item }}={{ samba_pwd_policy[item.item] }}
+  with_items: "{{ samba_dc_current_pwd_policy.results }}"
+  when:
+    - samba_i_am_primary_dc == True
+    - item.stdout | string != samba_pwd_policy[item.item] | string
+  tags: samba
+
+- name: Deploy pre and post backup script
+  template: src={{ item.src }} dest={{ item.dest }} mode=755
+  with_items:
+    - src: samba_pre_backup.sh.j2
+      dest: /etc/backup/pre.d/samba.sh
+    - src: samba_post_backup.sh.j2
+      dest: /etc/backup/post.d/samba.sh
+  tags: samba
+
+- name: Deploy logrotate configuration
+  template: src=logrotate.conf.j2 dest=/etc/logrotate.d/samba
+  tags: samba

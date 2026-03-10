@@ -1,0 +1,5 @@
+#!/bin/sh
+
+DOMAIN="${1}"
+TOKEN_VALUE="${3}"
+lexicon $DNS_PROVIDER {% if letsencrypt_dns_provider_options is defined %}{{ letsencrypt_dns_provider_options }} {% endif %}delete ${DOMAIN} TXT --name="_acme-challenge.${DOMAIN}." --content="${TOKEN_VALUE}"

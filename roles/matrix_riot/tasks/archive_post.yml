@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ riot_root_dir }}"
+    - version: "{{ riot_current_version }}"
+  when: riot_install_mode == 'upgrade'
+  tags: matrix
+

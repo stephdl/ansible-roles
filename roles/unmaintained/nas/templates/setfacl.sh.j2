@@ -1,0 +1,42 @@
+#!/bin/bash -e
+
+WRITE_USERS=''
+READ_USERS=''
+WRITE_GROUPS=''
+READ_GROUPS=''
+{% if item.acl.read_users | length > 0 %}
+for U in '{{ item.acl.read_users | join("' '") }}'; do
+  getent passwd "$U" > /dev/null 2>&1 && READ_USERS=$READ_USERS",u:$U:rX,d:u:$U:rX"
+done
+{% endif %}
+{% if item.acl.write_users | length > 0 %}
+for U in '{{ item.acl.write_users | join("' '") }}'; do
+  getent passwd "$U" > /dev/null 2>&1 && WRITE_USERS=$WRITE_USERS",u:$U:rwX,d:u:$U:rwX"
+done
+{% endif %}
+{% if item.acl.read_groups | length > 0 %}
+for G in '{{ item.acl.read_groups | join("' '") }}'; do
+  getent group "$G" > /dev/null 2>&1 && READ_GROUPS=$READ_GROUPS",g:$G:rX,d:g:$G:rX"
+done
+{% endif %}
+{% if item.acl.write_groups | length > 0 %}
+for G in '{{ item.acl.write_groups | join("' '") }}'; do
+  getent group "$G" > /dev/null 2>&1 && WRITE_GROUPS=$WRITE_GROUPS",g:$G:rwX,d:g:$G:rwX"
+done
+{% endif %}
+
+chmod 770 {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+chmod 700 {{ item.path | default(nas_root_dir + '/meta/' + item.name) }}
+chown root:root {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+{% if not item.protocols.smb.nt_acl and not item.manual_permissions %}
+setfacl -R --remove-all --remove-default --physical {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+setfacl -R --remove-all --remove-default --physical {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+setfacl -R --physical -m g::---"$READ_USERS$WRITE_USERS$READ_GROUPS$WRITE_GROUPS" -- {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+{% if item.protocols.rsync.enabled %}
+setfacl -R --physical -m u:rsync:{{ item.protocols.rsync.read_only | ternary('rX','rwX') }},d:u:rsync:{{ item.protocols.rsync.read_only | ternary('rX','rwX') }} -- {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+{% endif %}
+{% endif %}
+setfacl -R -m mask::rwX,d:mask:rwX -- {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+{% if ansible_selinux.status == 'enabled' %}
+restorecon -R {{ item.path | default(nas_root_dir + '/data/' + item.name) }}
+{% endif %}

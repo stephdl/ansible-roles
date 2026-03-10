@@ -1,0 +1,24 @@
+[Unit]
+Description=Etherpad ({{ etherpad_id }} Instance)
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User={{ etherpad_user }}
+Group={{ etherpad_user }}
+WorkingDirectory={{ etherpad_root_dir }}/app
+ExecStart=/usr/bin/node ./src/node/server.js
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=1024M
+SyslogIdentifier=etherpad-{{ etherpad_id }}
+Restart=always
+Environment=NODE_ENV=production
+StartLimitInterval=0
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

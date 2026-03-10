@@ -1,0 +1,5 @@
+---
+
+- name: Create ma1sd user account
+  user: name={{ ma1sd_user }} home={{ ma1sd_root_dir }} shell=/bin/bash state=present
+  tags: matrix

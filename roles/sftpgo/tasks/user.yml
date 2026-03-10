@@ -1,0 +1,10 @@
+---
+
+- name: Create sftpgo user
+  user:
+    name: "{{ sftpgo_user }}"
+    comment: SFTPGO User account
+    home: "{{ sftpgo_root_dir }}"
+    system: True
+    shell: /sbin/nologin
+  tags: sftpgo

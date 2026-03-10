@@ -1,0 +1,22 @@
+---
+
+- name: Create samba tls dir
+  file: path=/var/lib/samba/private/tls state=directory mode=700
+  tags: samba
+
+- name: Create rsyncd conf snippet dir
+  file: path=/etc/rsyncd.conf.d/ state=directory
+  tags: samba
+
+- name: Create samba scripts dir
+  file: path=/var/lib/samba/scripts state=directory
+  tags: samba
+
+- name: Create conf.d directory
+  file: path=/etc/samba/smb.conf.d/ state=directory
+  tags: samba
+
+- name: Create JSON log dir
+  file: path=/var/log/samba/json state=directory
+  tags: samba
+

@@ -1,0 +1,32 @@
+---
+
+- import_tasks: ../includes/webapps_set_install_mode.yml
+  vars:
+    - root_dir: "{{ ma1sd_root_dir }}"
+    - version: "{{ ma1sd_version }}"
+  tags: matrix
+- set_fact: ma1sd_install_mode={{ (install_mode == 'upgrade' and not ma1sd_manage_upgrade) | ternary('none',install_mode) }}
+  tags: matrix
+- set_fact: ma1sd_current_version={{ current_version | default('') }}
+  tags: matrix
+
+- name: Detect if mxisd is installed
+  stat: path=/opt/matrix/mxisd
+  register: ma1sd_mxisd_dir
+  tags: matrix
+
+- name: Detect if ma1sd db already exists
+  stat: path={{ ma1sd_root_dir }}/db/ma1sd.sqlite
+  register: ma1sd_sqlite
+  tags: matrix
+
+- name: Detect if ma1sd signing key already exists
+  stat: path={{ ma1sd_root_dir }}/etc/signing.key
+  register: ma1sd_signingkey
+  tags: matrix
+
+- name: Check if the jar already exists
+  stat: path={{ ma1sd_root_dir }}/app/build/libs/app.jar
+  register: ma1sd_jar
+  tags: matrix
+

@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_post.yml
+  vars:
+    - root_dir: "{{ synadm_root_dir }}"
+    - version: "{{ synadm_version }}"
+  tags: matrix

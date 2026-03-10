@@ -1,0 +1,6 @@
+---
+
+ttrss_packages:
+  - git
+  - python3-mysql
+  - mariadb

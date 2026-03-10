@@ -1,0 +1,10 @@
+ldap_servers: {{ pmg_ldap_servers | join(' ') }}
+ldap_start_tls: {{ pmg_ldap_starttls | ternary('yes','no') }}
+ldap_tls_check_peer: yes
+ldap_tls_cacert_file: /etc/ssl/certs/ca-certificates.crt
+ldap_search_base: {{ pmg_ldap_search_base }}
+ldap_filter: {{ pmg_ldap_filter }}
+{% if pmg_ldap_bind_dn is defined and pmg_ldap_bind_pass is defined %}
+ldap_bind_dn: {{ pmg_ldap_bind_dn }}
+ldap_password: {{ pmg_ldap_bind_pass }}
+{% endif %}

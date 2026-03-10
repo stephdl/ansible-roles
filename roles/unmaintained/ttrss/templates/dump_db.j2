@@ -1,0 +1,7 @@
+#!/bin/sh
+
+/usr/bin/mysqldump --user={{ ttrss_mysql_user }} \
+                   --password={{ ttrss_mysql_pass }} \
+                   --host={{ ttrss_mysql_server }} \
+                   --quick --single-transaction \
+                   --add-drop-table {{ ttrss_mysql_db }} | lz4 -c > {{ ttrss_root_dir }}/db_dumps/{{ ttrss_mysql_db }}.sql.lz4

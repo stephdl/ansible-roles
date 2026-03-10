@@ -1,0 +1,10 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ jitsi_root_dir }}/tmp/jicofo-1.1-SNAPSHOT"
+    - "{{ jitsi_root_dir }}/src/jicofo/target"
+    - "{{ jitsi_root_dir }}/tmp/jigasi-linux-x64-1.1-SNAPSHOT"
+    - "{{ jitsi_root_dir }}/src/jigasi/target"
+  tags: jitsi

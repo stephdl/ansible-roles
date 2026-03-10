@@ -1,0 +1,5 @@
+---
+
+- name: Deploy lld graphs config
+  template: src=zabbix-lld-all-graph.j2 dest=/etc/sysconfig/zabbix-lld-all-graph mode=600 owner=zabbix
+  tags: zabbix

@@ -1,0 +1,9 @@
+---
+
+- name: Handle Zabbix Server port
+  iptables_raw:
+    name: zabbix_server_port
+    state: "{{ (zabbix_server_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ zabbix_server_port }} -s {{ zabbix_server_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: zabbix,firewall

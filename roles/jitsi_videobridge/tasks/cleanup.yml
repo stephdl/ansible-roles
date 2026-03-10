@@ -1,0 +1,8 @@
+---
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ jitsi_root_dir }}/tmp/jitsi-videobridge-2.1-SNAPSHOT"
+    - "{{ jitsi_root_dir }}/src/videobridge/target"
+  tags: jitsi

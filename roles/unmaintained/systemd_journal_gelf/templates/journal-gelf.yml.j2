@@ -1,0 +1,9 @@
+---
+
+url: {{ j2gelf_url }}
+{% if j2gelf_user is defined and j2gelf_user != '' and j2gelf_pass is defined and j2gelf_pass != '' %}
+username: '{{ j2gelf_user }}'
+password: '{{ j2gelf_pass | regex_replace('\\\'','\'\'') }}'
+{% endif %}
+compress: {{ j2gelf_compress | ternary('True','False') }}
+keep_alive: {{ j2gelf_keep_alive | ternary('True','False') }}

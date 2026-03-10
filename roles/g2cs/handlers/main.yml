@@ -1,0 +1,4 @@
+---
+
+- name: restart g2cs
+  service: name=g2cs state=restarted

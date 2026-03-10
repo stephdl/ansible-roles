@@ -1,0 +1,56 @@
+{% if nas_share_homes.protocols.smb.enabled %}
+[homes]
+  comment = {{ nas_share_homes.description }}
+  browseable = no
+  guest ok = no
+  read only = no
+  writable = yes
+  printable = no
+  root preexec = /var/lib/samba/scripts/mkhomedir %u
+  vfs objects = {{ nas_share_homes.recycle_bin.enabled | ternary('recycle','') }} {{ nas_share_homes.protocols.smb.full_audit | ternary('full_audit','') }}
+{% if nas_share_homes.recycle_bin.enabled %}
+  recycle:exclude_dir = tmp,temp,cache
+  recycle:repository = {{ nas_share_homes.recycle_bin.dir }}
+  recycle:versions = no
+  recycle:keeptree = yes
+  recycle:touch = yes
+  recycle:exclude = *.tmp,*.temp,*.o,*.obj,~$*
+{% endif %}
+{% if nas_share_homes.protocols.smb.full_audit %}
+  full_audit:success=mkdir rmdir open opendir close closedir rename unlink
+  full_audit:failure=mkdir rmdir open opendir close closedir rename unlink connect disconnect
+  full_audit:prefix=%u|%D|%I|%M|%S
+{% endif %}
+
+
+{% endif %}
+{% if nas_shares | length < 1 %}
+# No share configured
+{% else %}
+{% for share in nas_shares %}
+{% if share.protocols.smb.enabled %}
+[{{ share.name }}]
+  comment = {{ share.description | default(share.name) }}
+  readonly = no
+  path = {{ share.path | default(nas_root_dir + '/data/' + share.name) }}
+  browseable = {{ share.protocols.smb.browseable | ternary('yes','no') }}
+  inherit acls = yes
+  guest ok = {{ share.protocols.smb.guest_ok | ternary('yes','no') }}
+  vfs objects = {{ share.recycle_bin.enabled | ternary('recycle','') }} {{ share.protocols.smb.full_audit | ternary('full_audit','') }} {{ share.protocols.smb.nt_acl | ternary('nfs4acl_xattr','') }}
+{% if share.recycle_bin.enabled %}
+  recycle:repository = {{ share.recycle_bin.dir }}
+  recycle:versions = no
+  recycle:keeptree = no
+  recycle:touch = yes
+  recycle:exclude = *.tmp,*.temp,*.o,*.obj,~$*
+{% endif %}
+{% if share.protocols.smb.full_audit %}
+  full_audit:success=mkdir rmdir open opendir close closedir rename unlink
+  full_audit:failure=mkdir rmdir open opendir close closedir rename unlink connect disconnect
+  full_audit:prefix=%u|%D|%I|%M|%S
+{% endif %}
+
+
+{% endif %}
+{% endfor %}
+{% endif %}

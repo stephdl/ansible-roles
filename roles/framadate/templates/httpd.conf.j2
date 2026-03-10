@@ -1,0 +1,45 @@
+{% if framadate_alias is defined %}
+Alias /{{ framadate_alias }} {{ framadate_root_dir }}/web
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+<Directory {{ framadate_root_dir }}/web>
+  AllowOverride None
+  Options FollowSymLinks
+{% if framadate_allowed_ip is defined %}
+  Require ip {{ framadate_allowed_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ framadate_php_fpm_pool | default('framadate_' + framadate_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+{% if framadate_proxy_auth %}
+  SetEnvIfNoCase Auth-User "(.*)" REMOTE_USER=$1
+{% endif %}
+
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule . - [L]
+
+  RewriteRule ^([a-zA-Z0-9-]+)$ studs.php?poll=$1 [L]
+  RewriteRule ^([a-zA-Z0-9-]+)/action/([a-zA-Z_-]+)/(.+)$ studs.php?poll=$1&$2=$3
+  RewriteRule ^([a-zA-Z0-9-]+)/vote/([a-zA-Z0-9]{16})$ studs.php?poll=$1&vote=$2
+  RewriteRule ^(action/)?([a-zA-Z0-9-]{24})/admin$ adminstuds.php?poll=$2
+  RewriteRule ^([a-zA-Z0-9-]{24})/admin/vote/([a-zA-Z0-9]{16})$ adminstuds.php?poll=$1&vote=$2
+  RewriteRule ^([a-zA-Z0-9-]{24})/admin/action/([a-zA-Z_-]+)(/(.+))?$ adminstuds.php?poll=$1&$2=$4
+
+  <FilesMatch "(composer\..*|\.gitignore|\.editorconfig|.*\.(md|bat|sh|ini)|LICEN[SC]E\..*|htaccess\.txt|\.ansible_version)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+  </FilesMatch>
+
+</Directory>
+

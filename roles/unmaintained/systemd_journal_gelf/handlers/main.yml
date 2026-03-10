@@ -1,0 +1,4 @@
+---
+
+- name: restart systemd-journal-gelf
+  service: name=systemd-journal-gelf state=restarted

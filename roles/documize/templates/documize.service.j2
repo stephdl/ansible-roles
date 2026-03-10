@@ -1,0 +1,24 @@
+[Unit]
+Description=Documize Documentation Manager
+After=network.target postgresql.service mariadb.service
+
+[Service]
+Type=simple
+User={{ documize_user }}
+ExecStart={{ documize_root_dir }}/bin/documize {{ documize_root_dir }}/etc/documize.conf
+WorkingDirectory={{ documize_root_dir }}/tmp
+Restart=always
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictRealtime=true
+ReadWritePaths=/run
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

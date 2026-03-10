@@ -1,0 +1,10 @@
+listeners.tcp.default = {{ rabbitmq_port }}
+listeners.ssl.default = {{ rabbitmq_ssl_port }}
+{% if rabbitmq_ssl_cacert_path is defined %}
+ssl_options.cacertfile = {{ rabbitmq_ssl_cacert_path }}
+{% endif %}
+ssl_options.certfile = {{ rabbitmq_ssl_cert_path }}
+ssl_options.keyfile = {{ rabbitmq_ssl_key_path }}
+loopback_users.guest = {{ rabbitmq_guest_from_anywhere | ternary('false','true') }}
+management.tcp.port = {{ rabbitmq_web_port }}
+management.tcp.ip = 0.0.0.0

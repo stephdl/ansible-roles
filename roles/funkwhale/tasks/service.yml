@@ -1,0 +1,9 @@
+---
+
+- name: Start and enable funkwhale services
+  systemd: name=funkwhale_{{ funkwhale_id }}-{{ item }} state=started enabled=True
+  loop:
+    - server.service
+    - update-media.timer
+  tags: funkwhale
+

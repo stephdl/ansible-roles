@@ -1,0 +1,23 @@
+# /etc/systemd/system/jenkins.service
+[Unit]
+Description=Standalone Jenkins Master server
+Documentation=https://www.jenkins.io/doc
+ 
+Wants=network-online.target
+After=network-online.target
+ 
+[Service]
+User=jenkins
+Group=jenkins
+Environment=HTTP_PORT={{ jenkins_server_port }}
+Environment=JAVA_ARGS=-Djava.awt.headless=true
+Environment=JENKINS_HOME={{ jenkins_root_dir }}/data/
+Environment=JENKINS_WAR={{ jenkins_root_dir }}/jenkins.war
+Environment=LISTEN_ADDRESS=0.0.0.0
+Environment=WEBROOT={{ jenkins_root_dir }}/cache/
+WorkingDirectory={{ jenkins_root_dir }}
+LimitNOFILE=8192
+ExecStart=/usr/bin/java ${JAVA_ARGS} -jar ${JENKINS_WAR} --webroot=${WEBROOT} --httpPort=${HTTP_PORT} --httpListenAddress=${LISTEN_ADDRESS}
+ 
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eo pipefail
+
+mkdir -p /home/lbkp/mongo
+mongodump --username {{ mongo_admin_user }} --password {{ mongo_admin_pass | quote }} --quiet --port {{ mongo_port }} --out /home/lbkp/mongo

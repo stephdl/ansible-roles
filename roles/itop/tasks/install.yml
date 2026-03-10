@@ -1,0 +1,122 @@
+---
+
+- name: Install needed tools
+  yum:
+    name:
+      - tar
+      - mariadb
+      - acl
+      - graphviz
+  tags: itop
+
+- when: itop_install_mode != 'none'
+  block:
+    - name: Download iTop
+      get_url:
+        url: "{{ itop_archive_url }}"
+        dest: "{{ itop_root_dir }}/tmp/"
+        checksum: "sha1:{{ itop_archive_sha1 }}"
+    
+    - name: Extract iTop archive
+      unarchive:
+        src: "{{ itop_root_dir }}/tmp/iTop-{{ itop_version }}-{{ itop_build }}.zip"
+        dest: "{{ itop_root_dir }}/tmp"
+        remote_src: yes
+
+    - name: Remove previous install
+      file: path={{ itop_root_dir }}/web/{{ item }} state=absent
+      loop:
+        - addons
+        - datamodels
+        - images
+        - lib
+        - manifest.xml
+        - portal
+        - application
+        - core
+        - dictionnaries
+        - env-test
+        - index.php
+        - navigator
+        - setup
+        - webservices
+        - approot.inc.php
+        - css
+        - js
+        - pages
+        - synchro
+        - sources
+        - documentation
+    
+    - name: Install new version of iTop
+      synchronize:
+        src: "{{ itop_root_dir }}/tmp/web/"
+        dest: "{{ itop_root_dir }}/web/"
+        recursive: True
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Download php CAS lib
+      get_url:
+        url: "{{ itop_php_cas_archive_url }}"
+        checksum: sha1:{{ itop_php_cas_archive_sha1 }}
+        dest: "{{ itop_root_dir }}/tmp"
+
+    - name: Extract php CAS lib
+      unarchive:
+        src: "{{ itop_root_dir }}/tmp/CAS-{{ itop_php_cas_version }}.tgz"
+        dest: "{{ itop_root_dir }}/tmp"
+        remote_src: True
+
+    - name: Install php CAS lib
+      synchronize:
+        src: "{{ itop_root_dir }}/tmp/CAS-{{ itop_php_cas_version }}/{{ item }}"
+        dest: "{{ itop_root_dir }}/web/lib/"
+        recursive: True
+      delegate_to: "{{ inventory_hostname }}"
+      loop:
+        - CAS.php
+        - CAS
+
+  tags: itop
+
+- name: Ensure env-production directories exist
+  file: path={{ itop_root_dir }}/web/{{ item }} state=directory
+  loop:
+    - env-production
+    - env-production-build
+  tags: itop
+
+- import_tasks: ../includes/webapps_create_mysql_db.yml
+  vars:
+    - db_name: "{{ itop_db_name }}"
+    - db_user: "{{ itop_db_user }}"
+    - db_server: "{{ itop_db_server }}"
+    - db_pass: "{{ itop_db_pass }}"
+  tags: itop
+
+- name: Install backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/itop_{{ itop_id }} mode=700
+  loop:
+    - pre
+    - post
+  tags: itop
+
+- name: Install systemd units
+  template: src=itop.{{ item }}.j2 dest=/etc/systemd/system/itop_{{ itop_id }}.{{ item }}
+  loop:
+    - service
+    - timer
+  register: itop_units
+  tags: itop
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: itop_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: itop
+
+- name: Enable iTop timer
+  systemd:
+    name: itop_{{ itop_id }}.timer
+    state: "{{ (itop_cron_user is defined and itop_cron_pass is defined) | ternary('started','stopped') }}"
+    enabled: "{{ (itop_cron_user is defined and itop_cron_pass is defined) | ternary(True,False) }}"
+  tags: itop

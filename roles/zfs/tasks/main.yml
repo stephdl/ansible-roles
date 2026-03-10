@@ -1,0 +1,151 @@
+---
+
+- include: install_{{ ansible_os_family }}.yml
+
+- name: load ZFS
+  modprobe: name=zfs
+  tags: zfs
+
+- name: Create sanoid conf dir
+  file: path=/etc/sanoid/ state=directory
+  tags: zfs
+
+- name: Deploy sanoid configuration
+  template: src=sanoid.conf.j2 dest=/etc/sanoid/sanoid.conf
+  tags: zfs
+
+- name: Enable sanoid timer
+  systemd: name=sanoid.timer state=started enabled=True
+  tags: zfs
+
+- import_tasks: ../includes/create_system_user.yml
+  vars:
+    - user: zfs-recv
+    - comment: ZFS Receiver account
+    - shell: /bin/bash
+  tags: zfs
+
+- name: Deploy sudo fragment for zfs-recv
+  template: src=recv-sudo.j2 dest=/etc/sudoers.d/zfs_recv owner=root group=root mode=440 validate='visudo -cf %s'
+  tags: zfs
+
+- name: Deploy pool scrub suspend and resume scripts
+  copy: src={{ item }} dest=/usr/local/bin/{{ item }} mode=755
+  loop:
+    - z_suspend_scrubs
+    - z_resume_scrubs
+  tags: zfs
+
+- name: Deploy ssh keys for zfs-recv
+  authorized_key:
+    user: zfs-recv
+    key: "{{ zfs_repl_recv | ternary(zfs_repl_authorized_keys | join(\"\n\"), '') }}"
+    key_options: "no-port-forwarding,no-pty,no-X11-forwarding,no-agent-forwarding,from=\"{{ zfs_repl_src_ip | join(',') }}\""
+    exclusive: True
+  tags: zfs
+
+- name: Add an id to replication jobs (if not defined)
+  set_fact:
+    zfs_repl_with_id: "{{ zfs_repl_with_id | default([]) + [ item | combine({ 'id': item.id | default(item.dataset | regex_replace('[^a-zA-Z0-9]', '-') + '-' + item.dest | regex_replace('[^a-zA-Z0-9]', '-')) }, recursive=True) ] }}"
+  loop: "{{ zfs_repl }}"
+  tags: zfs
+- set_fact: zfs_repl={{ zfs_repl_with_id | default([]) }}
+  tags: zfs
+
+- name: List existing syncoid units
+  shell: find /etc/systemd/system/ -name syncoid-*.service -o -name syncoid-*.timer | xargs -n1 basename | perl -pe 's/syncoid\-(.*)\.(service|timer)$/$1/'
+  register: zfs_existing_syncoid_units
+  changed_when: False
+  tags: zfs
+
+- name: Disable unmanaged syncoid timer
+  systemd: name=syncoid-{{ item }}.timer state=stopped enabled=False
+  loop: "{{ zfs_existing_syncoid_units.stdout_lines }}"
+  when: item not in (zfs_repl | map(attribute='id') | list)
+  failed_when: False # unmanaged units might not have been picked up by a daemon-reload
+  tags: zfs
+
+- name: Remove unmanaged syncoid units
+  file: path=/etc/systemd/system/syncoid-{{ item.0 }}.{{ item.1 }} state=absent
+  with_nested:
+    - "{{ zfs_existing_syncoid_units.stdout_lines }}"
+    - [ 'service', 'timer' ]
+  when: item.0 not in (zfs_repl | map(attribute='id') | list)
+  register: zfs_syncoid_removed_units
+  tags: zfs
+
+- name: Deploy syncoid units
+  template:
+    src: syncoid.{{ item.0 }}.j2
+    dest: /etc/systemd/system/syncoid-{{ item.1.id }}.{{ item.0 }}
+  with_nested:
+    - [ 'service', 'timer' ]
+    - "{{ zfs_repl }}"
+  register: zfs_syncoid_units
+  notify: restart syncoid
+  tags: zfs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zfs_syncoid_units.results | selectattr('changed', 'equalto', True) | list | length > 0 or zfs_syncoid_removed_units.results | selectattr('changed', 'equalto', True) | list | length > 0
+  tags: zfs
+
+- name: Handle syncoid timer units
+  systemd: name=syncoid-{{ item.id }}.timer state=started enabled=True
+  loop: "{{ zfs_repl }}"
+  tags: zfs
+
+- name: Deploy ZFS scrub and trim template units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - zfs-scrub@.service
+    - zfs-scrub@.timer
+    - zfs-trim@.service
+    - zfs-trim@.timer
+  register: zfs_units
+  tags: zfs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zfs_units.changed
+  tags: zfs
+
+- name: List ZFS pools
+  command: zpool list -H -o name
+  register: zfs_existing_pools
+  changed_when: False
+  tags: zfs
+
+- name: Enable ZFS scrub and trim timers
+  systemd: name=zfs-{{ item.1 }}@{{ item.0 }}.timer state=started enabled=True
+  with_nested:
+    - "{{ zfs_existing_pools.stdout_lines }}"
+    - ['scrub', 'trim']
+  tags: zfs
+
+- name: List ZFS scrub and trim timers
+  shell: find /etc/systemd/system/timers.target.wants/ -maxdepth 1 -mindepth 1 -type l \( -name zfs-scrub@\*.timer -o -name zfs-trim@\*.timer \) -exec basename "{}" \; | sed 's/zfs-.*@\(.*\)\.timer/\1/'
+  register: zfs_pool_timers
+  changed_when: False
+  tags: zfs
+
+- name: Disable ZFS scrub and trim timers for non existing pools
+  systemd: name=zfs-{{ item.1 }}@{{ item.0 }}.timer state=stopped enabled=False
+  with_nested:
+    - "{{ zfs_pool_timers.stdout_lines | difference(zfs_existing_pools.stdout_lines) }}"
+    - ['scrub', 'trim']
+  tags: zfs
+
+- name: Fetch bash_completion support
+  get_url:
+    url: https://raw.githubusercontent.com/openzfs/zfs/master/contrib/bash_completion.d/zfs.in
+    dest: /tmp/zfs_bash_completion
+  tags: zfs
+
+- name: Install bash_completion
+  shell: sed -e 's/@sbindir@/\/sbin/' /tmp/zfs_bash_completion > /etc/bash_completion.d/zfs
+  args:
+    warn: False
+  changed_when: False
+  tags: zfs
+

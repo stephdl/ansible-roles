@@ -1,0 +1,16 @@
+---
+clam_mirror: database.clamav.net
+clam_user: clamav
+clam_group: clamav
+clam_enable_clamd: False
+clam_custom_db_url: []
+clam_safebrowsing: True
+clam_listen_port: 3310
+clam_ports: "{{ [clam_listen_port] + [clam_stream_port_min + ':' + clam_stream_port_max] }}"
+clam_listen_ip: 127.0.0.1
+clam_src_ip: []
+# Max stream size, in MB
+clam_stream_max_size: 50
+clam_stream_port_min: 30000
+clam_stream_port_max: 32000
+

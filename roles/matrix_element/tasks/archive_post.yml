@@ -1,0 +1,9 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ element_root_dir }}"
+    - version: "{{ element_current_version }}"
+  when: element_install_mode == 'upgrade'
+  tags: matrix
+

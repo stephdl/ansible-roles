@@ -1,0 +1,13 @@
+---
+
+- name: Install snmp packages
+  yum:
+    name:
+      - net-snmp-libs
+  tags: snmp,zabbix
+
+- name: Copy SNMP MIBS
+  copy:
+    src: mibs/
+    dest: /usr/share/snmp/mibs/
+  tags: snmp,zabbix

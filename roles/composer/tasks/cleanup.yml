@@ -1,0 +1,11 @@
+---
+
+- name: Check if composer exists in /usr/local/bin
+  stat: path=/usr/local/bin/composer
+  register: composer_local
+  tags: web
+
+- name: Remove manually installed composer
+  file: path=/usr/local/bin/composer state=absent
+  when: composer_local.stat.exists and not composer_local.stat.islnk
+  tags: web

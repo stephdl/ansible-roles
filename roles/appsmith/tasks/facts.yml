@@ -1,0 +1,61 @@
+---
+
+# Detect installed version (if any)
+- block:
+    - import_tasks: ../includes/webapps_set_install_mode.yml
+      vars:
+        - root_dir: "{{ appsmith_root_dir }}"
+        - version: "{{ appsmith_version }}"
+    - set_fact: appsmith_install_mode={{ (install_mode == 'upgrade' and not appsmith_manage_upgrade) | ternary('none',install_mode) }}
+    - set_fact: appsmith_current_version={{ current_version | default('') }}
+  tags: appsmith
+
+# Create a random encryption password
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ appsmith_root_dir }}/meta/ansible_encryption_pass"
+    - set_fact: appsmith_encryption_pass={{ rand_pass }}
+  when: appsmith_encryption_pass is not defined
+  tags: appsmith
+
+# Create a random encryption salt
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ appsmith_root_dir }}/meta/ansible_encryption_salt"
+        - complex: False
+        - pass_size: 10
+    - set_fact: appsmith_encryption_salt={{ rand_pass }}
+  when: appsmith_encryption_salt is not defined
+  tags: appsmith
+
+- set_fact: appsmith_mongo_pass={{ appsmith_mongo_url | urlsplit('password') | urldecode }}
+  when:
+    - appsmith_mongo_pass is not defined
+    - appsmith_mongo_url | urlsplit('password') is string
+  tags: mongo
+
+# Create a random password for mongo
+- block:
+    - import_tasks: ../includes/get_rand_pass.yml
+      vars:
+        - pass_file: "{{ appsmith_root_dir }}/meta/ansible_mongo_pass"
+    - set_fact: appsmith_mongo_pass={{ rand_pass }}
+  when: appsmith_mongo_pass is not defined
+  tags: appsmith
+
+# Try to read mongo admin pass
+- name: Check if mongo pass file exists
+  stat: path=/root/.mongo.pw
+  register: appsmith_mongo_pw
+  tags: appsmith
+- when: appsmith_mongo_pw.stat.exists and mongo_admin_pass is not defined
+  block:
+    - slurp: src=/root/.mongo.pw
+      register: appsmith_mongo_admin_pass
+    - set_fact: mongo_admin_pass={{ appsmith_mongo_admin_pass.content | b64decode | trim }}
+  tags: appsmith
+- fail: msg='mongo_admin_pass must be provided'
+  when: not appsmith_mongo_pw.stat.exists and mongo_admin_pass is not defined
+  tags: appsmith

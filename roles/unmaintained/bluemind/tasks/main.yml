@@ -1,0 +1,118 @@
+---
+
+- name: Install tools
+  yum:
+    name:
+      - socat
+  tags: bm
+
+- name: Create dehydrated hook dir
+  file: path=/etc/dehydrated/hooks_deploy_cert.d state=directory
+  tags: bm
+
+- name: Deploy dehydrated hook
+  template: src=dehydrated_deploy_hook.j2 dest=/etc/dehydrated/hooks_deploy_cert.d/bluemind mode=755
+  tags: bm
+
+- name: Create local conf directory
+  file: path=/etc/bm/local state=directory
+  tags: bm
+
+- name: Configure proxy
+  lineinfile:
+    regex: '^PROXY_OPTS=.*'
+    line: "PROXY_OPTS=\"{{ (system_proxy is defined and system_proxy != '') | ternary('-Dhttps.proxyHost=' ~ system_proxy | urlsplit('hostname') ~ ' -Dhttps.proxyPort=' ~ system_proxy | urlsplit('port') ~ ' -Dhttp.proxyHost=' ~ system_proxy | urlsplit('hostname') ~ ' -Dhttp.proxyPort=' ~ system_proxy | urlsplit('port'),'') }}\""
+    path: /etc/bm/local/{{ item }}.ini
+    create: True
+  loop:
+    - bm-core
+    - bm-webserver
+  notify: restart bluemind
+  tags: bm
+
+- name: Configure JVM options
+  lineinfile:
+    regex: '^JVM_OPTS=.*'
+    line: "JVM_OPTS=\"${PROXY_OPTS}\""
+    path: /etc/bm/local/{{ item }}.ini
+    insertafter: '^PROXY_OPTS=.*'
+  loop:
+    - bm-core
+    - bm-webserver
+  notify: restart bluemind
+  tags: bm
+
+- name: Configure memory allocation rules
+  template: src=rules.json.j2 dest=/etc/bm/local/rules.json
+  notify: restart bluemind
+  tags: bm
+
+- set_fact:
+    bm_restart_services: "[ 'bm-elasticsearch', 'bm-mapi' ]"
+  tags: bm
+
+- name: Create systemd unit snippet dirs
+  file: path=/etc/systemd/system/{{ item }}.service.d state=directory
+  loop: "{{ bm_restart_services }}"
+  tags: bm
+
+- name: Configure systemd to restart services on failure
+  copy:
+    content: |
+      [Service]
+      TimeoutSec=60
+      StartLimitInterval=0
+      RestartSec=1
+      Restart=on-failure
+    dest: /etc/systemd/system/{{ item }}.service.d/restart.conf
+  loop: "{{ bm_restart_services }}"
+  register: bm_units
+  notify: restart bluemind
+  tags: bm
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: bm_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: bm
+
+- name: Handle firewall ports
+  iptables_raw:
+    name: "{{ item.name }}"
+    state: "{{ (item.src | length > 0) | ternary('present','absent') }}"
+    rules: "{% if 'tcp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'tcp' %}-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT\n{% endif %}
+            {% if 'udp' in item.proto | default(['tcp']) or item.proto | default('tcp') == 'udp' %}-A INPUT -m state --state NEW -p udp -m multiport --dports {{ item.ports | join(',') }} -s {{ item.src | join(',') }} -j ACCEPT{% endif %}"
+  when: iptables_manage | default(True)
+  with_items:
+    - ports: "{{ bm_http_ports }}"
+      name: bm_http_ports
+      src: "{{ bm_http_src_ip }}"
+    - ports: "{{ bm_imap_ports }}"
+      name: bm_imap_ports
+      src: "{{ bm_imap_src_ip }}"
+    - ports: "{{ bm_pop_ports }}"
+      name: bm_pop_ports
+      src: "{{ bm_pop_src_ip }}"
+    - ports: "{{ bm_smtp_ports }}"
+      name: bm_smtp_ports
+      src: "{{ bm_smtp_src_ip }}"
+    - ports: "{{ bm_milter_ports }}"
+      name: bm_milter_ports
+      src: "{{ bm_milter_src_ip }}"
+    - ports: "{{ bm_int_ports }}"
+      name: bm_int_ports
+      src: "{{ bm_int_src_ip }}"
+  tags: bm,firewall
+
+- name: Create pre/post backup hook dir
+  file: path=/etc/backup/{{ item }}.d state=directory mode=750
+  loop:
+    - pre
+    - post
+  tags: bm
+
+- name: Deploy pre and post backup script
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/bluemind mode=755
+  loop:
+    - pre
+    - post
+  tags: bm

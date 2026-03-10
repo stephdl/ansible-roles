@@ -1,0 +1,286 @@
+---
+
+- name: Install RPM dependencies
+  yum: name={{ seafile_packages }}
+  tags: seafile
+
+- name: Install MariaDB libs
+  yum:
+    name:
+      - MariaDB-shared
+  when:
+    - mysql_mariadb_version is defined
+    - mysql_mariadb_version != 'default'
+  tags: seafile
+
+- name: Check if py2 venv is setup
+  stat: path={{ seafile_root_dir }}/bin/python2
+  register: seafile_py2
+  tags: seafile
+
+- name: Clear the venv as we migrate to py3
+  file: path={{ seafile_root_dir }}/{{ item }} state=absent
+  loop:
+    - lib
+    - lib64
+    - bin
+    - include
+  when: seafile_py2.stat.exists
+  tags: seafile
+
+- name: Install or update python modules in the virtualenv
+  pip:
+    state: "{{ (seafile_install_mode == 'upgrade') | ternary('latest', 'present') }}"
+    virtualenv: "{{ seafile_root_dir }}"
+    virtualenv_command: /usr/bin/virtualenv-3
+    virtualenv_python: /usr/bin/python3
+    name: "{{ seafile_python_libs }}"
+  notify:
+    - restart seafile
+    - restart seahub
+  tags: seafile
+
+- name: Install Seafile pro license
+  copy: content={{ seafile_license }} dest={{ seafile_root_dir }}/seafile-license.txt
+  when:
+    - seafile_license is defined
+    - seafile_license != '' # defining an empty license means using the Free for 3 user offer
+  notify:
+    - restart seafile
+    - restart seahub
+  tags: seafile
+
+- name: Download seafile archive
+  get_url:
+    url: "{{ seafile_archive_url }}"
+    dest: "{{ seafile_root_dir }}/tmp/seafile-server_{{ seafile_version }}_x86-64.tar.gz"
+    checksum: "sha1:{{ seafile_archive_sha1 }}"
+  when:
+    - seafile_install_mode != 'none'
+    - seafile_license is not defined
+  tags: seafile
+
+- name: Copy Seafile pro archive
+  copy: src=seafile-pro-server_{{ seafile_version }}_x86-64_CentOS.tar.gz dest={{ seafile_root_dir }}/tmp/
+  when:
+    - seafile_install_mode != 'none'
+    - seafile_license is defined
+  tags: seafile
+
+- name: Extract seafile archive
+  unarchive:
+    src: "{{ seafile_root_dir }}/tmp/{{ seafile_license is defined | ternary('seafile-pro-server_' ~ seafile_version ~ '_x86-64_CentOS.tar.gz','seafile-server_' ~ seafile_version ~ '_x86-64.tar.gz') }}"
+    dest: "{{ seafile_root_dir }}/tmp"
+    remote_src: yes
+  when: seafile_install_mode != 'none'
+  tags: seafile
+
+- name: Move seafile to the correct location
+  synchronize:
+    src: "{{ seafile_root_dir }}/tmp/seafile-{{ seafile_license is defined | ternary('pro-','') }}server-{{ seafile_version }}/"
+    dest: "{{ seafile_root_dir }}/seafile-server/"
+    recursive: True
+    delete: True
+    compress: False
+  delegate_to: "{{ inventory_hostname }}"
+  when: seafile_install_mode != 'none'
+  tags: seafile
+
+- name: Chown seafile install dir
+  shell: chown -R {{ seafile_user }}:{{ seafile_group }} {{ seafile_root_dir }}/seafile-server/*
+  args:
+    warn: False
+  when: seafile_install_mode != 'none'
+  tags: seafile
+
+- name: Check if avatar is a dir or a link
+  stat: path={{ seafile_root_dir }}/seafile-server/seahub/media/avatars
+  register: seafile_avatar
+  tags: seafile
+
+- name: Remove default avatar directory
+  file: path={{ seafile_root_dir }}/seafile-server/seahub/media/avatars state=absent
+  when: seafile_avatar.stat.isdir is defined and seafile_avatar.stat.isdir
+  tags: seafile
+
+- name: Create seahub symlinks
+  file: src={{ seafile_data_dir }}/seahub/{{ item.src }} dest={{ seafile_root_dir }}/seafile-server/seahub/media/{{ item.dest }} state=link force=True
+  with_items:
+    - src: custom
+      dest: custom
+    - src: cache
+      dest: CACHE
+    - src: avatars
+      dest: avatars
+  tags: seafile
+
+- name: Create data dir link
+  file: src={{ seafile_data_dir }} dest={{ seafile_root_dir }}/seafile-data state=link
+  tags: seafile
+
+- name: Create pro-data link
+  file: src={{ seafile_data_dir }}/pro dest={{ seafile_root_dir }}/pro-data state=link force=True
+  when: seafile_license is defined
+  tags: seafile
+
+- name: Set permissions on seahub runtime directory
+  file: path={{ seafile_root_dir }}/seafile-server/runtime state=directory owner={{ seafile_user }} mode=700
+  tags: seafile
+
+- name: Create library-template
+  file: path={{ seafile_data_dir }}/library-template state=directory
+  when: seafile_install_mode == 'install'
+  tags: seafile
+
+- name: Copy default avatars
+  copy: src=avatars/ dest={{ seafile_data_dir }}/seahub/avatars/
+  tags: seafile
+
+  # Needed since CentOS 7.5 so ldaps can be used
+- name: Remove bundled libs
+  file: path={{ seafile_root_dir }}/seafile-server/seafile/lib/{{ item }} state=absent
+  loop: "{{ seafile_rm_libs }}"
+  notify: restart seafile
+  tags: seafile
+
+- name: Copy documentation
+  copy: src={{ seafile_root_dir }}/tmp/seafile-{{ (seafile_license is defined) | ternary('pro-','') }}server-{{ seafile_version }}/seafile/docs/seafile-tutorial.doc dest={{ seafile_data_dir }}/library-template remote_src=True
+  when: seafile_install_mode == 'install'
+  tags: seafile
+
+- name: Generate a secret for seahub
+  shell: "{{ seafile_root_dir }}/bin/python {{ seafile_root_dir }}/seafile-server/seahub/tools/secret_key_generator.py > {{ seafile_root_dir }}/meta/ansible_hub_secret"
+  args:
+    creates: "{{ seafile_root_dir }}/meta/ansible_hub_secret"
+  when: seafile_seahub_secret is not defined
+  tags: seafile
+
+- name: Read seahub secret
+  command: cat {{ seafile_root_dir }}/meta/ansible_hub_secret
+  register: seafile_seahub_rand_secret
+  when: seafile_seahub_secret is not defined
+  changed_when: False
+  tags: seafile
+
+- name: Set seahub secret key
+  set_fact: seafile_seahub_secret={{ seafile_seahub_rand_secret.stdout }}
+  when: seafile_seahub_secret is not defined
+  tags: seafile
+
+- name: Create the databases
+  mysql_db:
+    name: "{{ item }}"
+    login_host: "{{ seafile_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    encoding: utf8
+    collation: utf8_general_ci
+    state: present
+  with_items:
+    - "{{ seafile_db_seafile }}"
+    - "{{ seafile_db_ccnet }}"
+    - "{{ seafile_db_seahub }}"
+  tags: seafile
+
+- name: Create database user
+  mysql_user:
+    name: "{{ seafile_db_user }}"
+    password: "{{ seafile_db_pass }}"
+    priv: "{{ seafile_db_seafile }}.*:ALL/{{ seafile_db_ccnet }}.*:ALL/{{ seafile_db_seahub }}.*:ALL"
+    host: "{{ item }}"
+    login_host: "{{ seafile_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    state: present
+  with_items: "{{ (seafile_db_server == '127.0.0.1') | ternary(['127.0.0.1','localhost'],ansible_all_ipv4_addresses) }}"
+  tags: seafile
+
+- name: Load database schema schema
+  mysql_db:
+    state: import
+    target: "{{ item.file }}"
+    name: "{{ item.db }}"
+    login_host: "{{ seafile_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+  loop:
+    - db: "{{ seafile_db_seahub }}"
+      file: "{{ seafile_root_dir }}/seafile-server/seahub/sql/mysql.sql"
+    - db: "{{ seafile_db_seafile }}"
+      file: "{{ seafile_root_dir }}/seafile-server/sql/mysql/seafile.sql"
+    - db: "{{ seafile_db_ccnet }}"
+      file: "{{ seafile_root_dir }}/seafile-server/sql/mysql/ccnet.sql"
+  when: seafile_install_mode == 'install'
+  tags: seafile
+
+- name: Deploy systemd services
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  with_items:
+    - seafile.service
+    - seahub.service
+    - seafile-clean-db.service
+    - seafile-clean-db.timer
+    - seafile-gc.service
+    - seafile-gc.timer
+  notify:
+    - restart seafile
+    - restart seahub
+  register: seafile_systemd_unit
+  tags: seafile
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: seafile_systemd_unit.changed
+  tags: seafile
+
+- name: Deploy pre and post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/seafile.sh mode=700
+  loop:
+    - pre
+    - post
+  tags: seafile
+
+- name: Check if there are custom office templates
+  local_action: stat path=config/{{ inventory_hostname }}/seafile/office-template/empty.{{ item }}
+  register: seafile_custom_office_template
+  vars:
+    ansible_become: False
+  loop:
+    - docx
+    - pptx
+    - xlsx
+  tags: seafile
+
+- name: Override office templates
+  copy:
+    src: "{{ item.stat.exists | ternary('config/' + inventory_hostname + '/seafile/office-template/empty.','office-template/empty.' ) }}{{ item.item }}"
+    dest: "{{ seafile_root_dir }}/seafile-server/seahub/media/office-template/"
+  loop: "{{ seafile_custom_office_template.results }}"
+  tags: seafile
+
+- name: Deploy a clamdscan wrapper script
+  copy:
+    content: |
+      #!/bin/bash -e
+      /bin/clamdscan -c /etc/clamd.conf $@
+    dest: "{{ seafile_root_dir }}/seafile-server/clamdscan.sh"
+    mode: 0755
+  tags: seafile
+
+- name: Deploy a python wrapper for Seafile
+  copy:
+    content: |
+      #!/bin/bash -e
+      export PYTHONPATH={{ seafile_root_dir }}/lib/python3.6/site-packages/
+      {{ seafile_root_dir }}/bin/python3 $@
+    dest: /usr/local/bin/seafpy
+    mode: 0755
+  tags: seafile
+
+- name: Deploy maintenance scripts
+  template: src={{ item }}.sh.j2 dest={{ seafile_root_dir }}/bin/{{ item }}.sh mode=0700
+  loop:
+    - gc
+    - clean_db
+  tags: seafile
+

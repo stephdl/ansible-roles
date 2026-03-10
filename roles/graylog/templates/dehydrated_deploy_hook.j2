@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+{% if graylog_letsencrypt_cert is defined %}
+if [ $1 == "{{ graylog_letsencrypt_cert }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ graylog_letsencrypt_cert }}/privkey.pem > {{ graylog_root_dir }}/ssl/key.pem
+  cat /var/lib/dehydrated/certificates/certs/{{ graylog_letsencrypt_cert }}/fullchain.pem > {{ graylog_root_dir }}/ssl/cert.pem
+  chown root:graylog {{ graylog_root_dir }}/ssl/*
+  chmod 644 {{ graylog_root_dir }}/ssl/cert.pem
+  chmod 640 {{ graylog_root_dir }}/ssl/key.pem
+  /bin/systemctl restart graylog-server
+fi
+{% endif %}

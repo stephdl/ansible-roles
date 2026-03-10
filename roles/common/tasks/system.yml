@@ -1,0 +1,153 @@
+---
+
+- name: Deploy journald.conf
+  template: src=journald.conf.j2 dest=/etc/systemd/journald.conf
+  when: ansible_service_mgr == 'systemd'
+  notify: restart journald
+
+- name: Allow userspace to trigger kernel autoload of modules
+  seboolean: name=domain_kernel_load_modules state=yes persistent=yes
+  when: ansible_selinux.status == 'enabled'
+  tags: selinux
+
+- name: Configure kmod to load
+  copy: content={{ system_kmods | join("\n") }} dest=/etc/modules-load.d/system.conf
+  register: system_kmods_file
+
+- name: Load needed kmods
+  service: name=systemd-modules-load state=restarted
+  when: system_kmods_file.changed
+
+- name: Set SELinux booleans
+  seboolean: name={{ item.name }} state={{ item.state }} persistent={{ item.persistent | default(True) }}
+  when: ansible_selinux.status == 'enabled'
+  with_items: "{{ sebool }}"
+
+- name: Set logrotate_t to permissive mode
+  selinux_permissive: name=logrotate_t permissive=True
+  when: ansible_selinux.status == 'enabled'
+
+- name: Create mount points directories
+  file: path={{ item.name }} state=directory
+  with_items: "{{ fstab }}"
+  ignore_errors: True # needed for some fuse mount points
+
+- name: Configure mount points
+  mount:
+    name: "{{ item.name }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype | default(omit) }}"
+    opts: "{{ item.opts | default(omit) }}"
+    boot: "{{ item.boot | default(omit) }}"
+    state: "{{ item.state | default('mounted') }}"
+  with_items: "{{ fstab }}"
+
+- name: Set swappiness
+  sysctl:
+    name: vm.swappiness
+    value: "{{ system_swappiness }}"
+    sysctl_file: /etc/sysctl.d/ansible.conf
+    state: present
+  when: ansible_virtualization_role == 'host' or (ansible_virtualization_type != 'lxc' and ansible_virtualization_type != 'systemd-nspawn')
+
+- name: Set sysctl values
+  sysctl:
+    name: "{{ item }}"
+    value: "{{ system_sysctl[item] }}"
+    sysctl_file: /etc/sysctl.d/ansible.conf
+    state: present
+  when: ansible_virtualization_role == 'host' or ansible_virtualization_type != 'lxc'
+  loop: "{{ system_sysctl.keys() | list }}"
+
+- name: Create symlink for restricted bash
+  file:
+    src: /bin/bash
+    dest: /bin/rbash
+    state: link
+
+- name: Set bash as default shell
+  file:
+    src: /bin/bash
+    dest: /bin/sh
+    state: link
+
+- name: Configure logrotate compression
+  blockinfile:
+    dest: /etc/logrotate.conf
+    insertbefore: BOF
+    block: |
+      compress
+      compressoptions -T0
+      compresscmd /usr/bin/xz
+      compressext .xz
+      uncompresscmd /usr/bin/unxz
+
+- name: Configure crond to send cron's log to syslog
+  copy: src=crond dest=/etc/sysconfig/crond mode=600
+  notify: restart crond
+  when: ansible_os_family == 'RedHat'
+
+- name: Deploy fstrim script
+  copy: src=fstrim_all dest=/usr/local/bin/fstrim_all mode=755
+
+- name: Add a cron task to run fstrim
+  cron:
+    name: fstrim
+    special_time: "{{ system_fstrim_freq }}"
+    user: root
+    job: 'sleep $(( 3600 + 1$(/bin/date +\%N) \% 7200 )); /usr/bin/systemd-cat /usr/local/bin/fstrim_all'
+    cron_file: fstrim
+    state: "{{ (ansible_virtualization_role == 'guest' and ansible_virtualization_type == 'lxc') | ternary('absent','present') }}"
+
+- name: Deploy global vimrc
+  copy: src=vimrc.local_{{ ansible_os_family }} dest=/etc/vim/vimrc.local
+  when: ansible_os_family == 'Debian'
+
+- name: Configure vim for dark background
+  lineinfile: path=/etc/vimrc regexp='^set\sbackground=' line='set background=dark'
+  when: ansible_os_family == 'RedHat'
+
+- name: Configure screen to use login shell
+  lineinfile: path=/etc/screenrc regexp='^shell\s.*' line='shell -/bin/sh'
+  when: ansible_os_family == 'Debian'
+
+- name: Handle syslog daemon
+  service:
+    name: rsyslog
+    state: "{{ (system_disable_syslog | default(False)) | ternary('stopped','started') }}"
+    enabled: "{{ (system_disable_syslog | default(False)) | ternary(False,True) }}"
+
+- name: Remove old bash aliases script
+  file: path=/etc/profile.d/bash_aliases.sh state=absent
+
+- name: Deploy bash aliases
+  template: src=bash_aliases.sh.j2 dest=/etc/profile.d/ansible_aliases.sh mode=755
+
+- name: Ensure /etc/rc.d exists
+  file: path=/etc/rc.d state=directory
+
+- name: Deploy rc.local script
+  template: src=rc.local.j2 dest=/etc/rc.d/rc.local mode=755
+
+- name: Deploy rc.local.shutdown script
+  template: src=rc.local.shutdown.j2 dest=/etc/rc.d/rc.local.shutdown mode=755
+
+  # Debian is using /etc/rc.local while RHEL is using /etc/rc.d/rc.local
+- name: Link /etc/rc.local to /etc/rc.d/rc.local
+  file: src=/etc/rc.d/rc.local path=/etc/rc.local state=link force=True
+
+- name: Link /etc/rc.local.shutdown to /etc/rc.d/rc.local.shutdown
+  file: src=/etc/rc.d/rc.local.shutdown path=/etc/rc.local.shutdown state=link force=True
+
+- name: Deploy rc-local-shutdown systemd unit
+  template: src=rc-local-shutdown.service.j2 dest=/etc/systemd/system/rc-local-shutdown.service
+  register: system_rc_local_shutdown_unit
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: system_rc_local_shutdown_unit.changed
+
+- name: Enable rc-local-shutdown service
+  service: name=rc-local-shutdown enabled=True
+
+...

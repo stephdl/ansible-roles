@@ -1,0 +1,59 @@
+{% if pki_web_alias == '/' %}
+{% set pki_web_alias='' %}
+{% endif %}
+{% for realm in pki_realms %}
+{% if realm.scep | default(True) %}
+ScriptAlias {{ pki_web_alias }}/scep/{{ realm.name }} {{ pki_root_dir }}/web/cgi-bin/scep_{{ realm.name }}.fcgi
+{% endif %}
+Alias {{ pki_web_alias }}/pub/{{ realm.name }}/crl {{ pki_root_dir }}/data/{{ realm.name }}/crl.pem
+Alias {{ pki_web_alias }}/pub/{{ realm.name }}/ca {{ pki_root_dir }}/data/{{ realm.name }}/ca.pem
+{% endfor %}
+#ScriptAlias {{ pki_web_alias }}/soap {{ pki_root_dir }}/web/cgi-bin/soap.fcgi
+#ScriptAlias {{ pki_web_alias }}/rpc  {{ pki_root_dir }}/web/cgi-bin/rpc.fcgi
+#ScriptAlias /.well-known/est {{ pki_root_dir }}/web/cgi-bin/est.fcgi
+ScriptAlias {{ pki_web_alias }}/cgi-bin/webui.fcgi {{ pki_root_dir }}/web/cgi-bin/webui.fcgi
+ScriptAlias {{ pki_web_alias }}/cgi-bin/download.fcgi {{ pki_root_dir }}/web/cgi-bin/download.fcgi
+Alias {{ pki_web_alias }}/ {{ pki_root_dir }}/web/htdocs/
+
+FcgidInitialEnv PERL5LIB {{ pki_root_dir }}/lib/perl5
+FcgidInitialEnv OPENXPKI_CLIENT_CONF_DIR {{ pki_root_dir }}/etc/
+FcgidInitialEnv OPENXPKI_CONF_PATH {{ pki_root_dir }}/etc/config.d
+FcgidInitialEnv OPENXPKI_SCEP_CLIENT_CONF_DIR {{ pki_root_dir }}/etc/scep/
+FcgidInitialEnv OPENXPKI_WEBUI_CLIENT_CONF_FILE {{ pki_root_dir }}/etc/webui/default.conf
+
+
+<LocationMatch {{ pki_web_alias }}/pub/\w+/crl>
+  Header set "Content-disposition" "attachment; filename=crl.pem"
+</LocationMatch>
+<LocationMatch {{ pki_web_alias }}/pub/\w+/ca>
+  Header set "Content-disposition" "attachment; filename=ca.crt"
+</LocationMatch>
+<Directory {{ pki_root_dir }}/data>
+  Options None
+  <FilesMatch "(.*\.pem)">
+{% if pki_pub_src_ip | length > 0 and '0.0.0.0/0' not in pki_pub_src_ip and '0.0.0.0/0.0.0.0' not in pki_pub_src_ip %}
+    Require ip {{ pki_pub_src_ip | join(' ') }}
+{% else %}
+    Require all granted
+{% endif %}
+  </FilesMatch>
+</Directory>
+<Directory {{ pki_root_dir }}/web/htdocs>
+  AllowOverride FileInfo
+  Options FollowSymlinks
+{% if pki_src_ip | length > 0 and '0.0.0.0/0' not in pki_src_ip and '0.0.0.0/0.0.0.0' not in pki_src_ip %}
+  Require ip {{ pki_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+</Directory>
+<Directory {{ pki_root_dir }}/web/cgi-bin>
+  AllowOverride None
+  AddHandler fcgid-script .fcgi
+  Options +ExecCGI
+{% if pki_src_ip | length > 0 and '0.0.0.0/0' not in pki_src_ip and '0.0.0.0/0.0.0.0' not in pki_src_ip %}
+  Require ip {{ pki_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+</Directory>

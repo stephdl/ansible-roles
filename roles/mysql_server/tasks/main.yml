@@ -1,0 +1,132 @@
+---
+
+- name: set service name
+  set_fact: mysql_service_name={{ (mysql_engine == 'mysql') | ternary('mysqld','mariadb') }}
+  tags: mysql
+
+- name: Remove mariadb repo
+  file: path=/etc/yum.repos.d/mariadb.repo state=absent
+  when: mysql_engine == 'mysql'
+  tags: mysql
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: mysql
+
+- name: Install server and client packages
+  package: name={{ mysql_server_packages }}
+  tags: mysql
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.j2 dest=/etc/backup/{{ item }}.d/mysql mode=755
+  loop:
+    - pre
+    - post
+  tags: mysql
+
+- name: Remove old backup hooks
+  file: path=/etc/backup/{{ item }} state=absent
+  loop:
+    - pre.d/mariadb_create_dumps.sh
+    - post.d/mariadb_delete_dumps.sh
+    - pre.d/mariadb
+    - post.d/mariadb
+  tags: mysql
+
+- name: Create system override directory
+  file: path=/etc/systemd/system/{{ mysql_service_name }}.service.d/ state=directory
+  tags: mysql
+
+- name: Modify the service unit
+  template: src=systemd_limits.conf.j2 dest=/etc/systemd/system/{{ mysql_service_name }}.service.d/limits.conf
+  register: mysql_unit
+  notify: restart mysql
+  tags: mysql
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: mysql_unit.changed
+  tags: mysql
+
+- name: Deploy my.cnf
+  template: src=my.cnf.j2 dest=/etc/my.cnf
+  notify: restart mysql
+  tags: mysql
+
+- name: Start and enable the server
+  service: name={{ mysql_service_name }} state=started enabled=True
+  tags: mysql
+
+- name: Check if we need to create a password for the root user
+  stat: path=/root/.my.cnf
+  register: my_no_cnf
+  tags: mysql
+
+- name: Generate a random password for user root
+  command: openssl rand -base64 45
+  register: my_root_pass
+  when: not my_no_cnf.stat.exists
+  tags: mysql
+
+- name: Set root password
+  command: mysqladmin password "{{ my_root_pass.stdout }}"
+  when:
+    - not my_no_cnf.stat.exists
+    - my_root_pass.stdout is defined
+  tags: mysql
+
+- name: Deploy /root/.my.cnf
+  template: src=root_my.cnf.j2 dest=/root/.my.cnf
+  when:
+    - not my_no_cnf.stat.exists
+    - my_root_pass.stdout is defined
+  tags: mysql
+
+- name: Remove anonymous user
+  mysql_user: name='' host_all=yes state=absent
+  tags: mysql
+
+- name: Remove the test database
+  mysql_db: name=test state=absent
+  tags: mysql
+
+- name: Handle service port
+  iptables_raw:
+    name: mysql_port
+    state: "{{ (mysql_src_ip is defined and mysql_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ mysql_port | default('3306') }} -s {{ mysql_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: mysql,firewall
+
+- name: Create database admin
+  mysql_user: name=sqladmin password={{ mysql_admin_pass }} host="%" priv="*.*:ALL,GRANT" state=present
+  tags: mysql
+
+- name: Create databases
+  mysql_db: name={{ item }} state=present
+  with_items: "{{ mysql_databases | default([]) }}"
+  tags: mysql
+
+- name: Create mysql users
+  mysql_user: name={{ item.name }} password={{ item.password }} priv={{ item.privileges }} host={{ item.host | default('localhost') }} state=present
+  with_items: "{{ mysql_users | default([]) }}"
+  when:
+    - item.name is defined
+    - item.password is defined
+    - item.privileges is defined
+  tags: mysql
+
+- name: Remove databases
+  mysql_db: name={{ item }} state=absent
+  with_items: "{{ mysql_databases_to_remove }}"
+  tags: mysql
+
+- name: Remove users
+  mysql_user: name={{ item.name }} host={{ item.host | default(omit) }} state=absent
+  with_items: "{{ mysql_users_to_remove }}"
+  tags: mysql
+...

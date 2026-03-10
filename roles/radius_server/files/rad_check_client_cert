@@ -1,0 +1,97 @@
+#!/usr/bin/perl -w
+
+use warnings;
+use strict;
+use Getopt::Long;
+use LWP::Simple qw($ua getstore);
+use Net::Domain qw(hostname hostfqdn hostdomain domainname);
+use Mail::Sendmail;
+
+my $cert;
+my $ca = '/etc/radius/certs/ca.pem';
+my $crl;
+my $issuer;
+my $notify_crl;
+
+GetOptions(
+  'certificate=s' => \$cert,
+  'cacert=s'      => \$ca,
+  'crl=s'         => \$crl,
+  'notify-crl=s'  => \$notify_crl,
+  'issuer=s'      => \$issuer
+);
+
+# Set a 5 sec timeout to fetch the CRL
+$ua->timeout(5);
+
+my $crl_file;
+my $crl_age;
+if ($crl){
+  if ($crl =~ m{^/} && -e $crl){
+    $crl_file = $crl;
+    $crl_age = time - ( stat($crl) )[9];
+  } elsif ($crl =~ m{^https?://}) {
+    $crl_age = 9999999;
+
+    if (-e '/run/radiusd/tls/crl.pem'){
+      $crl_age = time - ( stat('/run/radiusd/tls/crl.pem') )[9];
+      $crl_file = '/run/radiusd/tls/crl.pem';
+    }
+
+    if (!-e '/run/radiusd/tls/crl.pem' or $crl_age > 900){
+      my $code = getstore($crl, '/run/radiusd/tls/crl.pem');
+      if ($code == 200){
+        $crl_age  = 0;
+        $crl_file = '/run/radiusd/tls/crl.pem';
+      }
+    }
+
+  }
+}
+
+if (defined $crl and (not defined $crl_file or ($crl =~ m{https?://} and $crl_age > 7200))){
+  if (defined $notify_crl){
+    my %mail = (
+      To      => $notify_crl,
+      From    => 'radius@' . hostdomain(),
+      Subject => 'CRL issue',
+      Message => 'Authentication done with an outdated CRL'
+    );
+    sendmail(%mail);
+  } else {
+    die "CRL is too old or missing\n";
+  }
+}
+
+my $cmd = "openssl verify -trusted $ca -purpose sslclient";
+$cmd .= " -crl_check -CRLfile $crl_file" if (defined $crl_file);
+$cmd .= " $cert";
+my $ca_check = qx($cmd);
+if ($? != 0){
+  print "openssl verify command returned non zero\n";
+  print $ca_check;
+  exit 1;
+}
+chomp($ca_check);
+if ($ca_check !~ m/^$cert:\s+OK$/){
+  print "openssl failed to verify $cert against $ca\n";
+  exit 1;
+}
+
+my $expire_check = qx(openssl x509 -in $cert -checkend 0);
+if ($? != 0 || $expire_check !~ m/^Certificate will not expire/){
+  print "certificate is expired\n";
+  exit 1;
+}
+
+if ($issuer){
+  my $issuer_check = qx(openssl x509 -in $cert -noout -issuer);
+  chomp($issuer_check);
+  $issuer_check =~ s/^issuer=\s*//;
+  unless ($issuer_check eq $issuer){
+    print "Certificate is signed by $issuer_check instead of $issuer\n";
+    exit 1;
+  }
+}
+
+exit 0;

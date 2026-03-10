@@ -1,0 +1,55 @@
+---
+
+funkwhale_version: 1.1.2
+funkwhale_id: 1
+# https://dev.funkwhale.audio/funkwhale/funkwhale/-/jobs/artifacts/{{ funkwhale_version }}/download?job=build_front
+# https://dev.funkwhale.audio/funkwhale/funkwhale/-/jobs/artifacts/{{ funkwhale_version }}/download?job=build_api
+funkwhale_base_url: https://dev.funkwhale.audio/funkwhale/funkwhale/-/jobs/artifacts/{{ funkwhale_version }}/download
+funkwhale_archive_sha1:
+  api: 43c123ab0f19e81169372d79a3b322cb2e079974
+  front: 6a5d2b586fd54dd433a7aeb7ef6fe166485d4a13
+funkwhale_root_dir: /opt/funkwhale_{{ funkwhale_id }}
+
+# Should ansible manage upgrades of funkwhale, or only initial install
+funkwhale_manage_upgrade: True
+
+# A random one will be created if not defined
+# funkwhale_secret_key: 
+
+funkwhale_user: funkwhale_{{ funkwhale_id }}
+
+funkwhale_api_bind_ip: 127.0.0.1
+funkwhale_api_port: 5006
+
+# Set to your public URL
+funkwhale_public_url: https://{{ inventory_hostname }}
+
+# Database param
+funkwhale_db_server: "{{ pg_server | default('localhost') }}"
+funkwhale_db_port: 5432
+funkwhale_db_name: funkwhale_{{ funkwhale_id }}
+funkwhale_db_user: funkwhale_{{ funkwhale_id }}
+# A rand pass will be created if not defined
+# funkwhale_db_pass: 
+
+# Cache param
+funkwhale_redis_url: redis://127.0.0.1:6379/0
+
+# LDAP param
+funkwhale_ldap_auth: False
+funkwhale_ldap_url: "{{ ad_auth | default(False) | ternary('ldap://' + ad_realm | default(samba_realm) | default(ansible_domain) | lower, ldap_auth | default(False) | ternary(ldap_uri, '')) }}"
+# funkwhale_bind_dn: CN=Funkwhale,OU=Apps,DC=example,DC=org
+# funkwhale_bind_pass: S3cR3t.
+funkwhale_ldap_user_filter: "{{ ad_auth | default(False) | ternary('(&(objectClass=user)(sAMAccountName={0}))','(&(objectClass=inetOrgPerson)(uid={0}))') }}"
+funkwhale_ldap_base: "{{ ad_auth | default(False) | ternary((ad_ldap_user_search_base is defined) | ternary(ad_ldap_user_search_base,'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC=')), ldap_auth | ternary(ldap_user_base + ',' + ldap_base, '')) }}"
+funkwhale_ldap_attr_map: "first_name:givenName, last_name:sn, username:{{ ad_auth | ternary('sAMAccountName', 'uid') }}, email:mail"
+
+# dict of library ID <-> path from which to import music
+funkwhale_libraries: []
+# funkwhale_libraries:
+#   - id: 7b64b90c-353d-4969-8ab4-dafdf049036e
+#     path: /opt/funkwhale/data/music
+#     inplace: True
+
+# Increase on busy servers (but will require more memory)
+funkwhale_web_workers: 1

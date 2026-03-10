@@ -1,0 +1,32 @@
+---
+
+- name: Create archive dir
+  file: path={{ funkwhale_root_dir }}/archives/{{ funkwhale_current_version }} state=directory
+  tags: funkwhale
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ funkwhale_root_dir }}/{{ item }}"
+    dest: "{{ funkwhale_root_dir }}/archives/{{ funkwhale_current_version }}/"
+    recursive: True
+    delete: True
+  loop:
+    - api
+    - front
+    - venv
+  delegate_to: "{{ inventory_hostname }}"
+  tags: funkwhale
+
+- name: Archive a database dump
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create
+    --host={{ funkwhale_db_server }}
+    --port={{ funkwhale_db_port }}
+    --username=sqladmin {{ funkwhale_db_name }}
+    --file={{ funkwhale_root_dir }}/archives/{{ funkwhale_current_version }}/{{ funkwhale_db_name }}.sql
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  tags: funkwhale
+

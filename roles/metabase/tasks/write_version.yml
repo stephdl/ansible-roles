@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ metabase_version }} dest={{ metabase_root_dir }}/meta/ansible_version
+  tags: metabase

@@ -1,0 +1,63 @@
+---
+
+# Version to install
+mailman_version:
+  core: 3.3.4
+  postorius: 1.3.4
+  hyperkitty: 1.3.4
+mailman_root_dir: /opt/mailman
+mailman_user: mailman
+# Should ansible handle upgrades ? If False, only initale inistall
+mailman_manage_upgrade: True
+
+# Can be mysql or postgres
+mailman_db_engine: postgres
+mailman_db_server: "{{ (mailman_db_engine == 'postgres') | ternary(pg_server,mysql_server) | default('localhost') }}"
+mailman_db_port: "{{ (mailman_db_engine == 'postgres') | ternary('5432','3306') }}"
+mailman_db_user: mailman
+# A random one will be generated if not set
+# mailman_db_pass: S3cR3t.
+# Two databases are used, one for the core service, another for the web interface
+mailman_db_name:
+  core: mailman
+  web: mailmanweb
+
+# Email address of the admin
+mailman_site_owner: "{{ system_admin_email | default('admin' + ansible_domain) }}"
+mailman_public_url: https://listes.{{ ansible_domain }}/
+# Django secret key. A random one will be generated and stored in
+# {{ mailman_root_dir }}/meta/ansible_secret_key if not set
+# mailman_secret_key: 'p@ssW0rd'
+
+# Port on which uwsgi will listen
+mailman_web_port: 8012
+# IP addresses allowed to access uwsgi port
+mailman_web_src_ip: []
+
+# Port on which mailiman will listen for LMTP connexions
+mailman_lmtp_port: 8024
+# IP/CIDR allowed to access the LMTP service
+mailman_lmtp_src_ip: []
+
+# Port on which the core service will bind to expose the REST API
+# this port will not be exposed, it's limited to localhost and used by the web interface
+mailman_rest_port: 8013
+# A password to protect the REST API. The username is mailmanapi
+# A random one will be created if not defined here
+# mailman_rest_pass: F00/b4r\B4Z
+
+# the API key for HyperKitty. A random one will be generated and stored in
+# {{ mailman_root_dir }}/meta/ansible_hyperkitty_api_key if not defined
+# mailman_hyperkitty_api_key
+
+# Default FROM email
+mailman_email_from: mailman-no-reply@{{ ansible_domain }}
+mailman_smtp_server: localhost
+mailman_smtp_port: 25
+mailman_smtp_tls: False
+#mailman_smtp_user:
+#mailman_smtp_pass:
+
+mailman_default_lang: fr
+
+

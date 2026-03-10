@@ -1,0 +1,8 @@
+---
+
+httpd_common_packages:
+  - httpd
+  - mod_fcgid
+  - policycoreutils-python
+  - python-passlib
+  - mod_authnz_pam

@@ -1,0 +1,37 @@
+---
+
+- name: Create the archive dir
+  file:
+    path: "{{ n8n_root_dir }}/archives/{{ n8n_current_version }}"
+    state: directory
+  tags: n8n
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ n8n_root_dir }}/{{ item }}"
+    dest: "{{ n8n_root_dir }}/archives/{{ n8n_current_version }}"
+    recursive: True
+    delete: True
+    compress: False
+  loop:
+    - app
+    - etc
+    - data
+  delegate_to: "{{ inventory_hostname }}"
+  tags: n8n
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ n8n_db_name }}"
+    target: "{{ n8n_root_dir }}/archives/{{ n8n_current_version }}/{{ n8n_db_name }}.sql.xz"
+    login_host: "{{ n8n_db_server }}"
+    login_port: "{{ n8n_db_port }}"
+    login_user: "{{ n8n_db_user }}"
+    login_password: "{{ n8n_db_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: n8n
+

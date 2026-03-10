@@ -1,0 +1,143 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+    - vars/defaults.yml
+  tags: pg
+
+- name: Install Postgresql packages
+  yum:
+    name: "{{ pg_packages }}"
+  tags: pg
+
+- name: Check if PG_VERSION exists
+  stat: path=/var/lib/pgsql/{{ (pg_version != 'default') | ternary(pg_version | string + '/','') }}data/PG_VERSION
+  register: pg_version_file
+  tags: pg
+
+- name: Init data
+  command: "{{ (pg_version != 'default') | ternary('/usr/pgsql-' + pg_version | string + '/bin/postgresql-' + pg_version | string + '-setup','postgresql-setup') }} initdb"
+  when: not pg_version_file.stat.exists
+  tags: pg
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest=/var/lib/pgsql/{{ (pg_version != 'default') | ternary(pg_version | string + '/','') }}data/{{ item }} owner=postgres group=postgres mode=600
+  with_items:
+    - pg_hba.conf
+    - postgresql.conf
+  notify: reload postgresql
+  tags: pg
+
+- name: Create backup directories
+  file: path=/home/lbkp/pgsql state=directory owner=postgres group=postgres mode=700
+  tags: pg
+
+- name: Remove old backup hooks
+  file: path={{ item }} state=absent
+  loop:
+    - /etc/backup/pre.d/postgresql_create_dumps.sh
+    - /etc/backup/post.d/postgresql_delete_dumps.sh
+  tags: pg
+
+- name: Deploy backup scripts
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/postgresql.sh mode=755
+  loop:
+    - pre
+    - post
+  tags: pg
+
+- name: Handle PostgreSQL port
+  iptables_raw:
+    name: pg_port
+    state: "{{ (pg_src_ip is defined and pg_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ pg_port }} -s {{ pg_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: pg
+
+- name: Create postgresql unit snippet dir
+  file: path=/etc/systemd/system/postgresql{{ (pg_version != 'default') | ternary('-' + pg_version | string,'') }}.service.d state=directory
+  tags: pg
+
+- name: Increase postgresql start/stop timeout
+  copy:
+    content: |
+      [Service]
+      TimeoutSec=300
+      StartLimitInterval=0
+      RestartSec=1
+    dest: /etc/systemd/system/postgresql{{ (pg_version != 'default') | ternary('-' + pg_version | string,'') }}.service.d/timeout.conf
+  register: pg_unit
+  notify: restart postgresql
+  tags: pg
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: pg_unit.changed
+  tags: pg
+
+  # TODO: we should instead iterate over every postgresql* services and disable everyone of them
+  # except for pg_version
+- name: Disable default postgresql version
+  service: name=postgresql state=stopped enabled=False
+  when: pg_version != 'default'
+  failed_when: False
+  tags: pg
+
+- name: Start and enable the service
+  service: name=postgresql{{ (pg_version != 'default') | ternary('-' + pg_version | string,'') }} state=started enabled=True
+  tags: pg
+
+- name: Create postgresql admin role
+  postgresql_user:
+    name: "sqladmin"
+    password: "{{ pg_admin_pass }}"
+    role_attr_flags: SUPERUSER,CREATEROLE,CREATEDB
+  become_user: postgres
+  tags: pg
+
+- name: Create roles
+  postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.pass }}"
+    role_attr_flags: "{{ item.flags | default([]) | join(',') }}"
+  become_user: postgres
+  with_items: "{{ pg_roles }}"
+  tags: pg
+
+- name: Create databases
+  postgresql_db:
+    name: "{{ item.name }}"
+    encoding: "{{ item.encoding | default('UTF-8') }}"
+    lc_collate: C
+    lc_ctype: C
+    template: template0
+    owner: "{{ item.owner | default(omit) }}"
+  become_user: postgres
+  with_items: "{{ pg_databases }}"
+  tags: pg
+
+- name: Apply privileges
+  postgresql_privs: "{{ item }}"
+  become_user: postgres
+  loop: "{{ pg_privs }}"
+  tags: pg
+
+- name: Remove databases
+  postgresql_db:
+    name: "{{ item }}"
+    state: absent
+  become_user: postgres
+  with_items: "{{ pg_databases_to_remove }}"
+  tags: pg
+
+- name: Remove roles
+  postgresql_user:
+    name: "{{ item }}"
+    state: absent
+  become_user: postgres
+  with_items: "{{ pg_roles_to_remove }}"
+  tags: pg

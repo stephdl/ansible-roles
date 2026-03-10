@@ -1,0 +1,20 @@
+---
+
+- name: Copy SELinux policy
+  copy: src=ufdb.te dest=/etc/selinux/targeted/local/
+  register: squid_ufdb_selinux_policy
+  tags: proxy
+
+- name: Install needed packages
+  yum:
+    name: policycoreutils
+  tags: proxy
+
+- name: Compile SELinux policy
+  shell: |
+    cd /etc/selinux/targeted/local/
+    checkmodule -M -m -o ufdb.mod ufdb.te
+    semodule_package -o ufdb.pp -m ufdb.mod
+    semodule -i /etc/selinux/targeted/local/ufdb.pp
+  when: squid_ufdb_selinux_policy.changed
+  tags: proxy

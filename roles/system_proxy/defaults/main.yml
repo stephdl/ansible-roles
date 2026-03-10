@@ -1,0 +1,10 @@
+---
+
+# system_proxy: http://proxyout.example.org:3128
+system_proxy_base_no_proxy:
+  - 127.0.0.1
+  - localhost
+  - "{{ inventory_hostname | regex_replace('^([^.]+)\\..*','\\1') }}"
+  - "{{ inventory_hostname }}"
+system_proxy_extra_no_proxy: []
+system_proxy_no_proxy: "{{ system_proxy_base_no_proxy + system_proxy_extra_no_proxy }}"

@@ -1,0 +1,9 @@
+---
+- include: ../common/handlers/main.yml
+
+- name: restart mysql
+  service: name={{ mysql_service_name }} state=restarted enabled=yes
+
+- name: mysql_upgrade
+  command: mysql_upgrade
+...

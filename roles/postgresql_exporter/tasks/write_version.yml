@@ -1,0 +1,5 @@
+---
+
+- name: Write installed version
+  copy: content={{ pg_exporter_version }} dest={{ pg_exporter_root_dir }}/meta/ansible_version
+  tags: pg

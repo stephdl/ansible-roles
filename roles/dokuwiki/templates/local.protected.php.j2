@@ -1,0 +1,37 @@
+<?php
+
+$conf['useacl'] = 1;
+$conf['savedir'] = '{{ dokuwiki_root_dir }}/data';
+
+$conf['authtype'] = '{{ dokuwiki_auth }}';
+{% if dokuwiki_auth == 'authldap' or dokuwiki_auth == 'authhttpldap' %}
+$conf['plugin']['{{ dokuwiki_auth }}']['server'] = "{{ dokuwiki_ldap_uri }}";
+$conf['plugin']['{{ dokuwiki_auth }}']['starttls'] = {{ dokuwiki_ldap_starttls | ternary('1','0') }};
+$conf['plugin']['{{ dokuwiki_auth }}']['version'] = '3';
+$conf['plugin']['{{ dokuwiki_auth }}']['usertree'] = '{{ dokuwiki_ldap_user_base }}';
+$conf['plugin']['{{ dokuwiki_auth }}']['attributes'] = array();
+$conf['plugin']['{{ dokuwiki_auth }}']['grouptree'] = '{{ dokuwiki_ldap_group_base }}';
+$conf['plugin']['{{ dokuwiki_auth }}']['userfilter'] = '{{ dokuwiki_ldap_user_filter }}';
+$conf['plugin']['{{ dokuwiki_auth }}']['groupfilter'] = '{{ dokuwiki_ldap_group_filter }}';
+$conf['plugin']['{{ dokuwiki_auth }}']['groupkey'] = '{{ dokuwiki_ldap_group_key }}';
+{% if dokuwiki_ldap_bind_dn is defined and dokuwiki_ldap_bind_pass is defined %}
+$conf['plugin']['{{ dokuwiki_auth }}']['binddn'] = '{{ dokuwiki_ldap_bind_dn }}';
+$conf['plugin']['{{ dokuwiki_auth }}']['bindpw'] = '{{ dokuwiki_ldap_bind_pass }}';
+{% endif %}
+{% elif dokuwiki_auth == 'authad' %}
+$conf['plugin']['authad']['base_dn'] = '{{ dokuwiki_ad_user_base }}';
+$conf['plugin']['authad']['domain_controllers'] = '{{ dokuwiki_ad_dc | join(', ') }}';
+{% if dokuwiki_ad_bind_user is defined and dokuwiki_ad_bind_pass is defined %}
+$conf['plugin']['authad']['admin_username'] = '{{ dokuwiki_ad_bind_user }}';
+$conf['plugin']['authad']['admin_password'] = '{{ dokuwiki_ad_bind_pass }}';
+{% endif %}
+{% if dokuwiki_ad_domain is defined %}
+$conf['plugin']['authad']['account_suffix'] = '@{{ dokuwiki_ad_domain }}';
+{% endif %}
+$conf['plugin']['authad']['sso'] = 1;
+$conf['plugin']['authad']['use_tls'] = {{ dokuwiki_ad_starttls | ternary('1','0') }};
+$conf['plugin']['authad']['recursive_groups'] = 1;
+$conf['plugin']['authad']['expirywarn'] = 15;
+{% endif %}
+
+?>

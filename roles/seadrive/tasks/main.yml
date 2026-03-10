@@ -1,0 +1,110 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - seadrive-daemon
+      - fuse
+  tags: seadrive
+
+- name: Ensure fuse is loaded
+  modprobe: name=fuse state=present
+  tags: seadrive
+
+- name: Create global directories
+  file: path={{ item }} state=directory mode=755
+  loop:
+    - /etc/seadrive
+    - /var/cache/seadrive
+    - /opt/seadrive
+  tags: seadrive
+
+- name: Create cache directories
+  file: path={{ item.data_dir | default('/var/cache/seadrive/' + item.id) }} state=directory owner={{ item.user | default('root') }} mode=700
+  loop: "{{ seadrive_daemons }}"
+  tags: seadrive
+
+- name: Create drive directories
+  file: path={{ item.drive_dir }} state=directory owner={{ item.user | default('root') }} mode=700
+  loop: "{{ seadrive_daemons }}"
+  ignore_errors: True # Needed if allow_other is not set as root can't check the mount point
+  tags: seadrive
+
+- name: Make sure allow_other is available for user
+  lineinfile: dest=/etc/fuse.conf regexp='^user_allow_other' line='user_allow_other'
+  tags: seadrive
+
+- name: List existing instances
+  shell: ls /etc/systemd/system/seadrive-*.service | perl -ne 's/.*\/seadrive\-(.*)\.service/$1/ && print "$1\n"'
+  register: seadrive_instances
+  changed_when: False
+  tags: seadrive
+
+- name: List managed instances
+  set_fact: seadrive_managed_instances={{ seadrive_daemons | map(attribute='id') | list }}
+  tags: seadrive
+
+- name: List instances to be removed
+  set_fact: seadrive_remove_instances={{ seadrive_instances.stdout_lines | difference(seadrive_managed_instances) }}
+  tags: seadrive
+
+- name: Stop unmanaged instances
+  service: name=seadrive-{{ item }} state=stopped enabled=False
+  loop: "{{ seadrive_remove_instances }}"
+  tags: seadrive
+
+- name: Remove unmanaged instances
+  file: path=/etc/systemd/system/seadrive-{{ item }}.service state=absent
+  loop: "{{ seadrive_remove_instances }}"
+  register: seadrive_remove_units
+  tags: seadrive
+
+- name: Remove unmanaged config
+  file: path=/etc/seadrive/{{ item }}.conf state=absent
+  loop: "{{ seadrive_remove_instances }}"
+  tags: seadrive
+
+- name: Remove unmanaged cache directories
+  file: path=/var/cache/seadrive/{{ item }} state=absent
+  loop: "{{ seadrive_remove_instances }}"
+  tags: seadrive
+
+- include: selinux.yml
+  when: ansible_selinux.status == 'enabled'
+
+- name: Obtain API Tokens
+  uri:
+    url: "{{ item.server }}/api2/auth-token/"
+    method: POST
+    body:
+      username: "{{ item.login }}"
+      password: "{{ item.pass }}"
+    body_format: form-urlencoded
+    return_content: True
+  register: seadrive_tokens
+  when: item.token is not defined
+  loop: "{{ seadrive_daemons }}"
+  tags: seadrive
+
+- name: Deploy systemd units
+  template: src=seadrive.service.j2 dest=/etc/systemd/system/seadrive-{{ item.id }}.service
+  register: seadrive_new_units
+  notify: restart seadrive
+  loop: "{{ seadrive_daemons }}"
+  tags: seadrive
+
+- name: Deploy configurations
+  template: src=seadrive.conf.j2 dest=/etc/seadrive/{{ item.id }}.conf owner={{ item.user | default('root') }} mode=600
+  loop: "{{ seadrive_daemons }}"
+  notify: restart seadrive
+  tags: seadrive
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: seadrive_new_units.changed or seadrive_remove_units.changed
+  tags: seadrive
+
+- name: Start and enable managed instances
+  service: name=seadrive-{{ item.id }} state=started enabled=yes
+  loop: "{{ seadrive_daemons }}"
+  tags: seadrive

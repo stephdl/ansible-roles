@@ -1,0 +1,8 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ jitsi_root_dir }}/tmp/chromedriver_linux64.zip"
+    - "{{ jitsi_root_dir }}/tmp/chromedriver"
+  tags: jitsi

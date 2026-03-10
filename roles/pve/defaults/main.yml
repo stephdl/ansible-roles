@@ -1,0 +1,36 @@
+---
+
+pve_dump_storage: local
+
+pve_mod_to_load:
+  - nf_conntrack_proto_gre
+
+pve_ksm: True
+pve_ksm_sleep_msec: 5
+pve_ksm_thres_coef: 35
+pve_ksm_thres_const: 8000
+pve_ksm_npages_boost: 1200
+
+pve_ocfs2: False
+pve_ocfs2_heartbeat_thres: 8
+
+pve_online: False
+# pve_online_api_key:
+pve_wan_bridge: vmbr1
+#pve_vlan_bridge: vmbr0
+# If true, the hook script on migrate will unplug/replug the WAN nic
+# to force an ARP flush in the guest.
+# This is not needed if the wan bridge has the same MAC addr on every node
+pve_migrate_flush_arp: True
+
+pve_ovh: False
+
+pve_cluster_vhosts: []
+# pve_cluster_vhosts:
+#   - pve.example.net
+#   - pve.example.com
+pve_letsencrypt: False
+
+# If enabled, a cron task will populate zabbix monitoring cache
+# needs zabbix_agent to be deployed too
+pve_zabbix_cache: False

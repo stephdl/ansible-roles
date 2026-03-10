@@ -1,0 +1,56 @@
+---
+
+- name: Install zmldapsync dependencies
+  yum:
+    name:
+      - perl-LDAP
+      - perl-YAML-Tiny
+      - perl-Data-UUID
+      - perl-String-ShellQuote
+      - perl-Array-Diff
+      - perl-List-MoreUtils
+      - perl-Hash-Merge-Simple
+      - perl-Text-Unidecode
+      - perl-Email-MIME
+      - perl-Email-Sender
+  tags: zcs
+
+- name: Install zmldapsync
+  get_url:
+    url: "{{ item.url }}"
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - url: https://git.fws.fr/dani/zimbra/raw/branch/master/zmldapsync/zmldapsync.pl
+      dest: /opt/zimbra/bin/zmldapsync
+      mode: 755
+    - url: https://git.fws.fr/dani/zimbra/raw/branch/master/zmldapsync/zmldapsync.yml
+      dest: /opt/zimbra/conf/zmldapsync.yml.dist
+      mode: 640
+  tags: zcs
+
+- name: Remove old zmldapsync script
+  file: path=/opt/zimbra/bin/zmldapsync.pl state=absent
+  tags: zcs
+
+- name: Deploy zmldapsync configuration
+  template: src=zmldapsync.yml.j2 dest=/opt/zimbra/conf/zmldapsync.yml owner=root group=zimbra mode=0640
+  tags: zcs
+
+- name: Deploy zmldapsync systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  loop:
+    - zmldapsync.service
+    - zmldapsync.timer
+  register: zcs_zmldapsync_unit
+  tags: zcs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: zcs_zmldapsync_unit.changed
+  tags: zcs
+
+- name: Enable zmldapsync timer
+  systemd: name=zmldapsync.timer state={{ (zcs_domains.keys() | length > 0) | ternary('started','stopped') }} enabled={{ (zcs_domains.keys() | length > 0) | ternary(True,False) }}
+  when: zcs_domains.keys() | length > 0
+  tags: zcs

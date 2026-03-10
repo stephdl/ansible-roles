@@ -1,0 +1,9 @@
+---
+- name: Update everything
+  hosts: '*'
+  tasks:
+    - yum: name='*' state=latest
+      when: ansible_os_family == 'RedHat'
+    - apt: name='*' state=latest
+      when: ansible_os_family == 'Debian'
+

@@ -1,0 +1,17 @@
+[Unit]
+Description=BounCA PKI Daemon
+After=syslog.target
+
+[Service]
+Environment=PYTHONPATH=/usr/bin/python34
+ExecStart=/usr/sbin/uwsgi --ini /etc/bounca/uwsgi.ini
+ExecReload=/bin/kill -HUP $MAINPID
+User={{ bounca_user }}
+Group={{ bounca_user }}
+KillSignal=SIGINT
+Restart=always
+Type=notify
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,236 @@
+---
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml
+    - vars/{{ ansible_distribution }}.yml
+    - vars/{{ ansible_os_family }}.yml
+  tags: unifi
+
+- name: Set default install mode to none
+  set_fact: unifi_install_mode="none"
+  tags: unifi
+
+- name: Remove mongodb from base repo
+  yum: name=mongodb-server state=absent
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution_major_version is version('8','<')
+  tags: unifi
+
+- name: Install dependencies
+  yum: name={{ unifi_packages }}
+  notify: restart unifi
+  tags: unifi
+
+- name: Create a system account to run unifi
+  user:
+    name: unifi
+    comment: "Unifi system account"
+    system: True
+    shell: /sbin/nologin
+  tags: unifi
+
+- name: Check if unifi is installed
+  stat: path={{ unifi_root_dir }}/meta/ansible_version
+  register: unifi_version_file
+  tags: unifi
+
+- name: Check installed version
+  command:  cat {{ unifi_root_dir }}/meta/ansible_version
+  register: unifi_current_version
+  changed_when: False
+  when: unifi_version_file.stat.exists
+  tags: unifi
+
+- name: Set install mode to install
+  set_fact: unifi_install_mode='install'
+  when: not unifi_version_file.stat.exists
+  tags: unifi
+
+- name: Set install mode to upgrade
+  set_fact: unifi_install_mode='upgrade'
+  when:
+    - unifi_version_file.stat.exists
+    - unifi_current_version is defined
+    - unifi_current_version.stdout != unifi_version
+    - unifi_manage_upgrade == True
+  tags: unifi
+
+- name: Create archive directory
+  file: path={{ unifi_root_dir }}/archives/{{ unifi_current_version.stdout }} state=directory
+  when: unifi_install_mode == 'upgrade'
+  tags: unifi
+
+- name: Stop the service
+  service: name=unifi state=stopped
+  when: unifi_install_mode == 'upgrade'
+  tags: unifi
+
+- name: Archive current version
+  synchronize:
+    src: "{{ unifi_root_dir }}/app"
+    dest: "{{ unifi_root_dir }}/archives/{{ unifi_current_version.stdout }}/"
+    recursive: True
+    delete: True
+    compress: False
+    rsync_opts:
+      - '--sparse'
+  delegate_to: "{{ inventory_hostname }}"
+  when: unifi_install_mode == 'upgrade'
+  tags: unifi
+
+- name: Create directories
+  file: path={{ unifi_root_dir }}/{{ item.path }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - path: tmp
+    - path: app
+      owner: unifi
+      group: unifi
+    - path: 'app/data'
+      owner: unifi
+      group: unifi
+      mode: 700
+    - path: meta
+    - path: archives
+    - path: backup
+      owner: unifi
+      group: unifi
+      mode: 700
+  tags: unifi
+
+- name: Download unifi archive
+  get_url:
+    url: "{{ unifi_archive_url }}"
+    dest: "{{ unifi_root_dir }}/tmp"
+    checksum: "sha1:{{ unifi_archive_sha1 }}"
+  when: unifi_install_mode != 'none'
+  tags: unifi
+
+- name: Extract Unifi
+  unarchive:
+    src: "{{ unifi_root_dir }}/tmp/UniFi.unix.zip"
+    dest: "{{ unifi_root_dir }}/tmp"
+    owner: unifi
+    group: unifi
+    remote_src: True
+  when: unifi_install_mode != 'none'
+  tags: unifi
+
+- name: Move unifi to its final directory
+  synchronize:
+    src: "{{ unifi_root_dir }}/tmp/UniFi/{{ item }}"
+    dest: "{{ unifi_root_dir }}/app/"
+    delete: True
+    recursive: True
+  with_items:
+    - bin
+    - conf
+    - dl
+    - lib
+    - webapps
+  delegate_to: "{{ inventory_hostname }}"
+  when: unifi_install_mode != 'none'
+  tags: unifi
+
+- name: Handle unifi HTTP ports
+  iptables_raw:
+    name: unifi_http_ports
+    state: "{{ (unifi_http_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp -m multiport --dports {{ unifi_http_ports | join(',') }} -s {{ unifi_http_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,unifi]
+
+- name: Handle unifi STUN ports
+  iptables_raw:
+    name: unifi_stun_ports
+    state: "{{ (unifi_stun_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p udp -m multiport --dports {{ unifi_stun_ports | join(',') }} -s {{ unifi_stun_src_ip | join(',') }} -j ACCEPT"
+  when: iptables_manage | default(True)
+  tags: [firewall,unifi]
+
+- name: Check if a config file already exists
+  stat: path={{ unifi_root_dir }}/app/data/system.properties
+  register: unifi_config
+  tags: unifi
+
+- name: Init config file
+  copy: content="is_default=true" dest={{ unifi_root_dir }}/app/data/system.properties owner=unifi group=unifi mode=640
+  when: not unifi_config.stat.exists
+  tags: unifi
+
+- name: Configure UniFi Controller
+  lineinfile:
+    path: "{{ unifi_root_dir }}/app/data/system.properties"
+    regexp: "^{{ item.option }}.*"
+    line: "{{ item.option }}={{ item.value }}"
+  with_items:
+    - option: unifi.xmx
+      value: 4096
+    - option: unifi.xms
+      value: 4096
+    - option: unifi.G1GC.enabled
+      value: 'true'
+    - option: autobackup.dir
+      value: "{{ unifi_root_dir }}/backup"
+    - option: unifi.http.port
+      value: "{{ unifi_http_port }}"
+    - option: unifi.https.port
+      value: "{{ unifi_https_port }}"
+    - option: portal.http.port
+      value: "{{ unifi_portal_http_port }}"
+    - option: portal.https.port
+      value: "{{ unifi_portal_https_port }}"
+    - option: uuid
+      value: "{{ inventory_hostname | to_uuid }}"
+  notify: restart unifi
+  tags: unifi
+
+- name: Deploy unit file
+  template: src=unifi.service.j2 dest=/etc/systemd/system/unifi.service
+  notify: restart unifi
+  register: unifi_unit
+  tags: unifi
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+  when: unifi_unit.changed
+  tags: unifi
+
+- name: Deploy pre and post backup hooks
+  template: src={{ item }}-backup.sh.j2 dest=/etc/backup/{{ item }}.d/unifi mode=755
+  loop:
+    - pre
+    - post
+  tags: unifi
+
+- name: Start and enable the service
+  service: name=unifi state=started enabled=True
+  tags: unifi
+
+- name: Compress previous version
+  command: tar cf {{ unifi_root_dir }}/archives/{{ unifi_current_version.stdout }}.tar.zst --use-compress-program=zstd ./
+  args:
+    chdir: "{{ unifi_root_dir }}/archives/{{ unifi_current_version.stdout }}"
+    warn: False
+  when: unifi_install_mode == 'upgrade'
+  tags: unifi
+
+- name: Remove archive dir
+  file: path={{ unifi_root_dir }}/archives/{{ unifi_current_version.stdout }} state=absent
+  when: unifi_install_mode == 'upgrade'
+  tags: unifi
+
+- name: Remove temp files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ unifi_root_dir }}/tmp/UniFi.unix.zip"
+    - "{{ unifi_root_dir }}/tmp/UniFi"
+  tags: unifi
+
+- name: Write version installed
+  copy: content={{ unifi_version }} dest={{ unifi_root_dir }}/meta/ansible_version
+  tags: unifi
+
+- include: filebeat.yml

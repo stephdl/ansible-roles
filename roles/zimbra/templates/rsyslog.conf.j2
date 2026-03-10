@@ -1,0 +1,23 @@
+$ModLoad imuxsock
+$ModLoad imjournal
+$OmitLocalLogging on
+$IMJournalStateFile imjournal.state
+$WorkDirectory /var/lib/rsyslog
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+{% if 'logger' in zcs_enabled_components %}
+$ModLoad imudp
+$UDPServerRun 514
+local0.*                -/var/log/zimbra.log
+local1.*                -/var/log/zimbra-stats.log
+auth.*                  -/var/log/zimbra.log
+mail.*                -/var/log/zimbra.log
+{% else %}
+local0.*                @{{ zcs_log_hostname }}
+local1.*                @{{ zcs_log_hostname }}
+auth.*                  @{{ zcs_log_hostname }}
+local0.*                -/var/log/zimbra.log
+local1.*                -/var/log/zimbra-stats.log
+auth.*                  -/var/log/zimbra.log
+mail.*                @{{ zcs_log_hostname }}
+mail.*                -/var/log/zimbra.log
+{% endif %}

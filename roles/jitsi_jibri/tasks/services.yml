@@ -1,0 +1,9 @@
+---
+
+- name: Start and enable services
+  service: name=jitsi-jibri state=started enabled=True
+  tags: jitsi
+
+- name: Start cleaer timer
+  systemd: name=jitsi-jibri-cleaner.timer state=started enabled=True
+  tags: jitsi

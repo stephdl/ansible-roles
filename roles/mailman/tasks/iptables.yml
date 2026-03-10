@@ -1,0 +1,15 @@
+---
+
+- name:  Handle mailman web port in the firewall
+  iptables_raw:
+    name: mailman_web_port
+    state: "{{ (mailman_web_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ mailman_web_port }} -s {{ mailman_web_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,mailman
+
+- name: Handle mailman LMTP port in the firewall
+  iptables_raw:
+    name: mailman_lmtp_port
+    state: "{{ (mailman_lmtp_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ mailman_lmtp_port }} -s {{ mailman_lmtp_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,mailman

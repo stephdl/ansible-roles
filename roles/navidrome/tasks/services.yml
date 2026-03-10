@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable service
+  service: name=navidrome state=started enabled=True
+  tags: navidrome

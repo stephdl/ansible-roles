@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+    <syslogHost>localhost</syslogHost>
+    <port>10514</port>
+    <facility>DAEMON</facility>
+    <suffixPattern>bm-xmpp - [%thread] %c{1} %p - %m\n</suffixPattern>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="SYSLOG" />
+  </root>
+</configuration>

@@ -1,0 +1,8 @@
+---
+
+- name: Install perl modules
+  yum:
+    name:
+      - perl-JSON
+      - perl-libwww-perl
+      - perl-YAML-Tiny

@@ -1,0 +1,22 @@
+[Unit]
+Description=Mayan EDMS fast celery worker
+After=redis.service {{ (pg_version is defined and pg_version != 'default') | ternary('postgresql-' + pg_version | string,'postgresql') }}.service mysql.service mariadb.service rabbitmq-server.service
+
+[Service]
+User={{ mayan_user }}
+WorkingDirectory={{ mayan_root_dir }}/
+EnvironmentFile={{ mayan_root_dir }}/config/.env
+ExecStart={{ mayan_root_dir }}/venv/bin/celery worker -A mayan -Ofair -l ERROR -Q document_states_fast,converter,sources_fast -n mayan-worker-fast.%%h --concurrency={{ ansible_processor_vcpus + 1 }}
+Nice=1
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit=2048M
+SyslogIdentifier=mayan-edms-worker-fast
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

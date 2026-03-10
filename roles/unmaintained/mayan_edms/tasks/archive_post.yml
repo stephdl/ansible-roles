@@ -1,0 +1,10 @@
+---
+
+- name: Compress previous version
+  command: tar cf {{ mayan_root_dir }}/archives/{{ mayan_current_version }}.tar.zst --use-compress-program=zstd ./
+  environment:
+    ZST_CLEVEL: 10
+  args:
+    chdir: "{{ mayan_root_dir }}/archives/{{ mayan_current_version }}"
+    warn: False
+  tags: mayan

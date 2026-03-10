@@ -1,0 +1,10 @@
+---
+
+- name: Create a system user account
+  user:
+    name: "{{ funkwhale_user }}"
+    comment: "Funkwhale system user"
+    system: True
+    shell: /sbin/nologin
+    home: "{{ funkwhale_root_dir }}"
+  tags: funkwhale

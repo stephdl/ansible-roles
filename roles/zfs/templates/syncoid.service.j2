@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync ZFS datasets
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+ExecStart=/sbin/syncoid --identifier={{ item.1.id }}{% if item.1.force | default(True) %} --force-delete {% endif %}{% if item.1.compress | default('lz4') is string %}--compress={{ item.1.compress | default('lz4') }} {%elif item.1.compress | default('lz4') == True %}--compress {% endif %}{% if item.1.recursive | default(True) == True %}--recursive{% endif %} {% if item.1.skip_parent | default(True) == True %}--skip-parent {% endif %} --sshcipher={{ item.1.ssh_cipher | default('aes128-ctr') }} {% if item.1.ssh_port is defined %}--sshport={{ item.1.ssh_port }} {% endif %}{% if item.1.bw_limit is defined %}--source-bwlimit={{ item.1.bw_limit }} {% endif %}{{ item.1.syncoid_opts | default('') }} {{ item.1.dataset }} {{ item.1.dest }}
+{% if item.1.max_duration is defined %}
+TimeoutSec={{ item.1.max_duration }}
+{% endif %}

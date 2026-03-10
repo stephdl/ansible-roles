@@ -1,0 +1,39 @@
+common:
+  daemonize: false
+  log_media: stdout
+  log_level: info
+  working_dir: .
+
+config_paths:
+  config_dir: /etc/crowdsec/
+  data_dir: {{ cs_root_dir }}/data/
+  simulation_path: /etc/crowdsec/simulation.yaml
+  hub_dir: /etc/crowdsec/hub/
+  index_path: /etc/crowdsec/hub/.index.json
+
+crowdsec_service:
+  acquisition_path: /etc/crowdsec/acquis.yaml
+  parser_routines: 1
+
+cscli:
+  output: human
+  hub_branch: master
+
+db_config:
+  log_level: info
+  type: sqlite
+  db_path: {{ cs_root_dir }}/data/dev.db
+  flush:
+    max_items: 1000
+    max_age: 30d
+
+api:
+  client:
+    insecure_skip_verify: false
+    credentials_path: /etc/crowdsec/local_api_credentials.yaml
+  server:
+    profiles_path: /etc/crowdsec/profiles.yaml
+
+prometheus:
+  enabled: false
+

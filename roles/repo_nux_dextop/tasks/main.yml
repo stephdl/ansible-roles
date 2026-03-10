@@ -1,0 +1,11 @@
+---
+
+- name: Configure Nux Dextop repository
+  yum_repository:
+    name: nux-dextop
+    description: Nux.Ro RPMs for general desktop use
+    baseurl: http://li.nux.ro/download/nux/dextop/el$releasever/$basearch/ http://mirror.li.nux.ro/li.nux.ro/nux/dextop/el$releasever/$basearch/
+    gpgcheck: True
+    gpgkey: http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro
+  tags: repo
+

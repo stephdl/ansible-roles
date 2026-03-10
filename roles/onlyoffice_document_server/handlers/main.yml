@@ -1,0 +1,6 @@
+---
+
+- name: restart documentserver
+  service: name={{ item }} state=restarted
+  loop: "{{ oo_services }}"
+

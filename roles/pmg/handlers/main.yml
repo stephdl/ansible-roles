@@ -1,0 +1,24 @@
+---
+- name: restart saslauthd
+  service: name=saslauthd state=restarted
+
+- name: restart postfix
+  service: name=postfix state=restarted
+
+- name: restart dovecot
+  service: name=dovecot state=restarted
+
+- name: pmgconfig sync
+  command: pmgconfig sync --restart 1
+
+- name: restart opendkim-signer
+  service: name=opendkim-signer state=restarted
+
+- name: restart opendkim-verifier
+  service: name=opendkim-verifier state=restarted
+
+- name: restart pmgproxy
+  service: name=pmgproxy state=restarted
+
+- name: reload pmg-smtp-filter
+  service: name=pmg-smtp-filter state=reloaded

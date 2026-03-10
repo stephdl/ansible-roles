@@ -1,0 +1,7 @@
+---
+
+- name: restart crowdsec
+  service: name=crowdsec state=restarted
+
+- name: reload crowdsec
+  service: name=crowdsec state=reloaded

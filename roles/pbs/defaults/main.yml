@@ -1,0 +1,7 @@
+---
+
+# This control access on port 8007. Note that the port is not configurable
+pbs_src_ip: []
+
+# pbs_letsencrypt_cert can be defined to the name of dehydrated (Let's Encrypt) cert
+# pbs_letsencrypt_cert: pbs.example.org

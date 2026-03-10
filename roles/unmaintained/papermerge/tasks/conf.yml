@@ -1,0 +1,50 @@
+---
+
+- name: Deploy configuration
+  template: src={{ item }}.j2 dest={{ papermerge_root_dir }}/app/{{ item }} group={{ papermerge_user }} mode=640
+  loop:
+    - papermerge.conf.py
+    - gunicorn.conf.py
+  notify: restart papermerge
+  tags: ged
+
+- name: Deploy production settings
+  template:
+    src: production.py.j2
+    dest: "{{ papermerge_root_dir }}/app/config/settings/production.py"
+    group: "{{ papermerge_user }}"
+    mode: 0640
+  notify: restart papermerge
+  tags: ged
+
+- name: Iniialize or update the database
+  django_manage:
+    command: migrate
+    app_path: "{{ papermerge_root_dir }}/app"
+    virtualenv: "{{ papermerge_root_dir }}/venv"
+  when: papermerge_install_mode != 'none'
+  notify: restart papermerge
+  tags: ged
+
+- name: Collect staic files
+  django_manage:
+    command: collectstatic
+    app_path: "{{ papermerge_root_dir }}/app"
+    virtualenv: "{{ papermerge_root_dir }}/venv"
+  when: papermerge_install_mode != 'none'
+  tags: ged
+
+- name: Create an initial superuser
+  django_manage:
+    command: createsuperuser --noinput --username admin --email admin@example.org
+    app_path: "{{ papermerge_root_dir }}/app"
+    virtualenv: "{{ papermerge_root_dir }}/venv"
+  environment:
+    DJANGO_SUPERUSER_PASSWORD: admin
+  when: papermerge_install_mode == 'install'
+  tags: ged
+
+- name: Deploy nginx configuration
+  template: src=nginx.conf.j2 dest=/etc/nginx/ansible_conf.d/40-papermerge.conf
+  notify: reload nginx
+  tags: ged

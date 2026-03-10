@@ -1,0 +1,30 @@
+---
+
+- name: Create archive dir
+  file: path={{ pki_root_dir }}/archives/{{ pki_current_version }} state=directory mode=700
+  tags: pki
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ pki_root_dir }}"
+    dest: "{{ pki_root_dir }}/archives/{{ pki_current_version }}/"
+    delete: True
+    compress: False
+    rsync_opts:
+      - '--exclude=archives/'
+      - '--exclude=run/'
+  delegate_to: "{{ inventory_hostname }}"
+  tags: pki
+
+- name: Dump the database
+  mysql_db:
+    state: dump
+    name: "{{ pki_db_name }}"
+    target: "{{ pki_root_dir }}/archives/{{ pki_current_version }}/{{ pki_db_name }}.sql"
+    login_host: "{{ pki_db_server | default(mysql_server) }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  tags: pki
+

@@ -1,0 +1,32 @@
+---
+
+net_ipv4_forward: no
+
+net_if: []
+# net_if:
+#   - name: vlan500
+#     type: vlan
+#     vlanid: 500
+#     vlandev: eth3
+#     bridge: brprd
+#   - name: brprd
+#     type: bridge
+#     ip4:
+#       method: static|dhcp
+#       addr:
+#         - 10.22.4.5/32
+#       gw: 10.22.4.1
+#       dns:
+#         - 10.22.4.1
+#         - 1.1.1.1
+
+net_if_defaults:
+  type: ethernet
+  ip4:
+    enabled: True
+    method: static
+    addr: []
+  ip6:
+    enabled: False
+
+...

@@ -1,0 +1,393 @@
+---
+
+- name: Set default install mode to none
+  set_fact: dokuwiki_install_mode="none"
+  tags: dokuwiki
+
+- name: Install dependencies
+  yum:
+    name:
+      - acl
+  tags: dokuwiki
+
+- name: Create PHP user acount
+  user:
+    name: "{{ dokuwiki_php_user }}"
+    comment: "PHP FPM for dokuwiki {{ dokuwiki_id }}"
+    system: yes
+    shell: /sbin/nologin
+  tags: dokuwiki
+
+- name: Check if dokuwiki is already installed
+  stat: path={{ dokuwiki_root_dir }}/meta/ansible_version
+  register: dokuwiki_version_file
+  changed_when: False
+  tags: dokuwiki
+
+- name: Check dokuwiki version
+  command:  cat {{ dokuwiki_root_dir }}/meta/ansible_version
+  register: dokuwiki_current_version
+  changed_when: False
+  when: dokuwiki_version_file.stat.exists
+  tags: dokuwiki
+
+- name: Set installation process to install
+  set_fact: dokuwiki_install_mode='install'
+  when: not dokuwiki_version_file.stat.exists
+  tags: dokuwiki
+
+- name: Set installation process to upgrade
+  set_fact: dokuwiki_install_mode='upgrade'
+  when:
+    - dokuwiki_version_file.stat.exists
+    - dokuwiki_current_version.stdout | string != dokuwiki_version | string
+    - dokuwiki_manage_upgrade
+  tags: dokuwiki
+
+- name: Create archive dir
+  file: path={{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }} state=directory mode=700
+  when: dokuwiki_install_mode == 'upgrade'
+  tags: dokuwiki
+
+- name: Prepare dokuwiki upgrade
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/web"
+    dest: "{{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: dokuwiki_install_mode == 'upgrade'
+  tags: dokuwiki
+
+- name: Create directory structure
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.groupe | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ dokuwiki_root_dir }}"
+    - dir: "{{ dokuwiki_root_dir }}/web"
+    - dir: "{{ dokuwiki_root_dir }}/tmp"
+      owner: "{{ dokuwiki_php_user }}"
+      mode: 700
+    - dir: "{{ dokuwiki_root_dir }}/cache"
+      owner: "{{ dokuwiki_php_user }}"
+      mode: 700
+    - dir: "{{ dokuwiki_root_dir }}/sessions"
+      owner: "{{ dokuwiki_php_user }}"
+      mode: 700
+    - dir: "{{ dokuwiki_root_dir }}/data"
+    - dir: "{{ dokuwiki_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ dokuwiki_root_dir }}/web/conf/tpl"
+      group: "{{ dokuwiki_php_user }}"
+      mode: 770
+  tags: dokuwiki
+
+- name: Download Dokuwiki
+  get_url:
+    url: "{{ dokuwiki_archive_url }}"
+    dest: "{{ dokuwiki_root_dir }}/tmp/"
+    checksum: "sha1:{{ dokuwiki_archive_sha1 }}"
+  when: dokuwiki_install_mode != 'none'
+  tags: dokuwiki
+
+- name: Extract dokuwiki archive
+  unarchive:
+    src: "{{ dokuwiki_root_dir }}/tmp/dokuwiki-{{ dokuwiki_version }}.tgz"
+    dest: "{{ dokuwiki_root_dir }}/tmp/"
+    remote_src: yes
+  when: dokuwiki_install_mode != 'none'
+  tags: dokuwiki
+
+- name: Move the content of dokuwiki to the correct top directory
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/tmp/dokuwiki-{{ dokuwiki_version }}/"
+    dest: "{{ dokuwiki_root_dir }}/web/"
+    recursive: True
+    delete: True
+    rsync_opts:
+      - '--exclude=data/'
+  delegate_to: "{{ inventory_hostname }}"
+  when: dokuwiki_install_mode != 'none'
+  tags: dokuwiki
+
+- name: Populate the data dir
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/tmp/dokuwiki-{{ dokuwiki_version }}/data/"
+    dest: "{{ dokuwiki_root_dir }}/data/"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  when: dokuwiki_install_mode != 'none'
+  tags: dokuwiki
+
+- name: Check existing conf to restore
+  stat: path={{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/web/{{ item }}
+  with_items:
+    - conf/local.php
+    - conf/acl.auth.php
+    - conf/users.auth.php
+    - conf/plugins.local.php
+    - conf/tpl/
+  register: dokuwiki_conf_to_restore
+  when: dokuwiki_install_mode == 'upgrade'
+  tags: dokuwiki
+
+- name: Restore Configuration
+  synchronize:
+    src: "{{ item.stat.path }}"
+    dest: "{{ dokuwiki_root_dir }}/web/{{ item.item }}"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  with_items: "{{ dokuwiki_conf_to_restore.results }}"
+  when:
+    - dokuwiki_install_mode == 'upgrade'
+    - item.stat.exists
+  tags: dokuwiki
+
+- name: List previously installed plugins
+  shell: find {{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/web/lib/plugins -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: dokuwiki_current_plugins
+  when:
+    - dokuwiki_install_mode == 'upgrade'
+    - not dokuwiki_remove_unmanaged_plugins
+  tags: dokuwiki
+
+- name: Restore unmanaged previous plugins
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/web/lib/plugins/{{ item }}"
+    dest: "{{ dokuwiki_root_dir }}/web/lib/plugins/"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  with_items: "{{ dokuwiki_current_plugins.stdout_lines }}"
+  when:
+    - dokuwiki_install_mode == 'upgrade'
+    - not dokuwiki_remove_unmanaged_plugins
+  tags: dokuwiki
+
+- name: List previously installed templates
+  shell: find {{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/web/lib/tpl -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: dokuwiki_current_tpl
+  when:
+    - dokuwiki_install_mode == 'upgrade'
+    - not dokuwiki_remove_unmanaged_tpl
+  tags: dokuwiki
+
+- name: Restore unmanaged previous templates
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}/web/lib/tpl/{{ item }}"
+    dest: "{{ dokuwiki_root_dir }}/web/lib/tpl/"
+    recursive: True
+  delegate_to: "{{ inventory_hostname }}"
+  with_items: "{{ dokuwiki_current_tpl.stdout_lines }}"
+  when:
+    - dokuwiki_install_mode == 'upgrade'
+    - not dokuwiki_remove_unmanaged_tpl
+  tags: dokuwiki
+
+- name: Write dokuwiki version
+  copy: content={{ dokuwiki_version }} dest={{ dokuwiki_root_dir }}/meta/ansible_version
+  when: dokuwiki_install_mode != 'none'
+  tags: dokuwiki
+
+- name: Compress previous version
+  command: tar cJf {{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}.txz ./
+  environment:
+    XZ_OPT: -T0
+  args:
+    chdir: "{{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }}"
+  when: dokuwiki_install_mode == 'upgrade'
+  tags: dokuwiki
+
+- name: Remove archive directory
+  file: path={{ dokuwiki_root_dir }}/archives/{{ dokuwiki_current_version.stdout }} state=absent
+  when: dokuwiki_install_mode == 'upgrade'
+  tags: dokuwiki
+
+- name: Build a list of installed plugins
+  shell: find {{ dokuwiki_root_dir }}/web/lib/plugins -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: dokuwiki_installed_plugins
+  changed_when: False
+  tags: dokuwiki
+
+- name: Install authhttpldap plugin
+  copy: src=authhttpldap dest={{ dokuwiki_root_dir }}/web/lib/plugins
+  tags: dokuwiki
+
+- name: Download plugins
+  get_url:
+    url: "{{ dokuwiki_plugins[item].url }}"
+    dest: "{{ dokuwiki_root_dir }}/tmp/"
+  when:
+    - item not in dokuwiki_installed_plugins.stdout_lines
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'plugin'
+  with_items: "{{ dokuwiki_plugins_to_install }}"
+  tags: dokuwiki
+
+- name: Extract plugins
+  unarchive:
+    src: "{{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_name }}"
+    dest: "{{ dokuwiki_root_dir }}/tmp"
+    remote_src: yes
+  when:
+    - item not in dokuwiki_installed_plugins.stdout_lines
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'plugin'
+  with_items: "{{ dokuwiki_plugins_to_install }}"
+  tags: dokuwiki
+
+- name: Move plugins to the final dir
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_dir | default(dokuwiki_plugins[item].archive_name | splitext | first) }}/"
+    dest: "{{ dokuwiki_root_dir }}/web/lib/plugins/{{ item }}"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when:
+    - item not in dokuwiki_installed_plugins.stdout_lines
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'plugin'
+  with_items: "{{ dokuwiki_plugins_to_install }}"
+  tags: dokuwiki
+
+- name: Remove unmanaged plugins
+  file: path={{ dokuwiki_root_dir }}/web/lib/plugins/{{ item }} state=absent
+  with_items: "{{ dokuwiki_installed_plugins.stdout_lines }}"
+  when:
+    - item not in dokuwiki_plugins_to_install
+    - item not in dokuwiki_core_plugins
+    - dokuwiki_remove_unmanaged_plugins
+  tags: dokuwiki
+
+- name: Build a list of installed templates
+  shell: find {{ dokuwiki_root_dir }}/web/lib/tpl -maxdepth 1 -mindepth 1 -type d -exec basename "{}" \;
+  register: dokuwiki_installed_tpl
+  changed_when: False
+  tags: dokuwiki
+
+- name: Download templates
+  get_url:
+    url: "{{ dokuwiki_plugins[item].url }}"
+    dest: "{{ dokuwiki_root_dir }}/tmp/"
+  when:
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'tpl'
+    - item not in dokuwiki_installed_tpl.stdout_lines | difference(['dokuwiki'])
+  with_items: "{{ dokuwiki_tpl_to_install }}"
+  tags: dokuwiki
+
+- name: Extract templates
+  unarchive:
+    src: "{{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_name }}"
+    dest: "{{ dokuwiki_root_dir }}/tmp"
+    remote_src: yes
+  when:
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'tpl'
+    - item not in dokuwiki_installed_tpl.stdout_lines | difference(['dokuwiki'])
+  with_items: "{{ dokuwiki_tpl_to_install }}"
+  tags: dokuwiki
+
+- name: Move templates to the final dir
+  synchronize:
+    src: "{{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_dir | default(dokuwiki_plugins[item].archive_name | splitext | first) }}/"
+    dest: "{{ dokuwiki_root_dir }}/web/lib/tpl/{{ item }}"
+    recursive: True
+    delete: True
+  delegate_to: "{{ inventory_hostname }}"
+  when:
+    - dokuwiki_plugins[item] is defined
+    - dokuwiki_plugins[item].type | default('plugin') == 'tpl'
+    - item not in dokuwiki_installed_tpl.stdout_lines | difference(['dokuwiki'])
+  with_items: "{{ dokuwiki_tpl_to_install }}"
+  tags: dokuwiki
+
+- name: Remove unmanaged tpl
+  file: path={{ dokuwiki_root_dir }}/web/lib/tpl/{{ item }} state=absent
+  with_items: "{{ dokuwiki_installed_plugins.stdout_lines }}"
+  when:
+    - item not in dokuwiki_tpl_to_install
+    - item != 'dokuwiki'
+    - dokuwiki_remove_unmanaged_tpl
+  tags: dokuwiki
+
+- name: Remove temp files
+  file: path={{ dokuwiki_root_dir }}/tmp/{{ item }} state=absent
+  with_items:
+    - dokuwiki-{{ dokuwiki_version }}
+    - dokuwiki-{{ dokuwiki_version }}.tgz
+  tags: dokuwiki
+
+- name: Remove plugins archives
+  file: path={{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_name }} state=absent
+  when: dokuwiki_plugins[item] is defined
+  with_items: "{{ dokuwiki_plugins_to_install + dokuwiki_tpl_to_install }}"
+  tags: dokuwiki
+
+- name: Remove plugins temp files
+  file: path={{ dokuwiki_root_dir }}/tmp/{{ dokuwiki_plugins[item].archive_dir | default(dokuwiki_plugins[item].archive_name | splitext | first) }} state=absent
+  when: dokuwiki_plugins[item] is defined
+  with_items: "{{ dokuwiki_plugins_to_install + dokuwiki_tpl_to_install }}"
+  tags: dokuwiki
+
+- name: Deploy permission script
+  template: src=perms.sh.j2 dest={{ dokuwiki_root_dir }}/perms.sh mode=755
+  tags: dokuwiki
+
+- name: Deploy httpd configuration
+  template: src=httpd.conf.j2 dest=/etc/httpd/ansible_conf.d/10-dokuwiki_{{ dokuwiki_id }}.conf
+  notify: reload httpd
+  tags: dokuwiki
+
+- name: Deploy php configuration
+  template: src=php.conf.j2 dest=/etc/opt/remi/php{{ dokuwiki_php_version }}/php-fpm.d/dokuwiki_{{ dokuwiki_id }}.conf
+  notify: restart php-fpm
+  tags: dokuwiki
+
+- name: Remove PHP config from other versions
+  file: path=/etc/opt/remi/php{{ item }}/php-fpm.d/dokuwiki_{{ dokuwiki_id }}.conf state=absent
+  with_items: "{{ httpd_php_versions | difference([ dokuwiki_php_version ]) }}"
+  notify: restart php-fpm
+  tags: dokuwiki
+
+- name: Remove PHP config (using a custom pool)
+  file: path=/etc/opt/remi/php{{ dokuwiki_php_version }}/php-fpm.d/dokuwiki_{{ dokuwiki_id }}.conf state=absent
+  with_items: "{{ httpd_php_versions }}"
+  when: dokuwiki_php_fpm_pool is defined
+  notify: restart php-fpm
+  tags: dokuwiki
+
+- name: Deploy dokuwiki configuration
+  template: src={{ item }}.j2 dest={{ dokuwiki_root_dir }}/web/conf/{{ item }} owner=root group={{ dokuwiki_php_user }} mode=660
+  with_items:
+    - local.protected.php
+    - plugins.protected.php
+  tags: dokuwiki
+
+- name: Check if local.php exists
+  stat: path={{ dokuwiki_root_dir }}/web/conf/local.php
+  register: dokuwiki_local_php
+  tags: dokuwiki
+
+- name: Set default values
+  template: src=local.php.j2 dest={{ dokuwiki_root_dir }}/web/conf/local.php
+  when: not dokuwiki_local_php.stat.exists
+  tags: dokuwiki
+
+- name: Deploy htaccess
+  template: src=htaccess.j2 dest={{ dokuwiki_root_dir }}/web/.htaccess
+  tags: dokuwiki
+
+- name: Set correct SElinux context
+  sefcontext:
+    target: "{{ dokuwiki_root_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  when: ansible_selinux.status == 'enabled'
+  tags: dokuwiki
+
+- name: Set optimal permissions
+  command: "{{ dokuwiki_root_dir }}/perms.sh"
+  changed_when: False
+  tags: dokuwiki
+
+- include: filebeat.yml
+...

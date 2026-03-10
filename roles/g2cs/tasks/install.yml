@@ -1,0 +1,38 @@
+---
+
+- name: Install dependencies
+  yum:
+    name:
+      - perl-IO
+      - perl-Getopt-Long
+  tags: cs
+
+- name: Install main script
+  copy: src=g2cs.pl dest=/usr/local/bin/g2cs mode=755
+  notify: restart g2cs
+  tags: cs
+
+- name: Deploy systemd unit
+  template: src=g2cs.service.j2 dest=/etc/systemd/system/g2cs.service
+  notify: restart g2cs
+  register: g2cs_unit
+  tags: cs
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: g2cs_unit.changed
+  tags: cs
+
+- name: Deploy tmpfiles.d config
+  copy:
+    content: |
+      d /run/g2cs 0755 g2cs g2cs - -
+      d /run/g2cs/logs 0700 g2cs g2cs - -
+    dest: /etc/tmpfiles.d/g2cs.conf
+  register: g2cs_tmpfiles
+  tags: cs
+
+- name: Create tmpfiles dir
+  command: systemd-tmpfiles --create
+  when: g2cs_tmpfiles.changed
+  tags: cs

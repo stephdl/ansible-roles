@@ -1,0 +1,13 @@
+---
+
+- name: restart postgresql
+  service: name=postgresql-9.6 state=restarted
+
+- name: restart nginx
+  service: name=nginx state=restarted
+
+- name: restart wapt
+  service: name={{ item }} state=restarted
+  with_items:
+    - waptserver
+      #- wapttasks

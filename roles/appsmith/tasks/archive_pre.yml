@@ -1,0 +1,33 @@
+---
+
+- name: Create the archive dir
+  file:
+    path: "{{ appsmith_root_dir }}/archives/{{ appsmith_current_version }}"
+    state: directory
+  tags: appsmith
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ appsmith_root_dir }}/{{ item }}"
+    dest: "{{ appsmith_root_dir }}/archives/{{ appsmith_current_version }}"
+    recursive: True
+    delete: True
+  loop:
+    - server
+    - client
+    - etc
+    - meta
+  delegate_to: "{{ inventory_hostname }}"
+  tags: appsmith
+
+- name: Dump mongo database
+  shell: |
+    mongodump --quiet \
+      --out {{ appsmith_root_dir }}/archives/{{ appsmith_current_version }}/ \
+      --uri \
+      {% if  appsmith_mongo_pass is defined and appsmith_mongo_pass != False %}
+      {{ appsmith_mongo_url | urlsplit('scheme') }}://{{ appsmith_mongo_user }}:{{ appsmith_mongo_pass | urlencode | regex_replace('/','%2F') }}@{{ appsmith_mongo_url | urlsplit('hostname') }}{% if appsmith_mongo_url | urlsplit('port') %}:{{ appsmith_mongo_url | urlsplit('port') }}{% endif %}{{ appsmith_mongo_url | urlsplit('path') }}?{{ appsmith_mongo_url | urlsplit('query') }}
+      {% else %}
+      {{ appsmith_mongo_url }}
+      {% endif %}
+  tags: appsmith

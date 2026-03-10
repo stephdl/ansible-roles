@@ -1,0 +1,43 @@
+pidfile="/var/run/coturn/coturn.pid"
+verbose
+fingerprint
+{% if turn_auth_secret is defined %}
+use-auth-secret
+static-auth-secret {{ turn_auth_secret }}
+{% else %}
+lt-cred-mech
+{% endif %}
+no-sslv2
+no-sslv3
+no-loopback-peers
+no-multicast-peers
+realm {{ turn_realm | default(ansible_domain) }}
+proc-user coturn
+proc-group coturn
+syslog
+
+{% for ip in turn_listen_ip %}
+listening-ip {{ ip }}
+{% endfor %}
+
+{% if not turn_allow_non_tls %}
+no-tcp
+no-udp
+{% endif %}
+
+listening-port {{ turn_port }}
+
+{% if turn_tls %}
+tls-listening-port {{ turn_tls_port }}
+{% if turn_letsencrypt_cert is defined %}
+cert /etc/coturn/ssl/cert.pem
+pkey /etc/coturn/ssl/key.pem
+{% else %}
+cert {{ turn_tls_cert }}
+pkey {{ turn_tls_key }}
+{% endif %}
+{% endif %}
+
+{% if turn_external_ip is defined %}
+external-ip {{ turn_external_ip }}
+{% endif %}

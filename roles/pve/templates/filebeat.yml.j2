@@ -1,0 +1,11 @@
+- type: log
+  enabled: True
+  paths:
+    - /var/log/pve-*.log
+    - /var/log/pveam.log
+    - /var/log/pveproxy/access.log
+    - /var/log/openvswitch/*.log
+    - /var/log/vzdump/*.log
+  exclude_files:
+    - '\.[gx]z$'
+    - '\d+$'

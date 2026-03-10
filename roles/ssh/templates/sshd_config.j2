@@ -1,0 +1,91 @@
+AddressFamily inet
+Protocol 2
+SyslogFacility AUTHPRIV
+PermitRootLogin {{ (sshd_permit_root_login == True) | ternary('yes','no') }}
+PasswordAuthentication {{ (sshd_password_auth == True) | ternary('yes','no') }}
+
+{% if ad_auth is defined and ad_auth and sshd_use_dns %}
+GSSAPIAuthentication yes
+GSSAPIKeyExchange yes
+GSSAPIStoreCredentialsOnRekey yes
+{% endif %}
+
+UseDNS {{ sshd_use_dns | ternary('yes', 'no') }}
+
+{% if sshd_authorized_keys_command is defined %}
+AuthorizedKeysCommand {{ sshd_authorized_keys_command }}
+{% if sshd_authorized_keys_command_user is defined %}
+AuthorizedKeysCommandUser {{ sshd_authorized_keys_command_user }}
+{% endif %}
+{% endif %}
+
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+
+AuthorizedKeysFile /etc/ssh/authorized_keys/%u/authorized_keys
+
+{% if sshd_deny_users is defined and sshd_deny_users | length > 0 %}
+DenyUsers {{ sshd_deny_users | join(' ') }}
+{% endif %}
+
+{% if sshd_allow_users is defined and sshd_allow_users | length > 0 %}
+AllowUsers {{ sshd_allow_users | join(' ') }}
+{% endif %}
+
+{% if sshd_deny_groups is defined and sshd_deny_groups | length > 0 %}
+DenyGroups {{ sshd_deny_groups | join(' ') }}
+{% endif %}
+
+{% if sshd_allow_groups is defined and sshd_allow_groups | length > 0 %}
+AllowGroups {{ sshd_allow_groups | join(' ') }}
+{% endif %}
+
+{% for port in sshd_ports %}
+Port {{ port }}
+{% endfor %}
+
+ChallengeResponseAuthentication no
+UsePAM yes
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE
+AcceptEnv XMODIFIERS
+AcceptEnv LC_PVE_*
+X11Forwarding no
+Subsystem       sftp    internal-sftp
+
+# Local user are managed separately
+Match User root,ansible,lbkp,zimbra,zfs-recv
+  AuthorizedKeysFile /etc/ssh/authorized_keys/%u/authorized_keys %h/.ssh/authorized_keys
+
+{% for user in ssh_users | default([]) %}
+Match user {{ user.name }}
+{% if user.chroot is defined %}
+  ChrootDirectory {{ user.chroot }}
+{% endif %}
+{% if user.sftp_only | default(False) %}
+  ForceCommand internal-sftp{% if user.sftp_cd is defined %} -d {{ user.sftp_cd }}{% endif %}
+{% endif %}
+{% if user.allow_forwarding is defined %}
+  AllowTCPForwarding {{ user.allow_forwarding | ternary('yes', 'no') }}
+  X11Forwarding {{ user.allow_forwarding | ternary('yes', 'no') }}
+{% endif %}
+{% if user.keys_file is defined %}
+  AuthorizedKeysFile {{ user.keys_file }}
+{% endif %}
+
+
+{% endfor %}
+
+{% for client in wh_clients | default([]) %}
+# Web hosting client {{ client.name }}
+# hosted app {{ client.apps | map(attribute='name') | list | join(', ') }}
+Match Group client_{{ client.name }}{{ (samba_realm is defined) | ternary('@' + samba_realm | upper,'') }}
+  ChrootDirectory /opt/wh/{{ client.name }}
+  ForceCommand internal-sftp
+  AllowTCPForwarding no
+  X11Forwarding no
+  AuthorizedKeysFile /etc/ssh/wh/{{ client.name }}/authorized_keys
+
+{% endfor %}

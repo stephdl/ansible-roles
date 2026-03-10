@@ -1,0 +1,8 @@
+---
+
+  # Here we use a template instead of yum_repository because
+  # we might need to set module_hotfixes = true for el8. And yum_repository
+  # doesn't support this setting
+- name: Configure MariaDB repo
+  template: src=mariadb.repo.j2 dest=/etc/yum.repos.d/mariadb.repo
+  tags: mysql,repo

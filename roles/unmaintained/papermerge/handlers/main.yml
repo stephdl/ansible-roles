@@ -1,0 +1,7 @@
+---
+
+- name: restart papermerge
+  service: name={{ item }} state=restarted
+  loop:
+    - papermerge-web
+    - papermerge-worker

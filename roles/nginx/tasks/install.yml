@@ -1,0 +1,8 @@
+---
+
+- include: install_openresty.yml
+  when: nginx_openresty
+
+- include: install_nginx.yml
+  when: not nginx_openresty
+

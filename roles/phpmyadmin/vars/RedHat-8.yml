@@ -1,0 +1,6 @@
+---
+
+pma_packages:
+  - unzip
+  - mariadb
+  - acl

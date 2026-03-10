@@ -1,0 +1,34 @@
+---
+
+# Postfix role
+# postfix_config: null_client
+#
+# Relay configuration
+# postfix_relay_host: 'smtp.example.com'
+# postfix_relay_user: 'account'
+# postfix_relay_pass: 'p@ssw0rd'
+# postfix_relay_transport: plain | tls | starttls (default is starttls)
+# postfix_relay_ca_path: '/etc/pki/tls/certs'
+#
+# If set, outgoing email will be rewritten
+# postfix_rewrite_domain: 'example.com'
+#
+# List of domains that this machine considers itself the final destination for
+# postfix_mydestination:
+#   - '$myhostname'
+#   - 'localhost.$mydomain'
+#   - 'localhost'
+#
+#
+#
+# List of IP/Network allowed to relay
+# 127.0.0.0/8 should always be in the list
+# postfix_mynetworks:
+#   - 127.0.0.0/8
+#   - 10.10.0.0/16
+#   - 192.168.7.0/24
+
+# List of IP addresses which will have access to port 25
+postfix_src_ip: []
+
+...

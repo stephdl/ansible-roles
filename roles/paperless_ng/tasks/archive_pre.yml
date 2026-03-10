@@ -1,0 +1,39 @@
+---
+
+- name: Create the archive dir
+  file: path={{ paperless_root_dir }}/archives/{{ paperless_current_version }} state=directory
+  tags: ged
+
+- name: Install postgresql client
+  package:
+    name:
+      - postgresql14
+  tags: ged
+
+- name: Archive previous version
+  synchronize:
+    src: "{{ paperless_root_dir }}/{{ item }}"
+    dest: "{{ paperless_root_dir }}/archives/{{ paperless_current_version }}/"
+    recursive: True
+    delete: True
+    compress: False
+  loop:
+    - venv
+    - app
+  delegate_to: "{{ inventory_hostname }}"
+  tags: ged
+
+- name: Dump the database
+  command: >
+    /usr/pgsql-14/bin/pg_dump
+    --clean
+    --create 
+    --host={{ paperless_db_server | quote }}
+    --port={{ paperless_db_port | quote }}
+    --username=sqladmin {{ paperless_db_name | quote }}
+    --file="{{ paperless_root_dir }}/archives/{{ paperless_current_version }}/{{ paperless_db_name }}.sql"
+  environment:
+    - PGPASSWORD: "{{ pg_admin_pass }}"
+  tags: ged
+
+

@@ -1,0 +1,5 @@
+Type: {{ (wh_default_app | combine(item.1)).database.engine | default('mysql') }}
+Server: {{ (wh_default_app | combine(item.1)).database.server | default(mysql_server) }}
+Database: {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }}
+User: {{ item.0.name[0:7] }}_{{ item.1.name[0:7] }}
+Password: {{ (wh_default_app | combine(item.1)).database.pass | default((wh_pass_seed | password_hash('sha256', 65534 | random(seed=item.0.name + item.1.name) | string))[9:27] ) }}

@@ -1,0 +1,9 @@
+proxy_cache_convert_head off;
+proxy_cache_methods GET HEAD;
+proxy_cache_key $scheme$request_method$proxy_host$request_uri;
+proxy_cache cache_std;
+proxy_cache_valid 200 120m;
+proxy_cache_valid 404 500 502 503 504 20s;
+proxy_no_cache $no_cache;
+proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;
+add_header X-Proxy-Cache $upstream_cache_status;

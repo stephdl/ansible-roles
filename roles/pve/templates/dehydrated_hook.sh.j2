@@ -1,0 +1,11 @@
+#!/bin/bash
+
+{% if pve_letsencrypt %}
+if [ $1 == "{{ inventory_hostname }}" ]; then
+  cat /var/lib/dehydrated/certificates/certs/{{ inventory_hostname }}/privkey.pem > /etc/pve/local/pveproxy-ssl.key
+  cat /var/lib/dehydrated/certificates/certs/{{ inventory_hostname }}/fullchain.pem > /etc/pve/local/pveproxy-ssl.pem
+  chown root:www-data /etc/pve/local/pveproxy-ssl.{key,pem}
+  chmod 640 /etc/pve/local/pveproxy-ssl.{key,pem}
+  /bin/systemctl reload pveproxy
+fi
+{% endif %}

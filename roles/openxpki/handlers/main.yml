@@ -1,0 +1,12 @@
+---
+
+- name: restart openxpki
+  service: name=openxpki state=restarted
+  when: not pki_started.changed
+
+- name: reload openxpki
+  service: name=openxpki state=reloaded
+
+- name: restart openxpki fcgi
+  shell: kill $(pgrep -f '(webui|scep.*|sc|est|rpc|download|soap).fcgi')
+  failed_when: False

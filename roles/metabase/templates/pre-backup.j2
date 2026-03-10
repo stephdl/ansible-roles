@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -eo pipefail
+
+{% if metabase_db_engine == 'mysql' %}
+/usr/bin/mysqldump \
+{% if metabase_db_server not in ['localhost','127.0.0.1'] %}
+  --user={{ metabase_db_user | quote }} \
+  --password={{ metabase_db_pass | quote }} \
+  --host={{ metabase_db_server | quote }} \
+  --port={{ metabase_db_port | quote }} \
+{% endif %}
+  --quick --single-transaction \
+  --add-drop-table {{ metabase_db_name | quote }} | zstd -c > {{ metabase_root_dir }}/backup/{{ metabase_db_name }}.sql.zst
+{% elif metabase_db_engine == 'postgres' %}
+PGPASSWORD={{ metabase_db_pass | quote }} /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ metabase_db_user }} \
+  --host={{ metabase_db_server }} \
+  {{ metabase_db_name }} | zstd -c > {{ metabase_root_dir }}/backup/{{ metabase_db_name }}.sql.zst
+{% endif %}
+cp {{ metabase_root_dir }}/etc/env {{ metabase_root_dir }}/backup/
+

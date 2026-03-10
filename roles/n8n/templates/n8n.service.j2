@@ -1,0 +1,24 @@
+[Unit]
+Description=n8n workflow automation daemon
+After=syslog.target network.target mariadb.service
+
+[Service]
+Type=simple
+User={{ n8n_user }}
+Group={{ n8n_user }}
+EnvironmentFile={{ n8n_root_dir }}/etc/env
+ExecStart={{ n8n_root_dir }}/app/node_modules/n8n/bin/n8n
+PrivateTmp=yes
+{% if n8n_protect_system %}
+ProtectSystem=full
+NoNewPrivileges=yes
+ProtectHome=yes
+{% endif %}
+MemoryLimit={{ n8n_mem_limit }}M
+Environment=NODE_OPTIONS="--max-old-space-size={{ n8n_mem_limit }}"
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

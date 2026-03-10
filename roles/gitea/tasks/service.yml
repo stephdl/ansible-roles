@@ -1,0 +1,4 @@
+---
+- name: Start and enable the service
+  service: name=gitea state=started enabled=True
+  tags: gitea

@@ -1,0 +1,15 @@
+---
+
+- name: Configure random keys
+  copy: content={{ item.value }} dest={{ etherpad_root_dir }}/app/{{ item.file }} owner={{ etherpad_user }} group={{ etherpad_user }} mode=600
+  loop:
+    - file: SESSIONKEY.txt
+      value: "{{ etherpad_session_key }}"
+    - file: APIKEY.txt
+      value: "{{ etherpad_api_key }}"
+  tags: etherpad
+
+- name: Deploy service configuration
+  template: src=settings.json.j2 dest={{ etherpad_root_dir }}/app/settings.json
+  notify: restart etherpad
+  tags: etherpad

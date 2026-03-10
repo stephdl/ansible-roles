@@ -1,0 +1,28 @@
+---
+- name: Create directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop:
+    - path: "{{ mayan_root_dir }}/meta"
+      mode: 700
+    - path: "{{ mayan_root_dir }}/tmp"
+      mode: 700
+      owner: "{{ mayan_user }}"
+    - path: "{{ mayan_root_dir }}/data/mayan_settings/"
+      mode: 700
+      owner: "{{ mayan_user }}"
+    - path: "{{ mayan_root_dir }}/archives"
+      mode: 700
+    - path: "{{ mayan_root_dir }}/backup"
+      mode: 700
+    - path: "{{ mayan_root_dir }}/config"
+      group: "{{ mayan_user }}"
+      mode: 750
+    - path: "{{ mayan_root_dir }}/fuse"
+      mode: 700
+    - path: "{{ mayan_root_dir }}/input"
+  tags: mayan

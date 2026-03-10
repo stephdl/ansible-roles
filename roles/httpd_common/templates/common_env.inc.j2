@@ -1,0 +1,7 @@
+# Determine which protocol to use
+RewriteRule   .*         -      [E=HTTP:http]
+RewriteCond   %{HTTPS}   =on
+RewriteRule   .*         -      [E=HTTP:https]
+{% if httpd_log_format == 'combined_virtual_backend' %}
+SetEnvIf X-Forwarded-Proto https HTTPS=on
+{% endif %}

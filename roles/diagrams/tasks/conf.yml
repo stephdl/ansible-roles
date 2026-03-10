@@ -1,0 +1,21 @@
+---
+
+- name: Deploy sysconfig
+  template: src=sysconfig.j2 dest=/etc/sysconfig/tomcat@diagrams
+  notify: restart diagrams
+  tags: diagrams
+
+- name: Deploy tomcat configuration
+  template: src={{ item }}.j2 dest={{ diagrams_root_dir }}/conf/{{ item }} group=tomcat mode=640
+  loop:
+    - server.xml
+  notify: restart diagrams
+  tags: diagrams
+
+- name: Link configuration files
+  file: state=link src=/etc/tomcat/{{ item }} dest={{ diagrams_root_dir }}/conf/{{ item }}
+  loop:
+    - web.xml
+    - logging.properties
+  notify: restart diagrams
+  tags: diagrams

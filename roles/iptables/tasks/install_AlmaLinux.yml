@@ -1,0 +1,10 @@
+---
+
+- name: Remove firewalld
+  yum: name=firewalld state=absent
+  tags: firewall
+
+- name: Install packages
+  yum: name=iptables-services
+  tags: firewall
+

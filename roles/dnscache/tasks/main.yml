@@ -1,0 +1,53 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - ndjbdns
+
+- name: Deploy dnscache config
+  template: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - { src: dnscache.conf.j2, dest: /etc/ndjbdns/dnscache.conf }
+    - { src: roots.j2,         dest: /etc/ndjbdns/servers/roots }
+  notify: restart dnscache
+
+- name: Handle DNS port
+  iptables_raw:
+    name=dnscache_ports
+    state={{ (dnscache_src_ip | length > 0) | ternary('present','absent') }}
+    rules='-A INPUT -m state --state NEW -p udp -m multiport --dports 53 -s {{ dnscache_src_ip | join(',') }} -j ACCEPT'
+  when: iptables_manage | default(True)
+
+- name: Allow queries
+  copy:
+    content: ""
+    dest: /etc/ndjbdns/ip/0
+    force: no
+    group: root
+    owner: root
+    mode: 0644
+  notify: restart dnscache
+
+- name: List forwarded zones
+  shell: ls -1 /etc/ndjbdns/servers/ | xargs -n1 basename | grep -vP '^roots$' | cat
+  register: dnscache_fwd_zones
+  changed_when: False
+
+- name: Remove unmanaged forwarded zones
+  file: path=/etc/ndjbdns/servers/{{ item }} state=absent
+  with_items: "{{ dnscache_fwd_zones.stdout_lines | default([]) }}"
+  when: item not in dnscache_forwarded_zones | map(attribute='zone')
+
+- name: Deploy forwarded zones
+  copy:
+    content: "{{ item.servers | default([]) | join(\"\n\") }}"
+    dest: /etc/ndjbdns/servers/{{ item.zone }}
+  with_items: "{{ dnscache_forwarded_zones }}"
+  when: dnscache_forwarded_zones is defined and dnscache_forwarded_zones | length > 0
+  notify: restart dnscache
+
+- name: Start and enable the service
+  service: name=dnscache state=started enabled=yes
+
+...

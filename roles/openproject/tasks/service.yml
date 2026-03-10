@@ -1,0 +1,26 @@
+---
+
+- name: Cleanup systemd units
+  file: path=/etc/systemd/system/{{ item }} state=absent
+  loop:
+    - openproject-worker-1.service
+    - openproject-web-1.service
+  register: openproject_rm_units
+  tags: openproject
+
+- name: Deploy clean systemd units
+  template: src={{ item }}.j2 dest=/etc/systemd/system/{{ item }}
+  register: openproject_ansible_units
+  loop:
+    - openproject.service
+    - openproject-worker.service
+  tags: openproject
+
+- name: Reload systemd
+  systemd: daemon_reload=True
+  when: openproject_rm_units.results | selectattr('changed','equalto',True) | list | length > 0 or openproject_ansible_units.results | selectattr('changed','equalto',True) | list | length > 0
+  tags: openproject
+
+- name: Start and enable the service
+  service: name=openproject state=started enabled=True
+  tags: openproject

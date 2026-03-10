@@ -1,0 +1,9 @@
+---
+
+- name: Remove tmp and obsolete files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ paperless_root_dir }}/archives/{{ paperless_current_version }}"
+    - "{{ paperless_root_dir }}/tmp/paperless-ng-{{ paperless_version }}.tar.xz"
+    - "{{ paperless_root_dir }}/tmp/paperless-ng"
+  tags: ged

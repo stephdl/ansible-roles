@@ -1,0 +1,11 @@
+---
+
+- name: restart zimbra
+  command: zmcontrol restart
+
+- name: restart rsyslog
+  service: name=rsyslog state=restarted
+
+- name: restart zmmailboxd
+  command: /opt/zimbra/bin/zmmailboxdctl restart
+  become_user: zimbra

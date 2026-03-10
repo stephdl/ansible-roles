@@ -1,0 +1,17 @@
+---
+- name: Create default root dir
+  file: path=/var/www/html state=directory
+  tags: web
+
+- name: Create ansible conf directory
+  file: path=/etc/nginx/{{ item }} state=directory
+  with_items:
+    - ansible_conf.d
+    - ansible_modules.d
+    - ansible_location.d
+    - bots.d
+  tags: web
+
+- name: Create cache directory
+  file: path=/var/cache/nginx state=directory mode=700 owner=nginx group=nginx
+  tags: web

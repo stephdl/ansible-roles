@@ -1,0 +1,10 @@
+---
+
+from: jitsi-noreply@{{ ansible_domain }}
+{% if jitsi_jibri_recording_notify | length > 0 %}
+notify:
+{% for dest in jitsi_jibri_recording_notify %}
+  - {{ dest }}
+{% endfor %}
+{% endif %}
+base_url: {{ jitsi_jibri_recordings_base_url }}

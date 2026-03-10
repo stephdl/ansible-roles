@@ -1,0 +1,5 @@
+---
+
+- name: Create navidrome user
+  user: name={{ nd_user }} system=True shell=/sbin/nologin
+  tags: navidrome

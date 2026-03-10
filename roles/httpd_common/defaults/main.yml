@@ -1,0 +1,67 @@
+---
+httpd_ports: ['80']
+httpd_src_ip:
+  - 0.0.0.0/0
+httpd_user: apache
+httpd_group: apache
+httpd_modules:
+  - unixd
+  - access_compat
+  - alias
+  - allowmethods
+  - auth_basic
+  - authn_core
+  - authn_file
+  - authz_core
+  - authz_host
+  - authz_user
+  - authnz_pam
+  - autoindex
+  - deflate
+  - dir
+  - env
+  - expires
+  - filter
+  - headers
+  - log_config
+  - logio
+  - mime_magic
+  - mime
+  - include
+  - remoteip
+  - rewrite
+  - setenvif
+  - systemd
+  - status
+  - negotiation
+  - fcgid
+  - proxy
+  - proxy_fcgi
+  - proxy_http
+  - proxy_wstunnel
+# Optional extra module to load
+# httpd_modules_extras: []
+httpd_mpm: prefork
+httpd_primary_domain: 'firewall-services.com'
+httpd_log_format: 'combined_virtual'
+httpd_status_ip:
+  - '127.0.0.1'
+
+httpd_proxy_timeout: 90
+
+httpd_ansible_vhosts: []
+httpd_ansible_directories: []
+httpd_custom_conf: |
+  # Custom config directives here
+
+httpd_htpasswd: []
+# httpd_htpasswd:
+#   - path: /etc/httpd/conf/customers.htpasswd
+#     users:
+#       - login: client1
+#         password: s3crEt.
+
+# The default vhost will have the name of the server in the inventory.
+# But you can overwrite it with this var
+# httpd_default_vhost: 
+...

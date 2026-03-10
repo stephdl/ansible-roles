@@ -1,0 +1,26 @@
+{% if itop_alias is defined %}
+Alias /{{ itop_alias }} {{ itop_root_dir }}/web/
+{% else %}
+# No alias defined, create a vhost to access it
+{% endif %}
+
+RewriteEngine On
+# Upgrading DB schema can be very long, so makes sure httpd will wait for a response long enough
+ProxyTimeout 1800
+<Directory {{ itop_root_dir }}/web/>
+  AllowOverride All
+  Options FollowSymLinks
+{% if itop_src_ip is defined %}
+  Require ip {{ itop_src_ip | join(' ') }}
+{% else %}
+  Require all granted
+{% endif %}
+  <FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/{{ itop_php_fpm_pool  | default('itop_' + itop_id | string) }}.sock|fcgi://localhost"
+  </FilesMatch>
+</Directory>
+{% for dir in ['log','env-production','env-production-build','data','conf'] %}
+<Directory {{ itop_root_dir }}/web/{{ dir }}>
+  Require all denied
+</Directory>
+{% endfor %}

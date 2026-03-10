@@ -1,0 +1,19 @@
+[Unit]
+Description=Matrix Identity Service Daemon
+
+[Service]
+Type=simple
+User={{ mxisd_user }}
+Group={{ mxisd_user }}
+ExecStart=/usr/bin/java -jar {{ mxisd_root_dir }}/app/build/libs/app.jar -c {{ mxisd_root_dir }}/etc/mxisd.yaml
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+NoNewPrivileges=yes
+MemoryLimit={{ mxisd_max_mem }}M
+SyslogIdentifier=matrix-mxisd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

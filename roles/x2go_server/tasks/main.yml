@@ -1,0 +1,8 @@
+---
+
+- name: Install packages
+  yum:
+    name:
+      - x2goserver
+      - x2goserver-printing
+      - x2goserver-xsession

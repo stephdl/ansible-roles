@@ -1,0 +1,4 @@
+---
+
+httpd_common_packages:
+  - httpd

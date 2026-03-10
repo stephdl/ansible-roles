@@ -1,0 +1,9 @@
+---
+
+- include: facts.yml
+
+- include: zmldapsync.yml
+  when: zcs_i_am_primary_ldap == True
+
+- include: cas.yml
+  when: "'mailbox' in zcs_enabled_components"

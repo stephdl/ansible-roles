@@ -1,0 +1,21 @@
+#!/bin/sh
+
+restorecon -R {{ dolibarr_root_dir }}
+chown root:root {{ dolibarr_root_dir }}
+chmod 700 {{ dolibarr_root_dir }}
+chown root:root {{ dolibarr_root_dir }}/{meta,db_dumps}
+chmod 700 {{ dolibarr_root_dir }}/{meta,db_dumps}
+setfacl -k -b {{ dolibarr_root_dir }}
+setfacl -m u:{{ dolibarr_php_user | default('apache') }}:rx,u:{{ httpd_user | default('apache') }}:rx {{ dolibarr_root_dir }}
+chown -R root:root {{ dolibarr_root_dir }}/web
+chown -R {{ dolibarr_php_user }} {{ dolibarr_root_dir }}/{tmp,sessions,data}
+chmod 700 {{ dolibarr_root_dir }}/{tmp,sessions,data}
+setfacl -R -m u:{{ httpd_user | default('apache') }}:rX {{ dolibarr_root_dir }}/data
+find {{ dolibarr_root_dir }}/web -type f -exec chmod 644 "{}" \;
+find {{ dolibarr_root_dir }}/web -type d -exec chmod 755 "{}" \;
+chown -R :{{ dolibarr_php_user }} {{ dolibarr_root_dir }}/web/htdocs/{conf,custom}
+chmod 770 {{ dolibarr_root_dir }}/web/htdocs/custom
+setfacl -R -m u:{{ httpd_user | default('apache') }}:rX {{ dolibarr_root_dir }}/web/htdocs/custom
+chmod 770 {{ dolibarr_root_dir }}/web/htdocs/conf
+chmod 640 {{ dolibarr_root_dir }}/web/htdocs/conf/*
+chmod 755 {{ dolibarr_root_dir }}/web/scripts/user/sync_ldap2dolibarr.sh

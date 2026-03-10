@@ -1,0 +1,5 @@
+---
+
+- name: Set system TZ
+  timezone: name={{ system_tz }}
+  when: system_tz is defined

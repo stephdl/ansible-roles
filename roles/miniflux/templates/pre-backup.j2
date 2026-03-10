@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eo pipefail
+
+PGPASSWORD='{{ miniflux_db_pass }}' /usr/pgsql-14/bin/pg_dump \
+  --clean \
+  --create \
+  --username={{ miniflux_db_user | quote }} \
+  --host={{ miniflux_db_server | quote }} \
+  {{ miniflux_db_name | quote }} | \
+  zstd -c > {{ miniflux_root_dir }}/backup/{{ miniflux_db_name | quote }}.sql.zst
+

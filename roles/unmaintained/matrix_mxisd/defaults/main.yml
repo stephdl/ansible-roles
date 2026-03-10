@@ -1,0 +1,77 @@
+---
+
+# Install directory
+mxisd_root_dir: /opt/matrix/mxisd
+# User account (will be created if missing)
+mxisd_user: mxisd
+# GIT URI repository
+mxisd_git_uri: https://github.com/kamax-io/mxisd.git
+# Version to checkout
+mxisd_version: v1.1.1
+# Memory limit for the service, in MB
+mxisd_max_mem: 2048
+# TCP port on which the service will bind
+mxisd_port: 8083
+# List of IP address allowed to access this port
+# mxisd_src_ip:
+#  - 0.0.0.0/0
+
+# External server to which forward queries
+# if no match are found localy
+# mxisd_forwarders:
+#   - https://matrix.org
+#   - https://vector.im
+
+# Domain of your Matrix instance. Default to synapse_server_name if present
+# mxisd_matrix_domain: matrix.example.com
+
+# mxisd_server_name: matrix-id.example.com
+# mxisd_public_url: https://matrix-id.domain.com/
+
+# Are recursive lookups allowed
+# mxisd_recursive_lookups: False
+# And if yes, restrict it to certain IP only
+# mxisd_recursive_lookups_ip:
+#   - 192.168.1.0/24
+#   - 172.20.0.0/16
+
+# Should we run LDAP lookups. Most settings can be taken from synapse if installed
+mxisd_ldap_lookup: True
+mxisd_ldap_filter: "{{ ad_auth | default(False) | ternary('(&(objectCategory=person)(objectClass=user)(primaryGroupId=513))','(objectClass=inetOrgPerson)') }}"
+mxisd_ldap_tls: True    # Note that this is TLS, usually on port 636. Start TLS is not supported
+mxisd_ldap_server: "{{ ad_auth | default(False) | ternary(ad_realm | default(samba_realm) | default(ansible_domain) | default(ansible_domain) | lower,'ldap.example.org') }}"
+mxisd_ldap_port: "{{ mxisd_ldap_tls | ternary('636','389') }}"
+#mxisd_ldap_bind_dn: cn=mxisd,ou=DSA,dc=example,dc=org
+#mxisd_ldap_bind_pass: secret
+mxisd_ldap_base: "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), 'dc=example,dc=org') }}"
+mxisd_ldap_uid_type: uid
+mxisd_ldap_uid_value: "{{ ad_auth | default(False) | ternary('samaccountname','uid') }}"
+mxisd_ldap_attr_name: cn
+mxisd_ldap_attr_mail:
+  - mail
+mxisd_ldap_attr_tel:
+  - telephoneNumber
+  - mobile
+  - homePhone
+  - otherTelephone
+  - otherMobile
+  - otherHomePhone
+mxisd_ldap_attr_other:
+  - cn
+  - memberOf
+
+# Outgoing email settings
+# Will use synapse settings if available
+# mxisd_smtp_server: smtp.domain.com
+# mxisd_smtp_port: 25
+# mxisd_smtp_tls: True
+# mxisd_smtp_user:
+# mxisd_smtp_pass:
+# mxisd_smtp_from: mxisd@domain.com
+
+# Overwrite the DNS name of your Matrix server
+mxisd_dns_overwrite:
+  - name: "{{ mxisd_matrix_domain | default(synapse_server_name) }}"
+    value: http://localhost:8008
+
+...

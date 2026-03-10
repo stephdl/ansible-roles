@@ -1,0 +1,28 @@
+---
+
+jitsi_root_dir: /opt/jitsi
+jitsi_jibri_user: jibri
+
+jitsi_jibri_git_url: https://github.com/jitsi/jibri.git
+
+# Should ansible manage upgrades or only initial install
+jitsi_jibri_manage_upgrade: "{{ jitsi_manage_upgrade | default(True) }}"
+
+jitsi_jibri_domain: "{{ jitsi_domain | default(inventory_hostname) }}"
+jitsi_jibri_auth_domain: "{{ jitsi_auth_domain | default('auth.' ~ jitsi_domain) }}"
+jitsi_jibri_internal_auth_domain: internal.{{ jitsi_jibri_auth_domain }}
+
+# XMPP password to connect to
+jitsi_jibri_xmpp_server: "{{ jitsi_xmpp_server | default(inventory_hostname) }}"
+jitsi_jibri_xmpp_user: jibri
+jitsi_jibri_xmpp_domain: recorder.{{ jitsi_jibri_domain }}
+# A random pass will be created if not defined
+# jitsi_jibri_xmpp_pass: s3cr3t.
+jitsi_jibri_recorder_xmpp_user: recorder
+# jitsi_jibri_recorder_xmpp_pass: p@ssw0rd
+
+# List of email address which will be notified when a recording is finished
+jitsi_jibri_recording_notify: []
+# Base URL where you can reach your Jitsi host.
+# Might need to be adjusted if running behing a reverse proxy
+jitsi_jibri_recordings_base_url: https://{{ inventory_hostname }}/recordings

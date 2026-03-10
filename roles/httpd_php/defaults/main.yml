@@ -1,0 +1,44 @@
+---
+
+httpd_php_common_modules:
+  - cli
+  - ldap
+  - imap
+  - gd
+  - xml
+  - xmlrpc
+  - soap
+  - opcache
+  - fpm
+  - mbstring
+  - mysqlnd
+  - pgsql
+  - json
+  - bcmath
+  - intl
+  - pear
+  - process
+  - snmp
+  - pecl-memcached
+  - pecl-zip
+  - pecl-apcu
+  - pecl-imagick
+
+httpd_php_versions:
+  - 56
+  - 70
+  - 71
+  - 72
+  - 73
+  - 74
+  - 80
+
+httpd_php_default_version: 73
+
+#httpd_php_ansible_pools:
+#  name: glpi
+#  version: 71
+#  conf:
+#    allow_url_fopen: True
+#
+...

@@ -1,0 +1,5 @@
+---
+
+- name: Start and enable prosody
+  service: name=prosody state=started enabled=True
+  tags: prosody

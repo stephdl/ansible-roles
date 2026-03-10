@@ -1,0 +1,89 @@
+---
+
+# On which ip we should bind.
+grafana_listen_ip: 0.0.0.0
+
+# Port on which we should bind
+grafana_port: 3000
+
+# If defined, will be the public URL of Grafana
+# granafa_root_url: https://graph.example.com
+
+# IP allowed to access grafana port. Only relevant if listen ip is not 127.0.0.1
+grafana_src_ip: []
+
+# Database settings
+# Can be sqlite3, mysql or postgres
+grafana_db_type: mysql
+
+# If mysql or postgres is used, all the following settings have to be set
+# For MySQL you can also set the path to a UNIX socket
+grafana_db_server: "{{ mysql_server | default('/var/lib/mysql/mysql.sock') }}"
+# If using TCP for MySQL or PostgreSQL, you must provide the port
+grafana_db_port: 3306
+grafana_db_name: grafana
+grafana_db_user: grafana
+# grafana_db_pass: secret
+
+# Is grafana_reporting_enabled is true. Send reports to stats.grafana.org
+grafana_reporting: False
+
+# Automatic check for updates
+grafana_check_for_updates: True
+
+# Log level. Can be "debug", "info", "warn", "error", "critical"
+grafana_log_level: info
+
+# Allow user to sign up
+grafana_allow_sign_up: False
+
+grafana_auth_base:
+  anonymous:
+    org_role: Viewer
+    enabled: False
+  proxy:
+    header_name: Auth-User
+    enabled: False
+    #    whitelist:
+    #  - 10.10.1.20
+    #  - 192.168.7.12
+  ldap:
+    enabled: "{{ (ad_auth | default(False) or ldap_auth | default(False)) | ternary(True,False) }}"
+    servers: "{{ (ad_ldap_servers is defined) | ternary(ad_ldap_servers,[ldap.example.org]) }}"
+    port: 389
+    use_ssl: True
+    start_tls: True
+    ssl_skip_verify: False
+    # root_ca_cert: /etc/pki/tls/certs/cert.pem
+    # bind_dn:
+    # bind_password:
+    search_filter: "({{ ad_auth | default(False) | ternary('samaccountname','uid') }}=%s)"
+    search_base_dns:
+      - "{{ ad_auth | default(False) | ternary('DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='), ldap_base | default('dc=example,dc=org')) }}"
+    # group_search_filter: "(&(objectClass=posixGroup)(memberUid=%s))"
+    # group_search_base_dns:
+    #   - ou=groups,dc=example,dc=org
+    # group_search_filter_user_attribute: uid
+    attributes:
+      name: givenName
+      surname: sn
+      username: "{{ ad_auth | default(False) | ternary('sAMAccountName','uid') }}"
+      member_of: "{{ ad_auth | default(False) | ternary('memberOf','cn') }}"
+      email: mail
+    group_mappings:
+      - ldap_group: "{{ ad_auth | default(False) | ternary('CN=Domain Admins,CN=Users,' + 'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='),'admins') }}"
+        role: Admin
+      - ldap_group: "{{ ad_auth | default(False) | ternary('CN=Domain Admins,OU=Groups,' + 'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='),'admins') }}"
+        role: Admin
+      - ldap_group: "{{ ad_auth | default(False) | ternary('CN=Domain Users,CN=Users,' + 'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='),'shared') }}"
+        role: Editor
+      - ldap_group: "{{ ad_auth | default(False) | ternary('CN=Domain Users,OU=Groups,' + 'DC=' + ad_realm | default(samba_realm) | default(ansible_domain) | regex_replace('\\.',',DC='),'shared') }}"
+        role: Editor
+      - ldap_group: '*'
+        role: Viewer
+grafana_auth_extra: {}
+grafana_auth: "{{ grafana_auth_base | combine(grafana_auth_extra, recursive=True) }}"
+
+# Plugins to install
+grafana_plugins:
+  - alexanderzobnin-zabbix-app

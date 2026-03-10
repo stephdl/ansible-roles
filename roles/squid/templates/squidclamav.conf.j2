@@ -1,0 +1,15 @@
+maxsize {{ squid_av_max_size }}
+clamd_local /var/run/clamav/squid.sock
+dnslookup 0
+safebrowsing {{ squid_safebrowsing.stat.exists | ternary('1','0') }}
+
+abort ^.*\.(ico|gif|png|jpg)$
+abortcontent ^image\/.*$
+abort ^.*\.(css|xml)$
+abortcontent ^video\/x-flv$
+abortcontent ^video\/mp4$
+abortcontent ^.*application\/x-mms-framed.*$
+
+{% for wl in squid_local_whitelist %}
+whitelist {{ wl | regex_replace('\.','\\\.') }}
+{% endfor %}

@@ -1,0 +1,41 @@
+DBTYPE = "postgres"
+DBNAME = "{{ papermerge_db_name }}"
+DBUSER = "{{ papermerge_db_user }}"
+DBPASS = "{{ papermerge_db_pass }}"
+DBHOST = "{{ papermerge_db_server }}"
+DBPORT = "{{ papermerge_db_port }}"
+MEDIA_DIR = "{{ papermerge_root_dir }}/data"
+IMPORTER_DIR = "{{ papermerge_import_dir }}"
+OCR_DEFAULT_LANGUAGE = "{{ papermerge_ocr_default_lang }}"
+LANGUAGE_FROM_AGENT = True
+LANGUAGES = [
+  ('de', 'Deutsch'),
+  ('en', 'English'),
+  ('fr', 'Français'),
+]
+TASK_QUEUE_DIR = "{{ papermerge_root_dir }}/tmp/queue"
+OCR_LANGUAGES = {
+  "deu": "Deutsch",
+  "eng": "English",
+  "fra": "Français",
+  "spa": "Spanish",
+  "ita": "Italian"
+}
+
+METADATA_DATE_FORMATS = [
+    'yyyy-mm-dd',
+    'month'
+]
+CELERY_BROKER_URL = "redis://"
+CELERY_BROKER_TRANSPORT_OPTIONS = {}
+CELERY_RESULT_BACKEND = "redis://localhost/0"
+
+{% if papermerge_imap_host is defined and papermerge_imap_user is defined and papermerge_imap_pass is defined %}
+IMPORT_MAIL_HOST = "{{ papermerge_imap_host }}"
+IMPORT_MAIL_USER = "{{ papermerge_imap_user }}"
+IMPORT_MAIL_PASS = "{{ papermerge_imap_pass }}"
+IMPORT_MAIL_BY_USER = True
+IMPORT_MAIL_BY_SECRET = True
+{% endif %}
+
+BINARY_STAPLER= "/opt/papermerge/venv/bin/stapler"

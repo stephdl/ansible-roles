@@ -1,0 +1,92 @@
+logdir "/var/log/ufdbguard/"
+dbhome "/var/ufdbguard/blacklists"
+logall on
+squid-version "3.5"
+squid-uses-active-bumping off
+url-lookup-result-during-database-reload allow
+url-lookup-result-when-fatal-error deny
+check-proxy-tunnels {{ squid_ufdb_deny_tunnels | ternary('queue-checks','log-only') }}
+safe-search off
+lookup-reverse-ip on
+use-ipv6-on-wan off
+upload-crash-reports off
+max-logfile-size 200000000
+youtube-edufilter off
+
+source localhost {
+  ipv4 127.0.0.1/32
+}
+source workstations {
+{% for net in squid_workstations_ip %}
+  ipv4 {{ net }}
+{% endfor %}
+}
+source servers {
+{% for net in squid_servers_ip %}
+  ipv4 {{ net }}
+{% endfor %}
+}
+source vip {
+{% for net in squid_vip_ip %}
+  ipv4 {{ net }}
+{% endfor %}
+}
+source admins {
+{% for net in squid_admins_ip %}
+  ipv4 {{ net }}
+{% endfor %}
+}
+source guests {
+{% for net in squid_guests_ip %}
+  ipv4 {{ net }}
+{% endfor %}
+}
+
+{% for category in squid_ufdb_db.results %}
+category {{ category.item }} {
+  redirect        "302:{{ squid_ufdb_blocked_url }}"
+{% if category.stat.exists %}
+  domainlist      {{ category.item }}/domains
+{% endif %}
+{% if category.item == 'security' %}
+  cacerts         "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+  # TODO: options to turn on/off
+  option          enforce-https-with-hostname off
+  option          enforce-https-official-certificate off
+  option          https-prohibit-insecure-sslv2 on
+  option          https-prohibit-insecure-sslv3 off
+  option          allow-aim-over-https on
+  option          allow-gtalk-over-https on
+  option          allow-skype-over-https on
+  option          allow-yahoomsg-over-https on
+  option          allow-fb-chat-over-https on
+  option          allow-citrixonline-over-https on
+  option          allow-unknown-protocol-over-https on
+{% endif %}
+}
+{% endfor %}
+
+acl {
+  localhost {
+    pass any
+  }
+  admins {
+    pass any
+  }
+  vip {
+    pass local_whitelist {% if squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | unique | join(' !') }}{% endif %} any
+  }
+  servers {
+    pass local_whitelist !local_blacklist {% if squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | unique | join(' !') }}{% endif %} any
+  }
+  guests {
+    pass local_whitelist !local_blacklist {% if squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | unique | join(' !') }}{% endif %} {% if squid_ufdb_guests_blocked_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_guests_blocked_categories | intersect(squid_ufdb_categories.stdout_lines) | join(' !') }}{% endif %} any
+  }
+  workstations {
+    pass local_whitelist !local_blacklist {% if squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_dangerous_categories | intersect(squid_ufdb_categories.stdout_lines) | unique | join(' !') }}{% endif %} {% if squid_ufdb_blocked_categories | intersect(squid_ufdb_categories.stdout_lines) | length > 0 %}!{{ squid_ufdb_blocked_categories | intersect(squid_ufdb_categories.stdout_lines) | join(' !') }}{% endif %} any
+  }
+  default {
+    pass none
+    redirect        "302:{{ squid_ufdb_blocked_url }}"
+  }
+}

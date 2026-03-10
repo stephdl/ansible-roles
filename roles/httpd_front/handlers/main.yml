@@ -1,0 +1,8 @@
+---
+
+- include: ../httpd_common/handlers/main.yml
+
+- name: restart htcacheclean
+  service: name=htcacheclean state=restarted enabled=yes
+
+...

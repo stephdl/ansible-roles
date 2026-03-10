@@ -1,0 +1,5 @@
+---
+
+- name: Write current installed version
+  copy: content={{ pim_version }} dest={{ pim_root_dir }}/meta/ansible_version
+  tags: pim

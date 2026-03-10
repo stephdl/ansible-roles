@@ -1,0 +1,7 @@
+---
+
+- import_tasks: ../includes/webapps_compress_archive.yml
+  vars:
+    - root_dir: "{{ matomo_root_dir }}"
+    - version: "{{ matomo_current_version }}"
+  tags: matomo

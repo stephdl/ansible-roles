@@ -1,0 +1,9 @@
+---
+
+- name: restart paperless
+  service: name={{ item }} state=restarted
+  loop:
+    - paperless_{{ paperless_id }}-webserver
+    - paperless_{{ paperless_id }}-scheduler
+    - paperless_{{ paperless_id }}-consumer
+

@@ -1,0 +1,16 @@
+name: fws/trusted_ip
+description: "Whitelist events from trusted ip"
+whitelist:
+  reason: "trusted ip"
+  ip:
+{% for ip in trusted_ip | default([]) %}
+{% if ip is not search('/\d+$') %}
+    - "{{ ip }}"
+{% endif %}
+{% endfor %}
+  cidr:
+{% for ip in trusted_ip | default([]) %}
+{% if ip is search('/\d+$') %}
+    - "{{ ip }}"
+{% endif %}
+{% endfor %}

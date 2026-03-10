@@ -1,0 +1,12 @@
+---
+
+- name: Compress previous version
+  command: tar cJf {{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }}.txz ./
+  args:
+    warn: False
+    chdir: "{{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }}"
+  tags: vaultwarden
+
+- name: Remove archive dir
+  file: path={{ vaultwarden_root_dir }}/archives/{{ vaultwarden_current_version }}+{{ vaultwarden_web_current_version }} state=absent
+  tags: vaultwarden

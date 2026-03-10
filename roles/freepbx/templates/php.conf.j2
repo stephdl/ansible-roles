@@ -1,0 +1,45 @@
+; {{ ansible_managed }}
+
+[freepbx]
+
+listen.owner = root
+listen.group = {{ httpd_user | default('apache') }}
+listen.mode = 0660
+listen = /run/php-fpm/freepbx.sock
+user = asterisk
+group = asterisk
+catch_workers_output = yes
+
+pm = dynamic
+pm.max_children = 15
+pm.start_servers = 3
+pm.min_spare_servers = 3
+pm.max_spare_servers = 6
+pm.max_requests = 5000
+request_terminate_timeout = 60m
+
+php_flag[display_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[memory_limit] = 512M
+php_admin_value[session.save_path] = {{ fpbx_root_dir }}/sessions
+php_admin_value[upload_tmp_dir] = {{ fpbx_root_dir }}/tmp
+php_admin_value[sys_temp_dir] = {{ fpbx_root_dir }}/tmp
+php_admin_value[post_max_size] = 50M
+php_admin_value[upload_max_filesize] = 50M
+php_admin_value[max_execution_time] = 900
+php_admin_value[max_input_time] = 900
+php_admin_flag[allow_url_include] = off
+php_admin_flag[allow_url_fopen] = on
+php_admin_flag[file_uploads] = on
+php_admin_flag[session.cookie_httponly] = on
+
+; Needed so that the #!/usr/bin/env php shebang will point to the correct PHP version
+env[PATH] = /opt/remi/php{{ fpbx_php_version }}/root/usr/bin:/opt/remi/php{{ fpbx_php_version }}/root/usr/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+{% if system_proxy is defined and system_proxy != '' %}
+env[http_proxy] = {{ system_proxy }}
+env[https_proxy] = {{ system_proxy }}
+{% if system_proxy_no_proxy is defined and system_proxy_no_proxy | length > 0 %}
+env[no_proxy] = {{ system_proxy_no_proxy | join(',') }}
+{% endif %}
+{% endif %}

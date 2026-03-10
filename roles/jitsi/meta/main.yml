@@ -1,0 +1,8 @@
+---
+
+dependencies:
+  - role: repo_nodejs
+  - role: maven
+  - role: prosody
+    when: jitsi_xmpp_server in ['127.0.0.1', 'localhost', inventory_hostname]
+  - role: nginx

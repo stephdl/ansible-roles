@@ -1,0 +1,8 @@
+---
+
+- name: Handle jitsi confmapper port
+  iptables_raw:
+    name: jitsi_confmapper_ports
+    state: "{{ (jitsi_confmapper_src_ip | length > 0) | ternary('present','absent') }}"
+    rules: "-A INPUT -m state --state NEW -p tcp --dport {{ jitsi_confmapper_port }} -s {{ jitsi_confmapper_src_ip | join(',') }} -j ACCEPT"
+  tags: firewall,jitsi

@@ -1,0 +1,29 @@
+---
+
+- name: Create directory structure
+  file: path={{ item.dir }} state=directory owner={{ item.owner | default(omit) }} group={{ item.group | default(omit) }} mode={{ item.mode | default(omit) }}
+  with_items:
+    - dir: "{{ itop_root_dir }}"
+    - dir: "{{ itop_root_dir }}/archives"
+      mode: 700
+    - dir: "{{ itop_root_dir }}/tmp"
+      owner: "{{ itop_php_user }}"
+      mode: 700
+    - dir: "{{ itop_root_dir }}/sessions"
+      owner: "{{ itop_php_user }}"
+      mode: 700
+    - dir: "{{ itop_root_dir }}/meta"
+      mode: 700
+    - dir: "{{ itop_root_dir }}/backup"
+      mode: 700
+    - dir: "{{ itop_root_dir }}/etc"
+      group: "{{ itop_php_user }}"
+      mode: 750
+    - dir: "{{ itop_root_dir }}/web/data"
+    - dir: "{{ itop_root_dir }}/web/conf"
+    - dir: "{{ itop_root_dir }}/web/env-production"
+    - dir: "{{ itop_root_dir }}/web/env-production-build"
+    - dir: "{{ itop_root_dir }}/web/log"
+    - dir: "{{ itop_root_dir }}/web/extensions"
+  tags: itop
+

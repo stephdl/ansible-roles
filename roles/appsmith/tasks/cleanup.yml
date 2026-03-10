@@ -1,0 +1,9 @@
+---
+
+- name: Remove tmp and unused files
+  file: path={{ item }} state=absent
+  loop:
+    - "{{ appsmith_root_dir }}/archives/{{ appsmith_current_version }}"
+    - "{{ appsmith_root_dir }}/tmp/appsmith-{{ appsmith_version }}"
+    - "{{ appsmith_root_dir }}/tmp/appsmith-{{ appsmith_version }}.tar.gz"
+  tags: appsmith

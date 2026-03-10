@@ -1,0 +1,38 @@
+---
+ad_auth: False
+ad_domain: "{{ samba_domain }}"
+ad_realm: "{{ samba_realm }}"
+ad_admin: Administrator
+ad_admin_pass: "{{ samba_dc_admin_pass }}"
+ad_computer_ou: 
+ad_access_filter: "(|(memberOf=CN=Domain Admins,CN=Users,DC={{ ad_realm | regex_replace('\\.',',DC=') }})(memberOf=CN=Domain Admins,OU=Groups,DC={{ ad_realm | regex_replace('\\.',',DC=') }}))"
+ad_enumerate: True
+ad_default_shell: /bin/false
+# If access control should evaluate domain GPO. Can be disabled, eforcing or permissive. See man sssd-ad
+ad_gpo_access_control: permissive
+
+# If set to True, ansible will re join the host to the domain
+ad_force_join: False
+
+# Set to false to disable dyndns update
+ad_dyndns_update: True
+
+# Set to false to disable private group
+ad_private_groups: True
+
+# sssd doesn't support cross forest approbations, but we can add the Linux box to the other domains
+ad_trusted_domains: "{{ samba_trusted_domains | default([]) }}"
+# ad_trusted_domains:
+#   - name: ad.fws.fr
+#     admin_user: administrator
+#     admin_pass: s3cr3t.
+
+ad_default_trusted_domain:
+  access_filter: "{{ ad_access_filter }}"
+  enumerate: "{{ ad_enumerate }}"
+  ldap_group_search_base: "{{ ad_ldap_group_search_base | default(False) }}"
+  ldap_user_search_base: "{{ ad_ldap_user_search_base | default(False) }}"
+
+# You can define a custom search base, with a scope and a filter for groups:
+# ad_ldap_group_search_base: CN=Users,dc=ad,dc=domain,dc=com?sub?(|(cn=Domain Users)(cn=Domain Admins))
+# ad_ldap_user_search_base: OU=IT,DC=AD,DC=DOMAIN,DC=COM?sub

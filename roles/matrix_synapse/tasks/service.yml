@@ -1,0 +1,6 @@
+---
+
+- name: Start and enable the service
+  service: name=matrix-synapse state=started enabled=True
+  register: synapse_started
+  tags: matrix

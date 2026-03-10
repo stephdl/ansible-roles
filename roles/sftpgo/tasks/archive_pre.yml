@@ -1,0 +1,23 @@
+---
+
+- name: Create the archive dir
+  file: path={{ sftpgo_root_dir }}/archives/{{ sftpgo_current_version }} state=directory
+  tags: sftpgo
+
+- name: Backup previous version
+  copy: src={{ sftpgo_root_dir }}/app dest={{ sftpgo_root_dir }}/archives/{{ sftpgo_current_version }}/ remote_src=True
+  tags: sftpgo
+
+- name: Archive the database
+  mysql_db:
+    state: dump
+    name: "{{ sftpgo_db_name }}"
+    target: "{{ sftpgo_root_dir }}/archives/{{ sftpgo_current_version }}/{{ sftpgo_db_name }}.sql.xz"
+    login_host: "{{ sftpgo_db_server }}"
+    login_user: sqladmin
+    login_password: "{{ mysql_admin_pass }}"
+    quick: True
+    single_transaction: True
+  environment:
+    XZ_OPT: -T0
+  tags: sftpgo

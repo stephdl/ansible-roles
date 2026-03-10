@@ -1,0 +1,51 @@
+{% for cert in letsencrypt_certs | default([]) %}
+{{ cert.common_name }} {{ cert.alt_names | default([]) | join(' ') }}
+{% endfor %}
+{% if nginx_auto_letsencrypt_cert is defined and nginx_auto_letsencrypt_cert and nginx_vhosts is defined %}
+{% for vhost in nginx_vhosts %}
+{% if vhost.ssl.cert is not defined and (vhost.ssl.letsencrypt_cert is not defined or vhost.ssl.letsencrypt_cert not in letsencrypt_certs | default([]) | map(attribute='common_name')) %}
+{{ vhost.name }} {{ vhost.aliases | default([]) | join(' ') }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if role_wh_proxy | default(False) %}
+{% for client in wh_clients | default([]) %}
+{% for app in client.apps %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+{% if app.letsencrypt_cert %}
+{{ app.vhost | default(client.name + '-' + app.name + '.wh.fws.fr') }} {{ app.aliases | join(' ') }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if pve_letsencrypt is defined and pve_letsencrypt and inventory_hostname not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ inventory_hostname }} {{ pve_cluster_vhosts | join(' ') }}
+{% endif %}
+{% if graylog_letsencrypt_cert is defined and graylog_letsencrypt_cert not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ graylog_letsencrypt_cert }}
+{% endif %}
+{% if zcs_letsencrypt is defined and zcs_letsencrypt and inventory_hostname not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ inventory_hostname }} {{ zcs_vhosts | default([]) | join(' ') }}
+{% endif %}
+{% if bitwarden_letsencrypt_cert is defined and bitwarden_letsencrypt_cert == True %}
+{{ bitwarden_public_url | urlsplit('hostname') }}
+{% endif %}
+{% if psono_letsencrypt_cert is defined and psono_letsencrypt_cert == True %}
+{{ psono_public_url | urlsplit('hostname') }}
+{% endif %}
+{% if jitsi_letsencrypt_cert is defined and jitsi_letsencrypt_cert == True and jitsi_domain is defined %}
+{{ jitsi_domain }} auth.{{ jitsi_domain }}
+{% endif %}
+{% if turn_letsencrypt_cert is defined and turn_letsencrypt_cert not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ turn_letsencrypt_cert }}
+{% endif %}
+{% if rabbitmq_letsencrypt_cert is defined and rabbitmq_letsencrypt_cert != False %}
+{% if rabbitmq_letsencrypt_cert is string and rabbitmq_letsencrypt_cert not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ rabbitmq_letsencrypt_cert }}
+{% elif rabbitmq_letsencrypt_cert == True and inventory_hostname not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ inventory_hostname }}
+{% endif %}
+{% endif %}
+{% if pbs_letsencrypt_cert is defined and pbs_letsencrypt_cert not in letsencrypt_certs | default([]) | map(attribute='common_name') %}
+{{ pbs_letsencrypt_cert }}
+{% endif %}

@@ -1,0 +1,93 @@
+# {{ ansible_managed }}
+
+{% for client in wh_clients | default([]) %}
+{% for app in client.apps | default([]) %}
+{% set app = wh_default_app | combine(app, recursive=True) %}
+
+server {
+  listen 80;
+  listen 443 ssl http2;
+
+  ssl_certificate     /var/lib/dehydrated/certificates/certs/{{ app.vhost | default(client.name + '-' + app.name + '.wh.fws.fr') }}/fullchain.pem;
+  ssl_certificate_key /var/lib/dehydrated/certificates/certs/{{ app.vhost | default(client.name + '-' + app.name + '.wh.fws.fr') }}/privkey.pem;
+
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256;
+
+  server_name {{ app.vhost | default(client.name + '-' + app.name + '.wh.fws.fr') }} {{ app.aliases | join(' ') }};
+
+  root /usr/share/nginx/html;
+
+{% if app.maintenance %}
+  include /etc/nginx/ansible_conf.d/maintenance.inc;
+{% endif %}
+
+  # All client's vhost will use http-01 ACME challenges
+  include /etc/nginx/ansible_conf.d/acme.inc;
+
+  # Ensure SSL is used
+  include /etc/nginx/ansible_conf.d/force_ssl.inc;
+
+  location / {
+    limit_req zone=limit_req_std burst=200 nodelay;
+    limit_conn limit_conn_std 100;
+
+    include /etc/nginx/ansible_conf.d/perf.inc;
+
+    include /etc/nginx/ansible_conf.d/cache.inc;
+
+{% if app.proxy_custom_rewrites is defined %}
+{{ app.proxy_custom_rewrites | indent(4,true) }}
+{% endif %}
+
+    # Send the original Host header to the backend
+    proxy_set_header Host "$host";
+
+    # Send info about the original request to the backend
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Proto "$scheme";
+
+    # Handle websocket proxying
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_http_version 1.1;
+
+    # Hide some headers sent by the backend
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header Cache-Control;
+    proxy_hide_header Pragma;
+    proxy_hide_header Expires;
+
+    # Set the timeout to read responses from the backend
+    proxy_read_timeout {{ app.php.max_execution_time }}s;
+
+    # Disable buffering large files
+    proxy_max_temp_file_size 5m;
+
+    # Proxy requests to the backend
+    proxy_pass http://{{ app.backend | default(client.backend) | default(wh_defaults.backend) }};
+
+    # per vhost IP blacklist
+{% for ip in app.deny_ip %}
+    deny {{ ip }};
+{% endfor %}
+
+{% if app.allow_ip | length > 0 %}
+    # per vhost IP restriction
+{% for ip in app.allow_ip %}
+    allow {{ ip }};
+{% endfor %}
+    deny all;
+
+{% endif %}
+  }
+
+  location = /RequestDenied {
+    return 403;
+  }
+}
+
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,10 @@
+---
+# Never manage iptables, PVE provides its own daemon
+iptables_manage: False
+
+# We most likely want to enable ip_forwarding
+net_ipv4_forward: True
+
+# root must be able to connect with ssh, and without DNS
+sshd_permit_root_login: True
+sshd_use_dns: False
